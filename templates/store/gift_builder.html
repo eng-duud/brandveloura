@@ -2,6 +2,43 @@
 
 {% block title %}خدمة الإهداء | {{ store_settings.store_name }}{% endblock %}
 
+{% block extra_head %}
+<style>
+    /* Checkmark Badge Inside Product Frame (أيقونة الصح في إطار المنتج) */
+    .gift-card-radio:checked ~ .check-badge {
+        background-color: #e83ab8 !important;
+        border-color: #e83ab8 !important;
+        color: #ffffff !important;
+        box-shadow: 0 1px 4px rgba(232, 58, 184, 0.45) !important;
+    }
+    .gift-card-radio:checked ~ .check-badge .check-icon {
+        opacity: 1 !important;
+        transform: scale(1) !important;
+    }
+    .product-gift-card:has(.gift-card-radio:checked) {
+        border-color: #e83ab8 !important;
+        box-shadow: 0 0 0 2px rgba(232, 58, 184, 0.25) !important;
+        background-color: #fff9fc !important;
+    }
+
+    /* Fallback classes toggled by JS */
+    .product-gift-card.is-selected {
+        border-color: #e83ab8 !important;
+        box-shadow: 0 0 0 2px rgba(232, 58, 184, 0.25) !important;
+        background-color: #fff9fc !important;
+    }
+    .product-gift-card.is-selected .check-badge {
+        background-color: #e83ab8 !important;
+        border-color: #e83ab8 !important;
+        color: #ffffff !important;
+    }
+    .product-gift-card.is-selected .check-icon {
+        opacity: 1 !important;
+        transform: scale(1) !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
 
@@ -16,7 +53,7 @@
             <h1 class="text-xl sm:text-2xl font-bold text-slate-900">
                 تجهيز باقة إهداء
             </h1>
-            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">اختر مكونات الباقة أو حدد إحدى الباقات الجاهزة مع خيارات التغليف وبطاقة الإهداء.</p>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">انقر على أيقونة الإطار لتضمين المنتجات في الباقة مع تحديد الدرجة وخيارات التغليف وبطاقة الإهداء.</p>
         </div>
         
         <div class="flex items-center gap-2 bg-pink-50/60 border border-pink-200 px-3 py-1.5 rounded-xl text-xs text-slate-700 self-start sm:self-auto">
@@ -65,79 +102,125 @@
                     <div class="flex items-center justify-between pb-3 border-b border-pink-100">
                         <div class="flex items-center gap-2">
                             <span class="w-6 h-6 rounded-full bg-brand-500 text-white font-bold text-xs flex items-center justify-center font-num">1</span>
-                            <h3 class="font-bold text-slate-900 text-sm">العطر الأساسي</h3>
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-sm">العطر الأساسي</h3>
+                                <p class="text-[11px] text-slate-400">انقر على إطار العطر لتعليمه بالصح وتضمينه في الباقة</p>
+                            </div>
                         </div>
                         <span class="text-[11px] text-brand-700 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-200 font-bold">إلزامي</span>
                     </div>
 
+                    <!-- Grade Selector (تحديد نوع ودرجة المنتج) -->
+                    <div class="p-3.5 rounded-xl bg-pink-50/40 border border-pink-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                        <div>
+                            <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                <i data-lucide="layers" class="w-4 h-4 text-brand-600"></i>
+                                <span>تحديد نوع ودرجة العطر المضمن:</span>
+                            </span>
+                            <span class="text-[11px] text-slate-500 block mt-0.5" id="grade-description-text">
+                                اختر بين العطر الأصلي 100% المعتمد أو جودة الماستر (طبق الأصل)
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <label class="grade-radio-label flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-pink-200 bg-white cursor-pointer has-checked:border-brand-500 has-checked:bg-brand-500 has-checked:text-white text-xs font-bold transition shadow-2xs">
+                                <input 
+                                    type="radio" 
+                                    name="perfume_grade" 
+                                    id="grade_original_radio"
+                                    value="original" 
+                                    checked 
+                                    class="sr-only"
+                                    onchange="onGradeChanged('original')"
+                                    hx-post="{% url 'store:gift_calculate' %}" 
+                                    hx-include="#gift-builder-form" 
+                                    hx-target="#gift-summary-card"
+                                >
+                                <i data-lucide="award" class="w-3.5 h-3.5"></i>
+                                <span>أصلي 100%</span>
+                            </label>
+                            <label class="grade-radio-label flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-pink-200 bg-white cursor-pointer has-checked:border-brand-500 has-checked:bg-brand-500 has-checked:text-white text-xs font-bold transition shadow-2xs">
+                                <input 
+                                    type="radio" 
+                                    name="perfume_grade" 
+                                    id="grade_master_radio"
+                                    value="master" 
+                                    class="sr-only"
+                                    onchange="onGradeChanged('master')"
+                                    hx-post="{% url 'store:gift_calculate' %}" 
+                                    hx-include="#gift-builder-form" 
+                                    hx-target="#gift-summary-card"
+                                >
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                                <span>ماستر طبق الأصل</span>
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- Perfumes Selection Grid -->
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[360px] overflow-y-auto p-1 scrollbar-thin">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[420px] overflow-y-auto p-1 scrollbar-thin">
                         {% for perfume in perfumes %}
-                        <label class="group relative flex flex-col justify-between p-2.5 rounded-xl border border-pink-200 hover:border-brand-400 bg-white cursor-pointer transition has-checked:border-brand-500 has-checked:ring-1 has-checked:ring-brand-500 shadow-2xs">
+                        <label 
+                            class="product-gift-card group relative flex flex-col justify-between p-3 rounded-2xl border-2 border-pink-200 hover:border-brand-400 bg-white cursor-pointer transition-all duration-200 shadow-2xs select-none"
+                            data-perfume-id="{{ perfume.id }}"
+                            data-has-grades="{{ perfume.has_grades|yesno:'true,false' }}"
+                            data-price-original="{{ perfume.price_original_yer|default:perfume.price_yer|floatformat:0 }}"
+                            data-price-master="{{ perfume.price_master_yer|default:perfume.price_yer|floatformat:0 }}"
+                            onclick="selectPerfumeCard('{{ perfume.id }}')"
+                        >
                             <input 
                                 type="radio" 
                                 name="perfume_id" 
                                 value="{{ perfume.id }}" 
-                                {% if forloop.first and not selected_bundle %}checked{% endif %}
-                                class="sr-only perfume-radio"
+                                {% if selected_perfume and selected_perfume.id == perfume.id %}checked{% elif not selected_perfume and forloop.first and not selected_bundle %}checked{% endif %}
+                                class="sr-only perfume-radio gift-card-radio peer"
+                                onchange="updateSelectedCardsVisuals()"
                                 hx-post="{% url 'store:gift_calculate' %}"
                                 hx-include="#gift-builder-form"
                                 hx-target="#gift-summary-card"
                             >
                             
-                            <div class="aspect-square rounded-lg bg-pink-50/30 p-2 mb-2 flex items-center justify-center overflow-hidden border border-pink-100">
+                            <!-- Checkmark Indicator in Product Border (ايقونة الصح في إطار المنتج) -->
+                            <div class="check-badge absolute top-2.5 left-2.5 z-10 w-6 h-6 rounded-full border-2 border-pink-300 bg-white flex items-center justify-center transition-all duration-200 shadow-2xs group-hover:border-brand-500">
+                                <svg class="check-icon w-3.5 h-3.5 stroke-[3] text-white opacity-0 transition-all duration-200 scale-75" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+
+                            <!-- Grade Tag on Perfume Card -->
+                            {% if perfume.has_grades %}
+                            <span class="absolute top-2.5 right-2.5 z-10 px-2 py-0.5 rounded-full bg-pink-50 text-brand-700 text-[9px] font-bold border border-pink-200">
+                                أصلي & ماستر
+                            </span>
+                            {% endif %}
+
+                            <!-- Perfume Photo -->
+                            <div class="aspect-square rounded-xl bg-pink-50/30 p-2 mb-2 flex items-center justify-center overflow-hidden border border-pink-100 relative">
                                 {% if perfume.primary_image_url %}
-                                <img src="{{ perfume.primary_image_url }}" alt="{{ perfume.name_ar }}" class="max-h-full max-w-full object-contain">
+                                <img src="{{ perfume.primary_image_url }}" alt="{{ perfume.name_ar }}" class="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300">
                                 {% else %}
-                                <i data-lucide="package" class="w-6 h-6 text-pink-300"></i>
+                                <i data-lucide="package" class="w-8 h-8 text-pink-300"></i>
                                 {% endif %}
                             </div>
 
-                            <div class="space-y-0.5">
+                            <!-- Title & Pricing -->
+                            <div class="space-y-1">
                                 <p class="text-[10px] text-slate-400 font-medium truncate">{{ perfume.brand_name|default:"Brand Veloura" }}</p>
-                                <p class="text-xs font-bold text-slate-900 line-clamp-1 leading-tight">{{ perfume.name_ar }}</p>
-                                <p class="text-xs font-bold text-slate-900 font-num pt-1">
-                                    {{ perfume.price_original_yer|default:perfume.price_yer|floatformat:0 }} <span class="text-[9px] font-normal text-slate-500">ر.ي</span>
-                                </p>
-                            </div>
-
-                            <div class="absolute top-2 left-2 w-4 h-4 rounded-full border border-pink-200 bg-white flex items-center justify-center group-has-checked:border-brand-500 group-has-checked:bg-brand-500 text-white text-[9px]">
-                                <i data-lucide="check" class="w-3 h-3 hidden group-has-checked:block"></i>
+                                <h4 class="text-xs font-bold text-slate-900 line-clamp-1 leading-tight group-hover:text-brand-600 transition-colors">{{ perfume.name_ar }}</h4>
+                                
+                                <div class="pt-1 flex items-baseline justify-between border-t border-pink-100">
+                                    <div>
+                                        <span class="text-xs font-black text-slate-950 font-num perfume-price-display" id="perfume-price-{{ perfume.id }}">
+                                            {{ perfume.price_original_yer|default:perfume.price_yer|floatformat:0 }}
+                                        </span>
+                                        <span class="text-[9px] text-slate-600 mr-0.5">ر.ي</span>
+                                    </div>
+                                    {% if perfume.has_grades %}
+                                    <span class="text-[9px] text-slate-400 font-medium perfume-grade-pill" id="perfume-grade-pill-{{ perfume.id }}">أصلي</span>
+                                    {% endif %}
+                                </div>
                             </div>
                         </label>
                         {% endfor %}
-                    </div>
-
-                    <!-- Perfume Grade Selector: Strict Utilitarian (Original vs Master) -->
-                    <div class="p-3 rounded-xl bg-pink-50/40 border border-pink-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                        <span class="text-xs font-bold text-slate-800">نوع العطر:</span>
-                        <div class="flex items-center gap-2">
-                            <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-pink-200 bg-white cursor-pointer has-checked:border-brand-500 has-checked:bg-brand-500 has-checked:text-white text-xs font-bold transition shadow-2xs">
-                                <input 
-                                    type="radio" 
-                                    name="perfume_grade" 
-                                    value="original" 
-                                    checked 
-                                    class="sr-only"
-                                    hx-post="{% url 'store:gift_calculate' %}" 
-                                    hx-include="#gift-builder-form" 
-                                    hx-target="#gift-summary-card"
-                                >
-                                <span>أصلي</span>
-                            </label>
-                            <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-pink-200 bg-white cursor-pointer has-checked:border-brand-500 has-checked:bg-brand-500 has-checked:text-white text-xs font-bold transition shadow-2xs">
-                                <input 
-                                    type="radio" 
-                                    name="perfume_grade" 
-                                    value="master" 
-                                    class="sr-only"
-                                    hx-post="{% url 'store:gift_calculate' %}" 
-                                    hx-include="#gift-builder-form" 
-                                    hx-target="#gift-summary-card"
-                                >
-                                <span>ماستر</span>
-                            </label>
-                        </div>
                     </div>
                 </div>
 
@@ -146,63 +229,78 @@
                     <div class="flex items-center justify-between pb-3 border-b border-pink-100">
                         <div class="flex items-center gap-2">
                             <span class="w-6 h-6 rounded-full bg-brand-500 text-white font-bold text-xs flex items-center justify-center font-num">2</span>
-                            <h3 class="font-bold text-slate-900 text-sm">ملحق إضافي</h3>
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-sm">ملحق إضافي</h3>
+                                <p class="text-[11px] text-slate-400">انقر على إطار الملحق لتضمينه أو اختر بدون ملحق</p>
+                            </div>
                         </div>
                         <span class="text-[11px] text-slate-500 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-200 font-bold">اختياري</span>
                     </div>
 
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-h-[280px] overflow-y-auto p-1 scrollbar-thin">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-h-[300px] overflow-y-auto p-1 scrollbar-thin">
                         <!-- Option: None -->
-                        <label class="group relative flex flex-col justify-center items-center p-3 rounded-xl border border-dashed border-pink-200 hover:border-brand-400 bg-white cursor-pointer transition text-center has-checked:border-brand-500 has-checked:ring-1 has-checked:ring-brand-500 shadow-2xs">
+                        <label class="product-gift-card group relative flex flex-col justify-center items-center p-3 rounded-2xl border-2 border-dashed border-pink-200 hover:border-brand-400 bg-white cursor-pointer transition text-center shadow-2xs select-none">
                             <input 
                                 type="radio" 
                                 name="accessory_id" 
                                 value="" 
                                 checked 
-                                class="sr-only"
+                                class="sr-only accessory-radio gift-card-radio peer"
+                                onchange="updateSelectedCardsVisuals()"
                                 hx-post="{% url 'store:gift_calculate' %}" 
                                 hx-include="#gift-builder-form" 
                                 hx-target="#gift-summary-card"
                             >
-                            <div class="w-9 h-9 rounded-full bg-pink-50 flex items-center justify-center text-pink-400 mb-1.5 border border-pink-100">
-                                <i data-lucide="slash" class="w-4 h-4"></i>
+                            <!-- Checkmark indicator in frame -->
+                            <div class="check-badge absolute top-2 left-2 z-10 w-5 h-5 rounded-full border-2 border-pink-300 bg-white flex items-center justify-center transition shadow-2xs group-hover:border-brand-500">
+                                <svg class="check-icon w-3 h-3 stroke-[3] text-white opacity-0 transition scale-75" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+
+                            <div class="w-10 h-10 rounded-full bg-pink-50 flex items-center justify-center text-pink-400 mb-1.5 border border-pink-100">
+                                <i data-lucide="slash" class="w-5 h-5"></i>
                             </div>
                             <p class="text-xs font-bold text-slate-800">بدون ملحق</p>
-                            <div class="absolute top-2 left-2 w-4 h-4 rounded-full border border-pink-200 bg-white flex items-center justify-center group-has-checked:border-brand-500 group-has-checked:bg-brand-500 text-white text-[9px]">
-                                <i data-lucide="check" class="w-3 h-3 hidden group-has-checked:block"></i>
-                            </div>
+                            <span class="text-[10px] text-slate-400">عطر فقط</span>
                         </label>
 
                         {% for acc in accessories %}
-                        <label class="group relative flex flex-col justify-between p-2.5 rounded-xl border border-pink-200 hover:border-brand-400 bg-white cursor-pointer transition has-checked:border-brand-500 has-checked:ring-1 has-checked:ring-brand-500 shadow-2xs">
+                        <label class="product-gift-card group relative flex flex-col justify-between p-2.5 rounded-2xl border-2 border-pink-200 hover:border-brand-400 bg-white cursor-pointer transition shadow-2xs select-none">
                             <input 
                                 type="radio" 
                                 name="accessory_id" 
                                 value="{{ acc.id }}" 
-                                class="sr-only"
+                                class="sr-only accessory-radio gift-card-radio peer"
+                                onchange="updateSelectedCardsVisuals()"
                                 hx-post="{% url 'store:gift_calculate' %}" 
                                 hx-include="#gift-builder-form" 
                                 hx-target="#gift-summary-card"
                             >
                             
-                            <div class="aspect-square rounded-lg bg-pink-50/30 p-2 mb-2 flex items-center justify-center overflow-hidden border border-pink-100">
+                            <!-- Checkmark indicator in frame -->
+                            <div class="check-badge absolute top-2 left-2 z-10 w-5 h-5 rounded-full border-2 border-pink-300 bg-white flex items-center justify-center transition shadow-2xs group-hover:border-brand-500">
+                                <svg class="check-icon w-3 h-3 stroke-[3] text-white opacity-0 transition scale-75" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+
+                            <div class="aspect-square rounded-xl bg-pink-50/30 p-2 mb-2 flex items-center justify-center overflow-hidden border border-pink-100">
                                 {% if acc.primary_image_url %}
-                                <img src="{{ acc.primary_image_url }}" alt="{{ acc.name_ar }}" class="max-h-full max-w-full object-contain">
+                                <img src="{{ acc.primary_image_url }}" alt="{{ acc.name_ar }}" class="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform">
                                 {% else %}
                                 <i data-lucide="package" class="w-6 h-6 text-pink-300"></i>
                                 {% endif %}
                             </div>
 
                             <div class="space-y-0.5">
-                                <p class="text-[10px] text-slate-400 truncate">{{ acc.category.name_ar|default:"ملحق" }}</p>
-                                <p class="text-xs font-bold text-slate-900 line-clamp-1 leading-tight">{{ acc.name_ar }}</p>
+                                <span class="text-[9px] font-bold text-brand-700 bg-pink-50 px-1.5 py-0.2 rounded border border-pink-100 truncate block">
+                                    {{ acc.category.name_ar|default:"ملحق" }}
+                                </span>
+                                <p class="text-xs font-bold text-slate-900 line-clamp-1 leading-tight pt-0.5">{{ acc.name_ar }}</p>
                                 <p class="text-xs font-bold text-slate-900 font-num pt-0.5">
                                     +{{ acc.price_yer|floatformat:0 }} <span class="text-[9px] font-normal text-slate-500">ر.ي</span>
                                 </p>
-                            </div>
-
-                            <div class="absolute top-2 left-2 w-4 h-4 rounded-full border border-pink-200 bg-white flex items-center justify-center group-has-checked:border-brand-500 group-has-checked:bg-brand-500 text-white text-[9px]">
-                                <i data-lucide="check" class="w-3 h-3 hidden group-has-checked:block"></i>
                             </div>
                         </label>
                         {% endfor %}
@@ -216,24 +314,32 @@
                 <div class="bg-white rounded-2xl p-4 sm:p-5 border border-pink-200 shadow-2xs space-y-3">
                     <div class="pb-2 border-b border-pink-100">
                         <h3 class="font-bold text-slate-900 text-sm">الباقات الجاهزة المنسقة</h3>
-                        <p class="text-xs text-slate-500">باقات تشمل المنتجات الفاخرة والتغليف وبطاقة الإهداء</p>
+                        <p class="text-xs text-slate-500">انقر على إطار أي باقة جاهزة لتحديدها وتضمينها بكامل ملحقاتها</p>
                     </div>
 
                     {% if gift_bundles %}
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {% for bundle in gift_bundles %}
-                        <label class="group relative flex flex-col justify-between p-3.5 rounded-2xl border border-pink-200 hover:border-brand-400 bg-white cursor-pointer transition has-checked:border-brand-500 has-checked:ring-1 has-checked:ring-brand-500 shadow-2xs">
+                        <label class="product-gift-card group relative flex flex-col justify-between p-3.5 rounded-2xl border-2 border-pink-200 hover:border-brand-400 bg-white cursor-pointer transition shadow-2xs select-none">
                             <input 
                                 type="radio" 
                                 name="bundle_id" 
                                 value="{{ bundle.id }}" 
                                 {% if selected_bundle and selected_bundle.id == bundle.id %}checked{% endif %}
-                                class="sr-only bundle-radio"
+                                class="sr-only bundle-radio gift-card-radio peer"
+                                onchange="updateSelectedCardsVisuals()"
                                 hx-post="{% url 'store:gift_calculate' %}"
                                 hx-include="#gift-builder-form"
                                 hx-target="#gift-summary-card"
                             >
                             
+                            <!-- Checkmark indicator in frame -->
+                            <div class="check-badge absolute top-3 left-3 z-10 w-6 h-6 rounded-full border-2 border-pink-300 bg-white flex items-center justify-center transition shadow-2xs group-hover:border-brand-500">
+                                <svg class="check-icon w-3.5 h-3.5 stroke-[3] text-white opacity-0 transition scale-75" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+
                             <div class="aspect-4/3 rounded-xl bg-pink-50/30 p-2 mb-2.5 flex items-center justify-center overflow-hidden border border-pink-100 relative">
                                 {% if bundle.primary_image_url %}
                                 <img src="{{ bundle.primary_image_url }}" alt="{{ bundle.name_ar }}" class="max-h-full max-w-full object-contain">
@@ -256,10 +362,6 @@
                                         {{ bundle.price_sar }} ر.س
                                     </div>
                                 </div>
-                            </div>
-
-                            <div class="absolute top-3 left-3 w-4 h-4 rounded-full border border-pink-200 bg-white flex items-center justify-center group-has-checked:border-brand-500 group-has-checked:bg-brand-500 text-white text-[10px]">
-                                <i data-lucide="check" class="w-3 h-3 hidden group-has-checked:block"></i>
                             </div>
                         </label>
                         {% endfor %}
@@ -375,6 +477,55 @@
 </div>
 
 <script>
+    // Update active class visuals on cards
+    function updateSelectedCardsVisuals() {
+        document.querySelectorAll('.product-gift-card').forEach(card => {
+            const radio = card.querySelector('.gift-card-radio');
+            if (radio && radio.checked) {
+                card.classList.add('is-selected');
+            } else {
+                card.classList.remove('is-selected');
+            }
+        });
+    }
+
+    // When clicking a perfume card
+    function selectPerfumeCard(perfumeId) {
+        const card = document.querySelector(`.product-gift-card[data-perfume-id="${perfumeId}"]`);
+        if (card) {
+            const radio = card.querySelector('.perfume-radio');
+            if (radio) {
+                radio.checked = true;
+                updateSelectedCardsVisuals();
+            }
+        }
+    }
+
+    // When changing perfume grade (أصلي / ماستر)
+    function onGradeChanged(grade) {
+        document.querySelectorAll('.product-gift-card[data-has-grades="true"]').forEach(card => {
+            const pid = card.dataset.perfumeId;
+            const priceEl = document.getElementById(`perfume-price-${pid}`);
+            const pillEl = document.getElementById(`perfume-grade-pill-${pid}`);
+            if (grade === 'master') {
+                if (priceEl && card.dataset.priceMaster) priceEl.innerText = card.dataset.priceMaster;
+                if (pillEl) pillEl.innerText = 'ماستر';
+            } else {
+                if (priceEl && card.dataset.priceOriginal) priceEl.innerText = card.dataset.priceOriginal;
+                if (pillEl) pillEl.innerText = 'أصلي';
+            }
+        });
+
+        const descText = document.getElementById('grade-description-text');
+        if (descText) {
+            if (grade === 'master') {
+                descText.innerText = 'جودة ماستر طبق الأصل بنفس ثبات وفوحان العطر وبسعر اقتصادي مناسب';
+            } else {
+                descText.innerText = 'العطر الأصلي 100% المعتمد بعبوته الأصلية المختومة';
+            }
+        }
+    }
+
     function switchGiftingTab(tab) {
         const customContent = document.getElementById('tab-custom-content');
         const bundleContent = document.getElementById('tab-bundle-content');
@@ -401,6 +552,7 @@
             if (selectedBundle) selectedBundle.checked = true;
         }
 
+        updateSelectedCardsVisuals();
         htmx.trigger('#gift-builder-form', 'change');
         if (window.lucide) window.lucide.createIcons();
     }
@@ -409,6 +561,7 @@
         {% if selected_bundle %}
         switchGiftingTab('bundle');
         {% else %}
+        updateSelectedCardsVisuals();
         htmx.trigger('#gift-builder-form', 'change');
         {% endif %}
     });

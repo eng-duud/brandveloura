@@ -613,6 +613,11 @@ def gift_builder_view(request):
     if bundle_id:
         selected_bundle = Product.objects.filter(id=bundle_id, is_active=True).first()
 
+    perfume_id = request.GET.get('perfume_id')
+    selected_perfume = None
+    if perfume_id:
+        selected_perfume = Product.objects.filter(id=perfume_id, is_active=True).first()
+
     perfumes = Product.objects.filter(
         category__category_type='perfumes', is_active=True, stock_quantity__gt=0
     ).order_by('-is_featured', '-is_best_seller')[:30]
@@ -703,6 +708,7 @@ def gift_builder_view(request):
         'accessories': accessories,
         'gift_bundles': gift_bundles,
         'selected_bundle': selected_bundle,
+        'selected_perfume': selected_perfume,
         'wrapping_fee': wrapping_fee,
         'yer_per_sar': yer_per_sar,
     }

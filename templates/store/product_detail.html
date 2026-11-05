@@ -305,16 +305,26 @@
                     {% endif %}
                 </div>
 
-                <!-- WhatsApp Direct Order Link -->
-                <a 
-                    id="whatsapp-inquiry-btn"
-                    href="https://wa.me/{{ store_settings.contact_whatsapp }}?text=مرحباً، أود الطلب: {{ product.name_ar }}" 
-                    target="_blank"
-                    class="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-pink-50 text-slate-800 border border-pink-200 font-medium text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
-                >
-                    <i data-lucide="message-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
-                    <span>طلب عبر واتساب</span>
-                </a>
+                <!-- Action Buttons: WhatsApp & Gift Order -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <a 
+                        id="whatsapp-inquiry-btn"
+                        href="https://wa.me/{{ store_settings.contact_whatsapp }}?text=مرحباً، أود الطلب: {{ product.name_ar }}" 
+                        target="_blank"
+                        class="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-pink-50 text-slate-800 border border-pink-200 font-medium text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                    >
+                        <i data-lucide="message-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
+                        <span>طلب عبر واتساب</span>
+                    </a>
+
+                    <a 
+                        href="{% url 'store:gift_builder' %}?perfume_id={{ product.id }}"
+                        class="w-full py-2.5 px-4 rounded-xl bg-pink-50/60 hover:bg-brand-50 text-brand-700 border border-pink-200 font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                    >
+                        <i data-lucide="gift" class="w-3.5 h-3.5 text-brand-600"></i>
+                        <span>تجهيز كباقة إهداء</span>
+                    </a>
+                </div>
             </form>
 
             <!-- Compact Product Information -->
