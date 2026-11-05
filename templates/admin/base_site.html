@@ -11,20 +11,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Pacifico&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Readex+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Custom Luxury Admin Theme -->
 <link rel="stylesheet" href="{% static 'css/admin_theme.css' %}">
-<!-- Ensure Navigation Sidebar is Closed by Default -->
 <script>
+    // Make Django Admin navigation sidebar closed/collapsed by default
     (function() {
-        if (localStorage.getItem('django.admin.navSidebarIsOpen') === null || !sessionStorage.getItem('django.admin.sidebarInteracted')) {
-            localStorage.setItem('django.admin.navSidebarIsOpen', 'false');
+        var key = 'django.admin.navSidebarIsOpen';
+        var sessionFlag = 'bv_nav_sidebar_default_set';
+        if (!sessionStorage.getItem(sessionFlag)) {
+            localStorage.setItem(key, 'false');
+            sessionStorage.setItem(sessionFlag, '1');
+        } else if (localStorage.getItem(key) === null) {
+            localStorage.setItem(key, 'false');
         }
-        document.addEventListener('DOMContentLoaded', function() {
-            const toggleBtn = document.getElementById('toggle-nav-sidebar');
-            if (toggleBtn) {
-                toggleBtn.addEventListener('click', function() {
-                    sessionStorage.setItem('django.admin.sidebarInteracted', 'true');
-                });
-            }
-        });
     })();
 </script>
 {% endblock %}

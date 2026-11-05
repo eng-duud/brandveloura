@@ -538,4 +538,96 @@ fieldset.collapse h2 a {
     color: #ffffff !important;
 }
 
+/* ==============================================================================
+   Navigation Sidebar & Collapsible Modernization
+   ============================================================================== */
+.toggle-nav-sidebar {
+    background: #ffffff !important;
+    border: 1px solid var(--bv-border) !important;
+    color: var(--bv-primary) !important;
+    width: 24px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.03) !important;
+}
+
+[dir="rtl"] .toggle-nav-sidebar {
+    border-left: 1px solid var(--bv-border) !important;
+    border-right: 0 !important;
+}
+
+.toggle-nav-sidebar:hover,
+.toggle-nav-sidebar:focus {
+    background: var(--bv-primary-light) !important;
+    color: var(--bv-primary-hover) !important;
+}
+
+#nav-sidebar {
+    background: #ffffff !important;
+    border-color: var(--bv-border) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+}
+
+#nav-filter {
+    border: 1px solid var(--bv-border) !important;
+    border-radius: var(--bv-radius-sm) !important;
+    padding: 6px 12px !important;
+    font-family: var(--bv-font-sans) !important;
+    background: #fdfbfc !important;
+}
+
+#nav-filter:focus {
+    border-color: var(--bv-primary) !important;
+    outline: none !important;
+    background: #ffffff !important;
+    box-shadow: 0 0 0 3px rgba(190, 18, 63, 0.1) !important;
+}
+
+/* ==============================================================================
+   Select2 Autocomplete Widget (for Category & Search)
+   ============================================================================== */
+.select2-container--admin-autocomplete .select2-selection--single {
+    border: 1px solid var(--bv-border) !important;
+    border-radius: var(--bv-radius-sm) !important;
+    height: 40px !important;
+    padding: 5px 10px !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+}
+
+.select2-container--admin-autocomplete .select2-selection--single .select2-selection__rendered {
+    line-height: 28px !important;
+    color: var(--bv-text) !important;
+    font-family: var(--bv-font-sans) !important;
+    font-weight: 600 !important;
+}
+
+.select2-container--admin-autocomplete .select2-selection--single .select2-selection__arrow {
+    height: 38px !important;
+}
+
+.select2-container--admin-autocomplete.select2-container--focus .select2-selection--single,
+.select2-container--admin-autocomplete.select2-container--open .select2-selection--single {
+    border-color: var(--bv-primary) !important;
+    box-shadow: 0 0 0 3px rgba(190, 18, 63, 0.1) !important;
+}
+
+.select2-dropdown {
+    border: 1px solid var(--bv-border) !important;
+    border-radius: var(--bv-radius-sm) !important;
+    box-shadow: var(--bv-shadow) !important;
+    font-family: var(--bv-font-sans) !important;
+}
+
+.select2-results__option {
+    padding: 8px 12px !important;
+    font-size: 0.88rem !important;
+}
+
+.select2-results__option--highlighted {
+    background-color: var(--bv-primary) !important;
+    color: #ffffff !important;
+}
+
+
 

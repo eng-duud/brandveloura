@@ -1,8 +1,10 @@
 from decimal import Decimal
 import urllib.parse
+import uuid
 from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Sum
+from django.urls import reverse
 from django.contrib.auth.models import Group, User
 from django.contrib.auth.admin import UserAdmin as DefaultUserAdmin
 
@@ -91,21 +93,81 @@ except Exception:
 
 
 # ==============================================================================
-# 2. إدارة صور ومنتجات المتجر (Products)
+# 2. أقسام وفئات المتجر (Categories)
+# ==============================================================================
+
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ['image_preview', 'name_ar', 'category_type_badge', 'products_count', 'is_featured', 'is_active', 'display_order']
+    list_editable = ['is_featured', 'is_active', 'display_order']
+    search_fields = ['name_ar', 'name_en']
+    list_filter = ['category_type', 'is_featured', 'is_active']
+    prepopulated_fields = {'slug': ('name_ar',)}
+    list_per_page = 25
+
+    fieldsets = (
+        ('معلومات القسم الأساسية', {
+            'description': 'أدخل اسم وتصنيف القسم وصورته المعروضة في شريط الأقسام والصفحة الرئيسية',
+            'fields': (('name_ar', 'category_type'), 'image', ('is_featured', 'is_active', 'display_order'))
+        }),
+        ('بيانات إضافية ورابط SEO (اختياري)', {
+            'classes': ('collapse',),
+            'description': 'يتم إنشاء الرابط تلقائياً من الاسم، يمكنك ترك هذه الحقول فارغة إن أردت',
+            'fields': (('name_en', 'slug'), 'description', 'image_url_fallback')
+        }),
+    )
+
+    def image_preview(self, obj):
+        return format_html(
+            '<img src="{}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 8px; border: 1.5px solid #fecdd3;" />',
+            obj.get_image_url
+        )
+    image_preview.short_description = 'الصورة'
+
+    def category_type_badge(self, obj):
+        types_map = {
+            'perfumes': ('عطور فاخرة', '#be185d', '#fdf2f8'),
+            'watches': ('ساعات راقية', '#0369a1', '#f0f9ff'),
+            'cosmetics': ('مستحضرات تجميل', '#b45309', '#fffbeb'),
+            'care': ('عناية بالبشرة', '#047857', '#ecfdf5'),
+            'bundles': ('باقات هدايا', '#6d28d9', '#f5f3ff'),
+            'general': ('عام', '#475569', '#f8fafc'),
+        }
+        title, color, bg = types_map.get(obj.category_type, ('عام', '#475569', '#f8fafc'))
+        return format_html(
+            '<span style="background-color: {}; color: {}; border: 1px solid {}; padding: 2px 9px; border-radius: 6px; font-weight: 700; font-size: 11px;">{}</span>',
+            bg, color, color + '33', title
+        )
+    category_type_badge.short_description = 'نوع القسم'
+
+    def products_count(self, obj):
+        count = obj.products.count()
+        url = reverse('admin:store_product_changelist') + f"?category__id__exact={obj.id}"
+        return format_html(
+            '<a href="{}" style="font-weight: 700; color: #be123f; text-decoration: underline;" title="عرض منتجات هذا القسم">{} منتج ↗</a>',
+            url, count
+        )
+    products_count.short_description = 'المنتجات التابعة'
+
+
+# ==============================================================================
+# 3. إدارة صور ومنتجات المتجر الفاخرة (Products)
 # ==============================================================================
 
 class ProductImageInline(admin.TabularInline):
     """معرض صور المنتج المتعددة بطريقة نظيفة ومبسطة"""
     model = ProductImage
     extra = 1
-    fields = ['image', 'is_primary', 'preview', 'display_order']
+    fields = ['image', 'image_url_fallback', 'is_primary', 'preview', 'display_order']
     readonly_fields = ['preview']
 
     def preview(self, instance):
-        if instance and instance.get_image_url:
+        if instance and instance.pk and instance.get_image_url:
+            badge = '<span style="display:block; font-size:10px; color:#be123f; font-weight:700; margin-top:2px;">⭐ رئيسية</span>' if instance.is_primary else ''
             return format_html(
-                '<img src="{}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1.5px solid #fed7aa;" />',
-                instance.get_image_url
+                '<div style="text-align: center;"><img src="{}" style="width: 52px; height: 52px; object-fit: cover; border-radius: 8px; border: 1.5px solid #fecdd3; box-shadow: 0 2px 6px rgba(0,0,0,0.06);" />{}</div>',
+                instance.get_image_url,
+                format_html(badge)
             )
         return '—'
     preview.short_description = 'معاينة'
@@ -113,39 +175,92 @@ class ProductImageInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ['image_preview', 'name_ar', 'brand_name', 'category', 'formatted_price_yer', 'formatted_price_sar', 'grades_badge', 'stock_badge', 'is_featured', 'is_active']
-    list_filter = ['category', 'brand_name', 'is_featured', 'is_active', 'has_grades']
+    list_display = [
+        'image_preview', 'name_ar', 'brand_name_badge', 'category', 
+        'formatted_price_yer', 'formatted_price_sar', 'grades_badge', 
+        'stock_badge', 'is_featured', 'is_new', 'is_active'
+    ]
+    list_filter = [
+        'is_active', 'is_featured', 'is_new', 'is_best_seller', 
+        'has_grades', 'category', 'brand_name'
+    ]
     search_fields = ['name_ar', 'name_en', 'brand_name', 'sku']
-    search_help_text = 'البحث باسم المنتج بالعربي أو الإنجليزي، الماركة، أو رمز SKU'
+    search_help_text = 'البحث باسم المنتج بالعربي أو الإنجليزي، الماركة (Brand)، أو رمز SKU'
     date_hierarchy = 'created_at'
     list_per_page = 25
-    list_editable = ['is_featured', 'is_active']
+    list_editable = ['is_featured', 'is_new', 'is_active']
+    autocomplete_fields = ['category']
+    prepopulated_fields = {'slug': ('name_ar',)}
+    readonly_fields = ['currency_preview_info', 'created_at', 'updated_at']
     inlines = [ProductImageInline]
+    actions = [
+        'duplicate_products',
+        'make_active',
+        'make_inactive',
+        'make_featured',
+        'unmake_featured',
+        'mark_as_new',
+        'unmark_as_new',
+        'mark_out_of_stock'
+    ]
 
     fieldsets = (
-        ('المعلومات الأساسية للمنتج', {
-            'description': 'أدخل اسم المنتج والماركة، واختر القسم المناسب لعرضه للعملاء',
-            'fields': (('name_ar', 'brand_name'), 'category', 'description')
+        ('1. القسم والماركة وهوية المنتج الفاخر', {
+            'description': 'حدد القسم الرئيسي للمنتج (مع بحث ذكي وسريع)، واكتب اسم الماركة والاسم التجاري المعروض للعملاء في واجهة المتجر.',
+            'fields': (
+                ('category', 'brand_name'),
+                ('name_ar', 'name_en'),
+                'description',
+            )
         }),
-        ('التسعير والمخزون', {
-            'description': 'حدد السعر بالريال اليمني، وسيتم احتساب المعادل بالريال السعودي تلقائياً بناءً على سعر الصرف اليومي',
-            'fields': (('price_yer', 'compare_at_price_yer'), 'stock_quantity')
+        ('2. التسعير الأساسي، التخفيض، والمخزون', {
+            'description': 'حدد السعر بالريال اليمني (العملة الأساسية). يتم تحويل السعر للريال السعودي للعملاء والمغتربين تلقائياً وفق سعر الصرف اليومي المحدد في إعدادات المتجر.',
+            'fields': (
+                ('price_yer', 'compare_at_price_yer'),
+                'stock_quantity',
+                'currency_preview_info',
+            )
         }),
-        ('خيارات العطور: أصلي 100% وماستر طبق الأصل (خاص بالعطور فقط)', {
+        ('3. خيارات درجات العطور (أصلي 100% وماستر طبق الأصل - اختياري)', {
             'classes': ('collapse',),
-            'description': 'خاص بالعطور فقط: فعّل هذا الخيار وحدد سعري الأصلي والماستر إذا كان العطر يتوفر بالدرجتين ليختار العميل منها في صفحة المنتج',
-            'fields': ('has_grades', ('price_original_yer', 'price_master_yer'))
+            'description': 'خاص بالعطور الفاخرة: إذا كان المنتج يتوفر بخياري (أصلي 100% وماستر كواليتي طبق الأصل)، فعّل هذا الخيار وحدد سعر كل درجة لتمكين العميل من الاختيار بينهما في صفحة المنتج.',
+            'fields': (
+                'has_grades',
+                ('price_original_yer', 'price_master_yer'),
+            )
         }),
-        ('خيارات العرض والترويج في المتجر', {
-            'description': 'تحكم في ظهور المنتج في واجهة المتجر وأقسام العروض',
-            'fields': (('is_active', 'is_featured'), ('is_best_seller', 'is_new'))
+        ('4. إعدادات العرض والترويج والشارات في المتجر', {
+            'description': 'تحكم في ظهور المنتج في واجهة المتجر، وإبرازه في قسم المميز، الأكثر مبيعاً، أو قسم وصل حديثاً.',
+            'fields': (
+                ('is_active', 'is_featured'),
+                ('is_new', 'is_best_seller'),
+            )
         }),
-        ('بيانات إضافية ورابط SEO (اختياري - يتم إنشاؤه تلقائياً)', {
+        ('5. رمز التخزين ورابط المتجر (SKU & SEO)', {
             'classes': ('collapse',),
-            'description': 'هذه الحقول اختيارية تماماً، يتم إنشاء رابط المنتج تلقائياً إن تركته فارغاً',
-            'fields': (('name_en', 'sku'), 'slug', 'specifications')
+            'description': 'رمز التخزين التعريفي ورابط المنتج (Slug) يتم توليده تلقائياً من اسم المنتج أو يمكنك تخصيصه.',
+            'fields': (
+                ('sku', 'slug'),
+            )
+        }),
+        ('6. المواصفات الفنية التفصيلية (JSON Specifications)', {
+            'classes': ('collapse',),
+            'description': 'مواصفات إضافية كالهرم العطري أو مقاس الساعة. يمكنك تركها أو كتابة كائن JSON مثل: {"حجم العبوة": "100 مل", "التركيز": "Eau de Parfum", "الجنس": "للجنسين"}',
+            'fields': (
+                'specifications',
+            )
         }),
     )
+
+    def brand_name_badge(self, obj):
+        if obj.brand_name:
+            return format_html(
+                '<span style="background: #fdf2f8; color: #be123f; border: 1px solid #fecdd3; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">{}</span>',
+                obj.brand_name
+            )
+        return format_html('<span style="color: #94a3b8; font-size: 11px;">—</span>')
+    brand_name_badge.short_description = 'الماركة'
+    brand_name_badge.admin_order_field = 'brand_name'
 
     def stock_badge(self, obj):
         if obj.stock_quantity <= 0:
@@ -154,6 +269,7 @@ class ProductAdmin(admin.ModelAdmin):
             return format_html('<span style="background-color: #fef3c7; color: #d97706; border: 1px solid #fcd34d; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">متبقي {} فقط!</span>', obj.stock_quantity)
         return format_html('<span style="color: #059669; font-weight: bold; font-size: 11px;">{} قطعة</span>', obj.stock_quantity)
     stock_badge.short_description = 'المخزون'
+    stock_badge.admin_order_field = 'stock_quantity'
 
     def grades_badge(self, obj):
         if obj.has_grades:
@@ -163,24 +279,133 @@ class ProductAdmin(admin.ModelAdmin):
                 '<span style="background-color: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: bold;">أصلي: {} | ماستر: {}</span>',
                 orig, mast
             )
-        return '—'
+        return format_html('<span style="color: #94a3b8; font-size: 11px;">—</span>')
     grades_badge.short_description = 'أصلي / ماستر'
 
     def image_preview(self, obj):
         url = obj.primary_image_url
         return format_html(
-            '<img src="{}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 8px; border: 1px solid #fecdd3;" />',
+            '<img src="{}" style="width: 46px; height: 46px; object-fit: cover; border-radius: 8px; border: 1.5px solid #fecdd3; box-shadow: 0 2px 5px rgba(0,0,0,0.05);" />',
             url
         )
     image_preview.short_description = 'الصورة'
 
     def formatted_price_yer(self, obj):
-        return f"{obj.price_yer:,.0f} ر.ي"
+        return format_html('<span style="font-weight: 700; color: #0f172a;">{}</span>', f"{obj.price_yer:,.0f} ر.ي")
     formatted_price_yer.short_description = 'السعر (يمني)'
+    formatted_price_yer.admin_order_field = 'price_yer'
 
     def formatted_price_sar(self, obj):
-        return format_html('<span style="color: #be123c; font-weight: 600;">{} ر.س</span>', obj.price_sar)
+        return format_html('<span style="color: #be123f; font-weight: 700;">{} ر.س</span>', obj.price_sar)
     formatted_price_sar.short_description = 'المعادل (سعودي)'
+
+    def currency_preview_info(self, obj):
+        if not obj or not obj.pk or not obj.price_yer:
+            return "احفظ المنتج لحساب المعادل بالريال السعودي ونسب الخصم آلياً."
+        settings_obj = StoreSettings.get_settings()
+        rate = settings_obj.yer_per_sar or Decimal('530')
+        sar_price = obj.price_sar
+        html = f"""
+        <div style="background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 10px; padding: 12px 16px; margin-top: 6px; font-size: 13px; line-height: 1.6;">
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
+                <div>
+                    <span style="color: #64748b; font-size: 11px; display: block;">السعر الحالي بالريال اليمني:</span>
+                    <strong style="color: #0f172a; font-size: 15px;">{obj.price_yer:,.0f} ر.ي</strong>
+                </div>
+                <div>
+                    <span style="color: #64748b; font-size: 11px; display: block;">المعادل للعميل بالريال السعودي:</span>
+                    <strong style="color: #be123f; font-size: 15px;">{sar_price} ر.س</strong>
+                    <span style="color: #64748b; font-size: 11px;">(سعر الصرف: 1 ر.س = {rate} ر.ي)</span>
+                </div>
+        """
+        if obj.compare_at_price_yer and obj.compare_at_price_yer > obj.price_yer:
+            discount = obj.discount_percentage
+            compare_sar = obj.compare_at_price_sar
+            html += f"""
+                <div>
+                    <span style="color: #64748b; font-size: 11px; display: block;">نسبة الخصم المعروضة:</span>
+                    <span style="background: #be123f; color: #fff; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 12px;">خصم {discount}%</span>
+                    <span style="color: #64748b; font-size: 11px; text-decoration: line-through;">({obj.compare_at_price_yer:,.0f} ر.ي / {compare_sar} ر.س)</span>
+                </div>
+            """
+        if obj.has_grades:
+            orig_yer = f"{obj.price_original_yer:,.0f}" if obj.price_original_yer else "—"
+            orig_sar = f"{obj.price_original_sar}" if obj.price_original_sar else "—"
+            mast_yer = f"{obj.price_master_yer:,.0f}" if obj.price_master_yer else "—"
+            mast_sar = f"{obj.price_master_sar}" if obj.price_master_sar else "—"
+            html += f"""
+                <div style="width: 100%; border-top: 1px dashed #fecdd3; padding-top: 8px; margin-top: 4px; display: flex; gap: 20px;">
+                    <div>
+                        <strong style="color: #be123f;">الأصلي 100%:</strong> {orig_yer} ر.ي ({orig_sar} ر.س)
+                    </div>
+                    <div>
+                        <strong style="color: #831843;">ماستر كواليتي:</strong> {mast_yer} ر.ي ({mast_sar} ر.س)
+                    </div>
+                </div>
+            """
+        html += "</div></div>"
+        return format_html(html)
+    currency_preview_info.short_description = 'ملخص التسعير وسعر الصرف المباشر'
+
+    @admin.action(description='📋 تكرار المنتج المحدد (عمل نسخة للمنتجات المشابهة)')
+    def duplicate_products(self, request, queryset):
+        count = 0
+        for prod in queryset:
+            images = list(prod.images.all())
+            prod.pk = None
+            prod.id = None
+            prod.name_ar = f"{prod.name_ar} (نسخة)"
+            if prod.name_en:
+                prod.name_en = f"{prod.name_en} (Copy)"
+            if prod.sku:
+                prod.sku = f"{prod.sku}-COPY-{uuid.uuid4().hex[:4].upper()}"
+            prod.slug = ""  # auto-generated on save
+            prod.save()
+            for img in images:
+                ProductImage.objects.create(
+                    product=prod,
+                    image=img.image,
+                    image_url_fallback=img.image_url_fallback,
+                    is_primary=img.is_primary,
+                    display_order=img.display_order
+                )
+            count += 1
+        self.message_user(request, f"تم بنجاح تكرار {count} منتج مع كامل صورهم وتفاصيلهم.")
+
+    @admin.action(description='✅ تفعيل وعرض المنتجات المحددة في المتجر')
+    def make_active(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f"تم تفعيل {updated} منتج بنجاح.")
+
+    @admin.action(description='🚫 إلغاء تفعيل وإخفاء المنتجات المحددة')
+    def make_inactive(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f"تم إخفاء {updated} منتج من واجهة المتجر.")
+
+    @admin.action(description='⭐ تمييز في الصفحة الرئيسية (Featured)')
+    def make_featured(self, request, queryset):
+        updated = queryset.update(is_featured=True)
+        self.message_user(request, f"تم تمييز {updated} منتج في الصفحة الرئيسية.")
+
+    @admin.action(description='✖ إلغاء التمييز من الصفحة الرئيسية')
+    def unmake_featured(self, request, queryset):
+        updated = queryset.update(is_featured=False)
+        self.message_user(request, f"تم إلغاء تمييز {updated} منتج.")
+
+    @admin.action(description='✨ إضافة لشارة "وصل حديثاً"')
+    def mark_as_new(self, request, queryset):
+        updated = queryset.update(is_new=True)
+        self.message_user(request, f"تمت إضافة شارة وصل حديثاً لـ {updated} منتج.")
+
+    @admin.action(description='✖ إزالة شارة "وصل حديثاً"')
+    def unmark_as_new(self, request, queryset):
+        updated = queryset.update(is_new=False)
+        self.message_user(request, f"تمت إزالة شارة وصل حديثاً عن {updated} منتج.")
+
+    @admin.action(description='⚠️ تحديد كـ نفد من المخزون (المخزون = 0)')
+    def mark_out_of_stock(self, request, queryset):
+        updated = queryset.update(stock_quantity=0)
+        self.message_user(request, f"تم تحديد المخزون إلى 0 لـ {updated} منتج.")
 
 
 # ==============================================================================
@@ -486,37 +711,6 @@ class ShippingZoneAdmin(admin.ModelAdmin):
     def formatted_fee(self, obj):
         return f"{obj.delivery_fee_yer:,.0f} ر.ي"
     formatted_fee.short_description = 'رسوم التوصيل'
-
-
-# ==============================================================================
-# 7. أقسام وتصنيفات المتجر (Categories)
-# ==============================================================================
-
-@admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['image_preview', 'name_ar', 'category_type', 'is_featured', 'is_active', 'display_order']
-    list_editable = ['is_featured', 'is_active', 'display_order']
-    search_fields = ['name_ar', 'name_en']
-    list_per_page = 25
-
-    fieldsets = (
-        ('معلومات القسم الأساسية', {
-            'description': 'أدخل اسم وتصنيف القسم وصورته المعروضة في واجهة المتجر',
-            'fields': (('name_ar', 'category_type'), 'image', ('is_featured', 'is_active', 'display_order'))
-        }),
-        ('بيانات إضافية ورابط SEO (اختياري)', {
-            'classes': ('collapse',),
-            'description': 'يتم إنشاء الرابط تلقائياً، يمكنك ترك هذه الحقول فارغة',
-            'fields': ('name_en', 'slug', 'description', 'image_url_fallback')
-        }),
-    )
-
-    def image_preview(self, obj):
-        return format_html(
-            '<img src="{}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px;" />',
-            obj.get_image_url
-        )
-    image_preview.short_description = 'الصورة'
 
 
 # ==============================================================================
