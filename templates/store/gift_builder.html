@@ -3,14 +3,14 @@
 {% block title %}خدمة الإهداء | {{ store_settings.store_name }}{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
 
     <!-- Breadcrumb & Header -->
-    <div class="mb-6 pb-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div class="mb-6 pb-4 border-b border-pink-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
             <nav class="flex items-center gap-1.5 text-[11px] text-slate-400 mb-1">
-                <a href="{% url 'store:home' %}" class="hover:text-slate-900 transition">الرئيسية</a>
-                <i data-lucide="chevron-left" class="w-3 h-3 text-slate-300"></i>
+                <a href="{% url 'store:home' %}" class="hover:text-brand-600 transition">الرئيسية</a>
+                <i data-lucide="chevron-left" class="w-3 h-3 text-pink-300"></i>
                 <span class="text-slate-900 font-bold">خدمة الإهداء</span>
             </nav>
             <h1 class="text-xl sm:text-2xl font-bold text-slate-900">
@@ -19,7 +19,7 @@
             <p class="text-xs sm:text-sm text-slate-500 mt-0.5">اختر مكونات الباقة أو حدد إحدى الباقات الجاهزة مع خيارات التغليف وبطاقة الإهداء.</p>
         </div>
         
-        <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs text-slate-600 self-start sm:self-auto">
+        <div class="flex items-center gap-2 bg-pink-50/60 border border-pink-200 px-3 py-1.5 rounded-xl text-xs text-slate-700 self-start sm:self-auto">
             <span>توصيل للمحافظات</span>
             <span>•</span>
             <span>دفع باليمني والسعودي</span>
@@ -28,22 +28,30 @@
         </div>
     </div>
 
-    <!-- Main Container -->
+    <!-- Main Container Form -->
     <form id="gift-builder-form" method="POST" action="{% url 'store:gift_builder' %}" class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         {% csrf_token %}
 
         <!-- Right / Main Column: Steps & Selection (8 cols) -->
         <div class="lg:col-span-8 space-y-5">
 
-            <!-- Selection Mode Tabs: Ready Bundles vs Custom Box -->
-            <div class="bg-slate-100 rounded-xl p-1 flex items-center gap-1">
-                <button type="button" id="tab-custom-btn" onclick="switchGiftingTab('custom')" 
-                        class="flex-1 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 bg-white text-slate-900 shadow-xs cursor-pointer">
+            <!-- Selection Mode Tabs: Custom Box vs Ready Bundles -->
+            <div class="bg-white rounded-2xl p-1.5 border border-pink-200 shadow-2xs flex items-center gap-1.5">
+                <button 
+                    type="button" 
+                    id="tab-custom-btn" 
+                    onclick="switchGiftingTab('custom')" 
+                    class="flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 bg-brand-500 text-white shadow-2xs cursor-pointer"
+                >
                     <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
                     <span>باقة مخصصة (عطر + ملحق)</span>
                 </button>
-                <button type="button" id="tab-bundle-btn" onclick="switchGiftingTab('bundle')" 
-                        class="flex-1 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 text-slate-600 hover:text-slate-900 cursor-pointer">
+                <button 
+                    type="button" 
+                    id="tab-bundle-btn" 
+                    onclick="switchGiftingTab('bundle')" 
+                    class="flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 text-slate-600 hover:text-slate-900 cursor-pointer"
+                >
                     <i data-lucide="package" class="w-3.5 h-3.5"></i>
                     <span>باقات جاهزة</span>
                 </button>
@@ -53,31 +61,35 @@
             <div id="tab-custom-content" class="space-y-5">
 
                 <!-- Step 1: Choose Primary Perfume -->
-                <div class="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 space-y-4">
-                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="bg-white rounded-2xl p-4 sm:p-5 border border-pink-200 shadow-2xs space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-pink-100">
                         <div class="flex items-center gap-2">
-                            <span class="w-6 h-6 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center">1</span>
+                            <span class="w-6 h-6 rounded-full bg-brand-500 text-white font-bold text-xs flex items-center justify-center font-num">1</span>
                             <h3 class="font-bold text-slate-900 text-sm">العطر الأساسي</h3>
                         </div>
-                        <span class="text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded">إلزامي</span>
+                        <span class="text-[11px] text-brand-700 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-200 font-bold">إلزامي</span>
                     </div>
 
                     <!-- Perfumes Selection Grid -->
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[360px] overflow-y-auto p-1 scrollbar-thin">
                         {% for perfume in perfumes %}
-                        <label class="group relative flex flex-col justify-between p-2.5 rounded-xl border border-slate-200 hover:border-slate-400 bg-white cursor-pointer transition has-checked:border-slate-900 has-checked:ring-1 has-checked:ring-slate-900">
-                            <input type="radio" name="perfume_id" value="{{ perfume.id }}" 
-                                   {% if forloop.first and not selected_bundle %}checked{% endif %}
-                                   class="sr-only perfume-radio"
-                                   hx-post="{% url 'store:gift_calculate' %}"
-                                   hx-include="#gift-builder-form"
-                                   hx-target="#gift-summary-card">
+                        <label class="group relative flex flex-col justify-between p-2.5 rounded-xl border border-pink-200 hover:border-brand-400 bg-white cursor-pointer transition has-checked:border-brand-500 has-checked:ring-1 has-checked:ring-brand-500 shadow-2xs">
+                            <input 
+                                type="radio" 
+                                name="perfume_id" 
+                                value="{{ perfume.id }}" 
+                                {% if forloop.first and not selected_bundle %}checked{% endif %}
+                                class="sr-only perfume-radio"
+                                hx-post="{% url 'store:gift_calculate' %}"
+                                hx-include="#gift-builder-form"
+                                hx-target="#gift-summary-card"
+                            >
                             
-                            <div class="aspect-square rounded-lg bg-slate-50 p-2 mb-2 flex items-center justify-center overflow-hidden border border-slate-100">
+                            <div class="aspect-square rounded-lg bg-pink-50/30 p-2 mb-2 flex items-center justify-center overflow-hidden border border-pink-100">
                                 {% if perfume.primary_image_url %}
                                 <img src="{{ perfume.primary_image_url }}" alt="{{ perfume.name_ar }}" class="max-h-full max-w-full object-contain">
                                 {% else %}
-                                <i data-lucide="package" class="w-6 h-6 text-slate-300"></i>
+                                <i data-lucide="package" class="w-6 h-6 text-pink-300"></i>
                                 {% endif %}
                             </div>
 
@@ -89,7 +101,7 @@
                                 </p>
                             </div>
 
-                            <div class="absolute top-2 left-2 w-4 h-4 rounded-full border border-slate-300 bg-white flex items-center justify-center group-has-checked:border-slate-900 group-has-checked:bg-slate-900 text-white text-[9px]">
+                            <div class="absolute top-2 left-2 w-4 h-4 rounded-full border border-pink-200 bg-white flex items-center justify-center group-has-checked:border-brand-500 group-has-checked:bg-brand-500 text-white text-[9px]">
                                 <i data-lucide="check" class="w-3 h-3 hidden group-has-checked:block"></i>
                             </div>
                         </label>
@@ -97,17 +109,32 @@
                     </div>
 
                     <!-- Perfume Grade Selector: Strict Utilitarian (Original vs Master) -->
-                    <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                        <span class="text-xs font-bold text-slate-700">نوع العطر:</span>
+                    <div class="p-3 rounded-xl bg-pink-50/40 border border-pink-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <span class="text-xs font-bold text-slate-800">نوع العطر:</span>
                         <div class="flex items-center gap-2">
-                            <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white cursor-pointer has-checked:border-slate-900 has-checked:bg-slate-900 has-checked:text-white text-xs font-bold transition">
-                                <input type="radio" name="perfume_grade" value="original" checked class="sr-only"
-                                       hx-post="{% url 'store:gift_calculate' %}" hx-include="#gift-builder-form" hx-target="#gift-summary-card">
+                            <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-pink-200 bg-white cursor-pointer has-checked:border-brand-500 has-checked:bg-brand-500 has-checked:text-white text-xs font-bold transition shadow-2xs">
+                                <input 
+                                    type="radio" 
+                                    name="perfume_grade" 
+                                    value="original" 
+                                    checked 
+                                    class="sr-only"
+                                    hx-post="{% url 'store:gift_calculate' %}" 
+                                    hx-include="#gift-builder-form" 
+                                    hx-target="#gift-summary-card"
+                                >
                                 <span>أصلي</span>
                             </label>
-                            <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white cursor-pointer has-checked:border-slate-900 has-checked:bg-slate-900 has-checked:text-white text-xs font-bold transition">
-                                <input type="radio" name="perfume_grade" value="master" class="sr-only"
-                                       hx-post="{% url 'store:gift_calculate' %}" hx-include="#gift-builder-form" hx-target="#gift-summary-card">
+                            <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-pink-200 bg-white cursor-pointer has-checked:border-brand-500 has-checked:bg-brand-500 has-checked:text-white text-xs font-bold transition shadow-2xs">
+                                <input 
+                                    type="radio" 
+                                    name="perfume_grade" 
+                                    value="master" 
+                                    class="sr-only"
+                                    hx-post="{% url 'store:gift_calculate' %}" 
+                                    hx-include="#gift-builder-form" 
+                                    hx-target="#gift-summary-card"
+                                >
                                 <span>ماستر</span>
                             </label>
                         </div>
@@ -115,39 +142,54 @@
                 </div>
 
                 <!-- Step 2: Choose Accessory (Optional) -->
-                <div class="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 space-y-4">
-                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="bg-white rounded-2xl p-4 sm:p-5 border border-pink-200 shadow-2xs space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-pink-100">
                         <div class="flex items-center gap-2">
-                            <span class="w-6 h-6 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center">2</span>
+                            <span class="w-6 h-6 rounded-full bg-brand-500 text-white font-bold text-xs flex items-center justify-center font-num">2</span>
                             <h3 class="font-bold text-slate-900 text-sm">ملحق إضافي</h3>
                         </div>
-                        <span class="text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded">اختياري</span>
+                        <span class="text-[11px] text-slate-500 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-200 font-bold">اختياري</span>
                     </div>
 
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-h-[280px] overflow-y-auto p-1 scrollbar-thin">
                         <!-- Option: None -->
-                        <label class="group relative flex flex-col justify-center items-center p-3 rounded-xl border border-dashed border-slate-200 hover:border-slate-400 bg-white cursor-pointer transition text-center has-checked:border-slate-900 has-checked:ring-1 has-checked:ring-slate-900">
-                            <input type="radio" name="accessory_id" value="" checked class="sr-only"
-                                   hx-post="{% url 'store:gift_calculate' %}" hx-include="#gift-builder-form" hx-target="#gift-summary-card">
-                            <div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-1.5">
+                        <label class="group relative flex flex-col justify-center items-center p-3 rounded-xl border border-dashed border-pink-200 hover:border-brand-400 bg-white cursor-pointer transition text-center has-checked:border-brand-500 has-checked:ring-1 has-checked:ring-brand-500 shadow-2xs">
+                            <input 
+                                type="radio" 
+                                name="accessory_id" 
+                                value="" 
+                                checked 
+                                class="sr-only"
+                                hx-post="{% url 'store:gift_calculate' %}" 
+                                hx-include="#gift-builder-form" 
+                                hx-target="#gift-summary-card"
+                            >
+                            <div class="w-9 h-9 rounded-full bg-pink-50 flex items-center justify-center text-pink-400 mb-1.5 border border-pink-100">
                                 <i data-lucide="slash" class="w-4 h-4"></i>
                             </div>
                             <p class="text-xs font-bold text-slate-800">بدون ملحق</p>
-                            <div class="absolute top-2 left-2 w-4 h-4 rounded-full border border-slate-300 bg-white flex items-center justify-center group-has-checked:border-slate-900 group-has-checked:bg-slate-900 text-white text-[9px]">
+                            <div class="absolute top-2 left-2 w-4 h-4 rounded-full border border-pink-200 bg-white flex items-center justify-center group-has-checked:border-brand-500 group-has-checked:bg-brand-500 text-white text-[9px]">
                                 <i data-lucide="check" class="w-3 h-3 hidden group-has-checked:block"></i>
                             </div>
                         </label>
 
                         {% for acc in accessories %}
-                        <label class="group relative flex flex-col justify-between p-2.5 rounded-xl border border-slate-200 hover:border-slate-400 bg-white cursor-pointer transition has-checked:border-slate-900 has-checked:ring-1 has-checked:ring-slate-900">
-                            <input type="radio" name="accessory_id" value="{{ acc.id }}" class="sr-only"
-                                   hx-post="{% url 'store:gift_calculate' %}" hx-include="#gift-builder-form" hx-target="#gift-summary-card">
+                        <label class="group relative flex flex-col justify-between p-2.5 rounded-xl border border-pink-200 hover:border-brand-400 bg-white cursor-pointer transition has-checked:border-brand-500 has-checked:ring-1 has-checked:ring-brand-500 shadow-2xs">
+                            <input 
+                                type="radio" 
+                                name="accessory_id" 
+                                value="{{ acc.id }}" 
+                                class="sr-only"
+                                hx-post="{% url 'store:gift_calculate' %}" 
+                                hx-include="#gift-builder-form" 
+                                hx-target="#gift-summary-card"
+                            >
                             
-                            <div class="aspect-square rounded-lg bg-slate-50 p-2 mb-2 flex items-center justify-center overflow-hidden border border-slate-100">
+                            <div class="aspect-square rounded-lg bg-pink-50/30 p-2 mb-2 flex items-center justify-center overflow-hidden border border-pink-100">
                                 {% if acc.primary_image_url %}
                                 <img src="{{ acc.primary_image_url }}" alt="{{ acc.name_ar }}" class="max-h-full max-w-full object-contain">
                                 {% else %}
-                                <i data-lucide="package" class="w-6 h-6 text-slate-300"></i>
+                                <i data-lucide="package" class="w-6 h-6 text-pink-300"></i>
                                 {% endif %}
                             </div>
 
@@ -159,7 +201,7 @@
                                 </p>
                             </div>
 
-                            <div class="absolute top-2 left-2 w-4 h-4 rounded-full border border-slate-300 bg-white flex items-center justify-center group-has-checked:border-slate-900 group-has-checked:bg-slate-900 text-white text-[9px]">
+                            <div class="absolute top-2 left-2 w-4 h-4 rounded-full border border-pink-200 bg-white flex items-center justify-center group-has-checked:border-brand-500 group-has-checked:bg-brand-500 text-white text-[9px]">
                                 <i data-lucide="check" class="w-3 h-3 hidden group-has-checked:block"></i>
                             </div>
                         </label>
@@ -171,119 +213,138 @@
 
             <!-- TAB 2: READY BUNDLES -->
             <div id="tab-bundle-content" class="hidden space-y-4">
-                <div class="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 space-y-3">
-                    <div class="pb-2 border-b border-slate-100">
-                        <h3 class="font-bold text-slate-900 text-sm">الباقات الجاهزة</h3>
-                        <p class="text-xs text-slate-500">باقات منسقة تشمل المنتجات والتغليف وبطاقة الإهداء</p>
+                <div class="bg-white rounded-2xl p-4 sm:p-5 border border-pink-200 shadow-2xs space-y-3">
+                    <div class="pb-2 border-b border-pink-100">
+                        <h3 class="font-bold text-slate-900 text-sm">الباقات الجاهزة المنسقة</h3>
+                        <p class="text-xs text-slate-500">باقات تشمل المنتجات الفاخرة والتغليف وبطاقة الإهداء</p>
                     </div>
 
                     {% if gift_bundles %}
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {% for bundle in gift_bundles %}
-                        <label class="group relative flex flex-col justify-between p-3.5 rounded-xl border border-slate-200 hover:border-slate-400 bg-white cursor-pointer transition has-checked:border-slate-900 has-checked:ring-1 has-checked:ring-slate-900">
-                            <input type="radio" name="bundle_id" value="{{ bundle.id }}" 
-                                   {% if selected_bundle and selected_bundle.id == bundle.id %}checked{% endif %}
-                                   class="sr-only bundle-radio"
-                                   hx-post="{% url 'store:gift_calculate' %}"
-                                   hx-include="#gift-builder-form"
-                                   hx-target="#gift-summary-card">
+                        <label class="group relative flex flex-col justify-between p-3.5 rounded-2xl border border-pink-200 hover:border-brand-400 bg-white cursor-pointer transition has-checked:border-brand-500 has-checked:ring-1 has-checked:ring-brand-500 shadow-2xs">
+                            <input 
+                                type="radio" 
+                                name="bundle_id" 
+                                value="{{ bundle.id }}" 
+                                {% if selected_bundle and selected_bundle.id == bundle.id %}checked{% endif %}
+                                class="sr-only bundle-radio"
+                                hx-post="{% url 'store:gift_calculate' %}"
+                                hx-include="#gift-builder-form"
+                                hx-target="#gift-summary-card"
+                            >
                             
-                            <div class="aspect-4/3 rounded-lg bg-slate-50 p-2 mb-2.5 flex items-center justify-center overflow-hidden border border-slate-100 relative">
+                            <div class="aspect-4/3 rounded-xl bg-pink-50/30 p-2 mb-2.5 flex items-center justify-center overflow-hidden border border-pink-100 relative">
                                 {% if bundle.primary_image_url %}
                                 <img src="{{ bundle.primary_image_url }}" alt="{{ bundle.name_ar }}" class="max-h-full max-w-full object-contain">
                                 {% else %}
-                                <i data-lucide="package" class="w-8 h-8 text-slate-300"></i>
+                                <i data-lucide="package" class="w-8 h-8 text-pink-300"></i>
                                 {% endif %}
-                                <span class="absolute top-2 right-2 px-2 py-0.5 rounded bg-slate-900/80 text-white text-[10px] font-bold">باقة جاهزة</span>
+                                <span class="absolute top-2 right-2 px-2 py-0.5 rounded-lg bg-brand-500 text-white text-[10px] font-bold shadow-xs">باقة جاهزة</span>
                             </div>
 
                             <div class="space-y-1">
                                 <h4 class="font-bold text-slate-900 text-xs sm:text-sm">{{ bundle.name_ar }}</h4>
                                 <p class="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">{{ bundle.description|striptags }}</p>
                                 
-                                <div class="pt-2 flex items-baseline justify-between border-t border-slate-100">
+                                <div class="pt-2 flex items-baseline justify-between border-t border-pink-100">
                                     <div>
                                         <span class="text-sm font-black text-slate-900 font-num">{{ bundle.price_yer|floatformat:0 }}</span>
                                         <span class="text-xs text-slate-600 mr-1">ر.ي</span>
                                     </div>
-                                    <div class="text-[11px] font-bold text-emerald-700">
+                                    <div class="text-[11px] font-bold text-emerald-700 font-num">
                                         {{ bundle.price_sar }} ر.س
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="absolute top-3 left-3 w-4 h-4 rounded-full border border-slate-300 bg-white flex items-center justify-center group-has-checked:border-slate-900 group-has-checked:bg-slate-900 text-white text-[10px]">
+                            <div class="absolute top-3 left-3 w-4 h-4 rounded-full border border-pink-200 bg-white flex items-center justify-center group-has-checked:border-brand-500 group-has-checked:bg-brand-500 text-white text-[10px]">
                                 <i data-lucide="check" class="w-3 h-3 hidden group-has-checked:block"></i>
                             </div>
                         </label>
                         {% endfor %}
                     </div>
                     {% else %}
-                    <div class="p-6 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                        <p class="text-xs text-slate-500">لا توجد باقات جاهزة حالياً، يرجى استخدام باقة مخصصة</p>
+                    <div class="p-6 text-center bg-pink-50/30 rounded-2xl border border-dashed border-pink-200">
+                        <p class="text-xs text-slate-500">لا توجد باقات جاهزة حالياً، يرجى تجهيز باقة مخصصة أعلاه</p>
                     </div>
                     {% endif %}
                 </div>
             </div>
 
-            <!-- Step 3: Recipient & Greeting Card -->
-            <div class="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 space-y-4">
-                <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
-                    <span class="w-6 h-6 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center">3</span>
-                    <h3 class="font-bold text-slate-900 text-sm">بيانات المستلم وبطاقة الإهداء</h3>
+            <!-- Step 3: Greeting Card & Presentation -->
+            <div class="bg-white rounded-2xl p-4 sm:p-5 border border-pink-200 shadow-2xs space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-pink-100">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-brand-500 text-white font-bold text-xs flex items-center justify-center font-num">3</span>
+                        <h3 class="font-bold text-slate-900 text-sm">بطاقة الإهداء والتغليف</h3>
+                    </div>
+                    <span class="text-[11px] text-slate-500">تطبع داخل ظرف مغلق مع الباقة</span>
                 </div>
 
-                <div class="space-y-3">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">اسم المستلم *</label>
-                            <input type="text" name="recipient_name" required placeholder="الاسم الكامل"
-                                   class="w-full h-9 bg-white border border-slate-300 rounded-lg px-3 text-xs text-slate-900 focus:outline-none focus:border-slate-900">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">رقم هاتف المستلم *</label>
-                            <input type="tel" name="recipient_phone" required placeholder="770000000" dir="ltr"
-                                   class="w-full h-9 bg-white border border-slate-300 rounded-lg px-3 text-xs text-slate-900 focus:outline-none focus:border-slate-900 font-num text-right">
-                        </div>
-                    </div>
-
+                <div class="space-y-3.5">
                     <!-- Greeting Card Cardboard -->
-                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
-                        <span class="text-xs font-bold text-slate-800 block">بطاقة الإهداء (مرفقة مع الطلب)</span>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div class="p-3.5 rounded-xl bg-pink-50/30 border border-pink-200 space-y-3 shadow-2xs">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-[11px] font-medium text-slate-600 mb-1">اسم المُهدي (من):</label>
-                                <input type="text" name="gift_card_sender" placeholder="اسمك"
-                                       class="w-full h-8.5 bg-white border border-slate-300 rounded-lg px-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900">
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">اسم المُهدي (من):</label>
+                                <input 
+                                    type="text" 
+                                    name="gift_card_sender" 
+                                    placeholder="اسمك"
+                                    class="w-full h-9 bg-white border border-pink-200 rounded-lg px-2.5 text-xs text-slate-900 focus:outline-none focus:border-brand-500"
+                                >
                             </div>
                             <div>
-                                <label class="block text-[11px] font-medium text-slate-600 mb-1">تاريخ التسليم المفضل:</label>
-                                <input type="date" name="preferred_delivery_date"
-                                       class="w-full h-8.5 bg-white border border-slate-300 rounded-lg px-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900 font-num">
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">اسم المهدى إليه (إلى):</label>
+                                <input 
+                                    type="text" 
+                                    name="gift_card_recipient" 
+                                    placeholder="اسم المستلم"
+                                    class="w-full h-9 bg-white border border-pink-200 rounded-lg px-2.5 text-xs text-slate-900 focus:outline-none focus:border-brand-500"
+                                >
                             </div>
                         </div>
 
                         <div>
-                            <label class="block text-[11px] font-medium text-slate-600 mb-1">نص بطاقة الإهداء:</label>
-                            <textarea name="gift_card_message" rows="2" placeholder="اكتب رسالتك هنا..."
-                                      class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900 resize-none"></textarea>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">نص بطاقة الإهداء:</label>
+                            <textarea 
+                                name="gift_card_message" 
+                                rows="2" 
+                                placeholder="اكتب هنا كلمات الإهداء والتهنئة..."
+                                class="w-full bg-white border border-pink-200 rounded-lg p-2.5 text-xs text-slate-900 focus:outline-none focus:border-brand-500 resize-none"
+                            ></textarea>
                         </div>
                     </div>
 
                     <!-- Luxury Wrapping Checkbox -->
-                    <label class="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200 hover:border-slate-400 cursor-pointer transition">
-                        <div class="flex items-center gap-2">
-                            <input type="checkbox" name="is_luxury_gift_wrapping" value="true" checked
-                                   hx-post="{% url 'store:gift_calculate' %}" hx-include="#gift-builder-form" hx-target="#gift-summary-card"
-                                   class="w-4 h-4 text-slate-900 rounded focus:ring-slate-900 cursor-pointer">
+                    <label class="flex items-center justify-between p-3.5 rounded-xl bg-white border border-pink-200 hover:border-pink-300 cursor-pointer transition shadow-2xs">
+                        <div class="flex items-center gap-2.5">
+                            <input 
+                                type="checkbox" 
+                                name="is_luxury_gift_wrapping" 
+                                value="true" 
+                                checked
+                                hx-post="{% url 'store:gift_calculate' %}" 
+                                hx-include="#gift-builder-form" 
+                                hx-target="#gift-summary-card"
+                                class="w-4 h-4 text-brand-500 rounded focus:ring-brand-500 cursor-pointer"
+                            >
                             <div>
-                                <span class="font-bold text-slate-900 text-xs">إضافة تغليف هدايا</span>
-                                <span class="text-[10px] text-slate-400 block">صندوق هدايا مع شريط وبطاقة إهداء</span>
+                                <span class="font-bold text-slate-900 text-xs block">إضافة تغليف هدايا فاخر</span>
+                                <span class="text-[10px] text-slate-400 block">صندوق هدايا أنيق مع شريط تقديم وبطاقة الإهداء</span>
                             </div>
                         </div>
-                        <span class="text-xs font-bold text-slate-700 font-num shrink-0">+{{ wrapping_fee|floatformat:0 }} ر.ي</span>
+                        <span class="px-2.5 py-1 rounded-full bg-pink-50 text-brand-700 text-xs font-bold font-num border border-pink-200 shrink-0">
+                            +{{ wrapping_fee|floatformat:0 }} ر.ي
+                        </span>
                     </label>
+
+                    <!-- Notice that delivery address is filled in checkout -->
+                    <div class="p-3 rounded-xl bg-pink-50/50 border border-pink-100 flex items-center gap-2 text-xs text-slate-600">
+                        <i data-lucide="info" class="w-4 h-4 text-brand-600 shrink-0"></i>
+                        <span>سيتم تحديد مدينة المستلم في اليمن وعنوان التسليم التفصيلي في خطوة إتمام الطلب التالية.</span>
+                    </div>
                 </div>
             </div>
 
@@ -291,8 +352,8 @@
 
         <!-- Left Column: Sticky Summary (4 cols) -->
         <div class="lg:col-span-4 space-y-4 lg:sticky lg:top-24">
-            <div class="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 space-y-4">
-                <div class="pb-2 border-b border-slate-100">
+            <div class="bg-white rounded-2xl p-4 sm:p-5 border border-pink-200 shadow-2xs space-y-4">
+                <div class="pb-2 border-b border-pink-100">
                     <h3 class="font-bold text-slate-900 text-sm">ملخص الباقة</h3>
                 </div>
 
@@ -300,9 +361,12 @@
                 {% include 'store/partials/gift_builder_summary.html' with total_yer=0 total_sar=0 items_breakdown="" yer_per_sar=yer_per_sar %}
 
                 <!-- Primary CTA Button -->
-                <button type="submit" class="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer">
-                    <span>متابعة إتمام الطلب</span>
-                    <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                <button 
+                    type="submit" 
+                    class="w-full py-3.5 px-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-98"
+                >
+                    <span>متابعة بيانات التوصيل والدفع</span>
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
                 </button>
             </div>
         </div>
@@ -320,24 +384,25 @@
         if (tab === 'custom') {
             customContent.classList.remove('hidden');
             bundleContent.classList.add('hidden');
-            customBtn.className = "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 bg-white text-slate-900 shadow-xs cursor-pointer";
-            bundleBtn.className = "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 text-slate-600 hover:text-slate-900 cursor-pointer";
+            customBtn.className = "flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 bg-brand-500 text-white shadow-2xs cursor-pointer";
+            bundleBtn.className = "flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 text-slate-600 hover:text-slate-900 cursor-pointer";
             
             document.querySelectorAll('.bundle-radio').forEach(r => r.checked = false);
-            const firstPerfume = document.querySelector('.perfume-radio');
-            if (firstPerfume) firstPerfume.checked = true;
+            const selectedPerfume = document.querySelector('.perfume-radio:checked') || document.querySelector('.perfume-radio');
+            if (selectedPerfume) selectedPerfume.checked = true;
         } else {
             bundleContent.classList.remove('hidden');
             customContent.classList.add('hidden');
-            bundleBtn.className = "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 bg-white text-slate-900 shadow-xs cursor-pointer";
-            customBtn.className = "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 text-slate-600 hover:text-slate-900 cursor-pointer";
+            bundleBtn.className = "flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 bg-brand-500 text-white shadow-2xs cursor-pointer";
+            customBtn.className = "flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 text-slate-600 hover:text-slate-900 cursor-pointer";
             
             document.querySelectorAll('.perfume-radio').forEach(r => r.checked = false);
-            const firstBundle = document.querySelector('.bundle-radio');
-            if (firstBundle) firstBundle.checked = true;
+            const selectedBundle = document.querySelector('.bundle-radio:checked') || document.querySelector('.bundle-radio');
+            if (selectedBundle) selectedBundle.checked = true;
         }
 
         htmx.trigger('#gift-builder-form', 'change');
+        if (window.lucide) window.lucide.createIcons();
     }
 
     document.addEventListener('DOMContentLoaded', () => {

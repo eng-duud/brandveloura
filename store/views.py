@@ -564,8 +564,10 @@ def toggle_currency(request):
 
 def get_shipping_fee(request):
     """حساب رسوم الشحن والتغليف عند اختيار المدينة أو خيار الهدية لحظياً عبر HTMX"""
-    city_id = request.GET.get('city_id')
-    is_gift_wrapping = request.GET.get('is_luxury_gift_wrapping') in ['true', '1', 'on']
+    city_id = request.GET.get('shipping_city') or request.GET.get('city_id')
+    order_type = request.GET.get('order_type', 'personal')
+    is_gift = (order_type == 'gift') or (request.GET.get('is_gift') in ['true', '1', 'on'])
+    is_gift_wrapping = (request.GET.get('is_luxury_gift_wrapping') in ['true', '1', 'on']) if is_gift else False
     
     shipping_fee = Decimal('0.00')
     delivery_time = 'خلال 24-48 ساعة'
@@ -575,13 +577,13 @@ def get_shipping_fee(request):
             zone = ShippingZone.objects.get(id=city_id)
             shipping_fee = zone.delivery_fee_yer
             delivery_time = zone.estimated_delivery_time
-        except ShippingZone.DoesNotExist:
+        except (ShippingZone.DoesNotExist, ValueError):
             pass
             
     settings = StoreSettings.get_settings()
     gift_wrapping_fee = settings.gift_wrapping_fee_yer if is_gift_wrapping else Decimal('0.00')
     
-    # حساب الإجمالي الجديد مع الشحن والتغليف الملكي
+    # حساب الإجمالي الجديد مع الشحن والتغليف
     cart = request.session.get('cart', {})
     subtotal_yer = sum(Decimal(str(item.get('price_yer', 0))) * item.get('quantity', 1) for item in cart.values())
     total_yer = subtotal_yer + shipping_fee + gift_wrapping_fee
@@ -799,12 +801,20 @@ def checkout_view(request):
     payment_methods = PaymentAccount.objects.filter(is_active=True).order_by('display_order')
     shipping_zones = ShippingZone.objects.filter(is_active=True).order_by('city_name')
     
+    gift_data = request.session.get('gift_data', {})
+    is_gift_active = bool(gift_data.get('is_gift', False))
+    is_luxury_wrapping_active = is_gift_active and bool(gift_data.get('is_luxury_gift_wrapping', False))
+    gift_wrapping_fee_yer = settings.gift_wrapping_fee_yer if is_luxury_wrapping_active else Decimal('0.00')
+
     default_zone = shipping_zones.first()
     shipping_fee_yer = default_zone.delivery_fee_yer if default_zone else Decimal('0.00')
-    total_yer = subtotal_yer + shipping_fee_yer
+    total_yer = subtotal_yer + shipping_fee_yer + gift_wrapping_fee_yer
     total_sar = round(total_yer / yer_per_sar, 1)
 
     if request.method == 'POST':
+        order_type = request.POST.get('order_type', 'personal')
+        is_gift = (order_type == 'gift') or (request.POST.get('is_gift') in ['true', '1', 'on'])
+
         customer_name = request.POST.get('customer_name', '').strip()
         customer_phone = request.POST.get('customer_phone', '').strip()
         customer_email = request.POST.get('customer_email', '').strip()
@@ -817,18 +827,27 @@ def checkout_view(request):
         customer_notes = request.POST.get('customer_notes', '').strip()
         payment_receipt = request.FILES.get('payment_receipt')
         
-        # 1. تدفق الهدايا
-        is_gift = request.POST.get('is_gift') in ['true', '1', 'on']
-        recipient_name = request.POST.get('recipient_name', '').strip()
-        recipient_phone = request.POST.get('recipient_phone', '').strip()
-        gift_card_sender = request.POST.get('gift_card_sender', '').strip()
-        gift_card_recipient = request.POST.get('gift_card_recipient', '').strip()
-        gift_card_message = request.POST.get('gift_card_message', '').strip()
-        is_luxury_gift_wrapping = request.POST.get('is_luxury_gift_wrapping') in ['true', '1', 'on']
-        preferred_delivery_date = request.POST.get('preferred_delivery_date', '').strip() or None
-        hide_invoice_prices = request.POST.get('hide_invoice_prices') in ['true', '1', 'on']
-        
-        gift_wrapping_fee_yer = settings.gift_wrapping_fee_yer if is_luxury_gift_wrapping else Decimal('0.00')
+        # 1. تدفق ومعالجة بيانات الإهداء بدقة
+        if is_gift:
+            recipient_name = request.POST.get('recipient_name', '').strip()
+            recipient_phone = request.POST.get('recipient_phone', '').strip()
+            gift_card_sender = request.POST.get('gift_card_sender', '').strip() or customer_name
+            gift_card_recipient = request.POST.get('gift_card_recipient', '').strip() or recipient_name
+            gift_card_message = request.POST.get('gift_card_message', '').strip()
+            is_luxury_gift_wrapping = request.POST.get('is_luxury_gift_wrapping') in ['true', '1', 'on']
+            preferred_delivery_date = request.POST.get('preferred_delivery_date', '').strip() or None
+            hide_invoice_prices = request.POST.get('hide_invoice_prices') in ['true', '1', 'on']
+            gift_wrapping_fee_yer = settings.gift_wrapping_fee_yer if is_luxury_gift_wrapping else Decimal('0.00')
+        else:
+            recipient_name = ''
+            recipient_phone = ''
+            gift_card_sender = ''
+            gift_card_recipient = ''
+            gift_card_message = ''
+            is_luxury_gift_wrapping = False
+            preferred_delivery_date = None
+            hide_invoice_prices = False
+            gift_wrapping_fee_yer = Decimal('0.00')
         
         selected_zone = ShippingZone.objects.filter(id=city_id).first()
         city_name = selected_zone.city_name if selected_zone else 'غير محدد'
@@ -960,6 +979,9 @@ def checkout_view(request):
         'items': items,
         'subtotal_yer': subtotal_yer,
         'shipping_fee_yer': shipping_fee_yer,
+        'gift_wrapping_fee_yer': gift_wrapping_fee_yer,
+        'is_gift_active': is_gift_active,
+        'is_luxury_gift_wrapping': is_luxury_wrapping_active,
         'total_yer': total_yer,
         'total_sar': total_sar,
         'payment_methods': payment_methods,

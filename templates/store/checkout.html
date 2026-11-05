@@ -15,14 +15,21 @@
                 <i data-lucide="chevron-left" class="w-3 h-3 text-pink-300"></i>
                 <span class="text-slate-900 font-bold">إتمام الطلب</span>
             </nav>
-            <h1 class="text-xl sm:text-2xl font-bold text-slate-900">إتمام الطلب</h1>
+            <h1 class="text-xl sm:text-2xl font-bold text-slate-900">إتمام الطلب والدفع</h1>
+        </div>
+        <div class="flex items-center gap-2 bg-pink-50/60 border border-pink-200 px-3 py-1.5 rounded-xl text-xs text-slate-700 self-start sm:self-auto">
+            <span>توصيل لكافة المحافظات</span>
+            <span>•</span>
+            <span>دفع باليمني والسعودي</span>
+            <span>•</span>
+            <span>حجب الأسعار في الهدايا</span>
         </div>
     </div>
 
     <form id="checkout-form" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         {% csrf_token %}
 
-        <!-- Left Column: Shipping, Gifting & Payment Dropdown (7 Cols) -->
+        <!-- Left Column: Order Type, Details, Gifting & Payment (7 Cols) -->
         <div class="lg:col-span-7 space-y-4">
             
             {% if not user.is_authenticated %}
@@ -35,242 +42,429 @@
             </div>
             {% endif %}
 
-            <!-- 1. Customer & Shipping Details -->
-            <div class="bg-white rounded-2xl p-4 sm:p-5 border border-pink-200 shadow-2xs space-y-3.5">
-                <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2 pb-2.5 border-b border-pink-100">
-                    <i data-lucide="map-pin" class="w-4 h-4 text-brand-600"></i>
-                    <span>بيانات الشحن</span>
-                </h3>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">الاسم الكامل *</label>
-                        <input 
-                            type="text" 
-                            name="customer_name" 
-                            required 
-                            value="{% if user.is_authenticated %}{{ user.get_full_name|default:user.username }}{% endif %}"
-                            placeholder="الاسم" 
-                            class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                        >
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف / الواتساب للتأكيد *</label>
-                        <input 
-                            type="tel" 
-                            name="customer_phone" 
-                            required 
-                            value="{% if user_profile and user_profile.phone %}{{ user_profile.phone }}{% endif %}"
-                            placeholder="مثال: 770000000" 
-                            class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-right font-num"
-                            dir="ltr"
-                        >
-                    </div>
-
-                    <div class="sm:col-span-2">
-                        <label class="block text-xs font-bold text-slate-700 mb-1">البريد الإلكتروني المعتمد للإشعار (اختياري)</label>
-                        <input 
-                            type="email" 
-                            name="customer_email" 
-                            value="{% if user.is_authenticated %}{{ user.email }}{% endif %}"
-                            placeholder="name@example.com" 
-                            class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                        >
-                    </div>
+            <!-- ========================================== -->
+            <!-- 1. ORDER TYPE SELECTOR (نوع الطلب) -->
+            <!-- ========================================== -->
+            <div class="bg-white rounded-2xl p-4 sm:p-5 border border-pink-200 shadow-2xs space-y-3">
+                <div class="flex items-center justify-between pb-2 border-b border-pink-100">
+                    <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                        <i data-lucide="sliders" class="w-4 h-4 text-brand-600"></i>
+                        <span>نوع الطلب</span>
+                    </h3>
+                    <span class="text-[11px] text-slate-500">حدد هل الطلب لك أم هدية لشخص آخر</span>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">المحافظة / المدينة *</label>
-                        <select 
-                            id="shipping_city_select"
-                            name="shipping_city" 
-                            required 
-                            hx-get="{% url 'store:get_shipping_fee' %}" 
-                            hx-include="#checkout-form"
-                            hx-target="#checkout-totals" 
-                            hx-trigger="change"
-                            class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 cursor-pointer"
-                        >
-                            {% for zone in shipping_zones %}
-                            <option value="{{ zone.id }}" {% if user_profile and user_profile.preferred_city == zone.city_name %}selected{% elif forloop.first %}selected{% endif %}>
-                                {{ zone.city_name }} (التوصيل: {% if zone.delivery_fee_yer == 0 %}مجاناً{% else %}{{ zone.delivery_fee_yer|floatformat:0 }} ر.ي{% endif %})
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
+                <!-- Hidden Controls -->
+                <input type="hidden" name="order_type" id="order_type_input" value="{% if is_gift_active %}gift{% else %}personal{% endif %}">
+                <input type="checkbox" name="is_gift" id="is_gift_hidden_checkbox" value="true" class="hidden" {% if is_gift_active %}checked{% endif %}>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">العنوان التفصيلي (الشارع والحي) *</label>
-                        <input 
-                            type="text" 
-                            name="shipping_address" 
-                            required 
-                            value="{% if user_profile and user_profile.shipping_address %}{{ user_profile.shipping_address }}{% endif %}"
-                            placeholder="مثال: شارع حدة - بالقرب من مركز الكميم" 
-                            class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                        >
-                    </div>
-                </div>
+                <!-- Two Distinct Visual Selectors -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <!-- Option 1: Personal Order -->
+                    <button 
+                        type="button" 
+                        id="btn-type-personal"
+                        onclick="setOrderType('personal')"
+                        class="p-3.5 rounded-xl border text-right transition-all cursor-pointer flex items-start gap-3 {% if not is_gift_active %}border-brand-500 bg-pink-50/40 ring-1 ring-brand-500{% else %}border-pink-200 bg-white hover:border-pink-300{% endif %}"
+                    >
+                        <div class="w-8 h-8 rounded-lg bg-white border border-pink-200 flex items-center justify-center shrink-0 text-brand-600 mt-0.5 shadow-2xs">
+                            <i data-lucide="user" class="w-4 h-4"></i>
+                        </div>
+                        <div class="flex-1">
+                            <span class="font-bold text-slate-900 text-xs block">طلب شخصي</span>
+                            <span class="text-[11px] text-slate-500 block leading-tight mt-0.5">التوصيل لعنوانك الشخصي مباشرة</span>
+                        </div>
+                    </button>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">ملاحظات خاصة بمندوب التوصيل (اختياري)</label>
-                    <textarea 
-                        name="customer_notes" 
-                        rows="2" 
-                        placeholder="أي توجيهات محددة تخص موعد الاستلام أو معالم الموقع..." 
-                        class="w-full bg-white border border-pink-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                    ></textarea>
+                    <!-- Option 2: Gift Order -->
+                    <button 
+                        type="button" 
+                        id="btn-type-gift"
+                        onclick="setOrderType('gift')"
+                        class="p-3.5 rounded-xl border text-right transition-all cursor-pointer flex items-start gap-3 {% if is_gift_active %}border-brand-500 bg-pink-50/40 ring-1 ring-brand-500{% else %}border-pink-200 bg-white hover:border-pink-300{% endif %}"
+                    >
+                        <div class="w-8 h-8 rounded-lg bg-brand-500 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                            <i data-lucide="gift" class="w-4 h-4"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-bold text-slate-900 text-xs">طلب كهدية</span>
+                                <span class="px-1.5 py-0.2 rounded bg-brand-50 text-brand-700 text-[9px] font-bold border border-pink-200">تغليف وبطاقة</span>
+                            </div>
+                            <span class="text-[11px] text-slate-500 block leading-tight mt-0.5">توصيل لشخص آخر في اليمن مع حجب الأسعار</span>
+                        </div>
+                    </button>
                 </div>
             </div>
 
-            <!-- 2. GIFT ORDER WORKFLOW (خدمة الإهداء) -->
-            <div class="bg-pink-50/40 rounded-2xl p-4 sm:p-5 border border-pink-200 shadow-2xs space-y-3.5">
-                <div class="flex items-center justify-between cursor-pointer select-none" onclick="toggleGiftFields(event)">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-8 h-8 rounded-xl bg-brand-500 text-white flex items-center justify-center shadow-2xs">
-                            <i data-lucide="gift" class="w-4 h-4"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-bold text-slate-900 text-xs sm:text-sm">خدمة الإهداء</h3>
-                            <p class="text-[11px] text-slate-500">إرسال الطلب كهدية مع بطاقة إهداء وحجب الأسعار في الفاتورة</p>
-                        </div>
-                    </div>
-                    <input type="checkbox" id="is_gift_checkbox" name="is_gift" value="true" class="w-4 h-4 text-brand-500 rounded focus:ring-brand-500 cursor-pointer" onchange="toggleGiftFields(event)" {% if gift_data.is_gift %}checked{% endif %}>
-                </div>
+            <!-- ========================================== -->
+            <!-- 2A. PERSONAL ORDER FORM PANEL -->
+            <!-- ========================================== -->
+            <div id="panel-personal-order" class="{% if is_gift_active %}hidden{% endif %} space-y-4">
+                <div class="bg-white rounded-2xl p-4 sm:p-5 border border-pink-200 shadow-2xs space-y-3.5">
+                    <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2 pb-2.5 border-b border-pink-100">
+                        <i data-lucide="map-pin" class="w-4 h-4 text-brand-600"></i>
+                        <span>بيانات التواصل وعنوان التوصيل</span>
+                    </h3>
 
-                <!-- Gift Extended Fields (Toggled) -->
-                <div id="gift-fields-container" class="{% if gift_data.is_gift %}block{% else %}hidden{% endif %} pt-3 border-t border-pink-200 space-y-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">اسم المستلم في اليمن *</label>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">الاسم الكامل *</label>
+                            <input 
+                                type="text" 
+                                name="customer_name" 
+                                id="personal_customer_name"
+                                value="{% if user.is_authenticated %}{{ user.get_full_name|default:user.username }}{% endif %}"
+                                placeholder="الاسم الكامل" 
+                                class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                                {% if is_gift_active %}disabled{% else %}required{% endif %}
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف / الواتساب *</label>
+                            <input 
+                                type="tel" 
+                                name="customer_phone" 
+                                id="personal_customer_phone"
+                                value="{% if user_profile and user_profile.phone %}{{ user_profile.phone }}{% endif %}"
+                                placeholder="مثال: 770000000" 
+                                class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-right font-num"
+                                dir="ltr"
+                                {% if is_gift_active %}disabled{% else %}required{% endif %}
+                            >
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">البريد الإلكتروني (اختياري)</label>
+                            <input 
+                                type="email" 
+                                name="customer_email" 
+                                id="personal_customer_email"
+                                value="{% if user.is_authenticated %}{{ user.email }}{% endif %}"
+                                placeholder="name@example.com" 
+                                class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                                {% if is_gift_active %}disabled{% endif %}
+                            >
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">المحافظة / المدينة *</label>
+                            <select 
+                                name="shipping_city" 
+                                id="personal_shipping_city"
+                                hx-get="{% url 'store:get_shipping_fee' %}" 
+                                hx-include="#checkout-form"
+                                hx-target="#checkout-totals" 
+                                hx-trigger="change"
+                                class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 cursor-pointer"
+                                {% if is_gift_active %}disabled{% else %}required{% endif %}
+                            >
+                                {% for zone in shipping_zones %}
+                                <option value="{{ zone.id }}" {% if user_profile and user_profile.preferred_city == zone.city_name %}selected{% elif forloop.first %}selected{% endif %}>
+                                    {{ zone.city_name }} (التوصيل: {% if zone.delivery_fee_yer == 0 %}مجاناً{% else %}{{ zone.delivery_fee_yer|floatformat:0 }} ر.ي{% endif %})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">العنوان التفصيلي (الشارع والحي) *</label>
+                            <input 
+                                type="text" 
+                                name="shipping_address" 
+                                id="personal_shipping_address"
+                                value="{% if user_profile and user_profile.shipping_address %}{{ user_profile.shipping_address }}{% endif %}"
+                                placeholder="مثال: شارع حدة - بالقرب من مركز الكميم" 
+                                class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                                {% if is_gift_active %}disabled{% else %}required{% endif %}
+                            >
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">ملاحظات خاصة بمندوب التوصيل (اختياري)</label>
+                        <textarea 
+                            name="customer_notes" 
+                            id="personal_customer_notes"
+                            rows="2" 
+                            placeholder="أي توجيهات محددة تخص موعد الاستلام أو معالم الموقع..." 
+                            class="w-full bg-white border border-pink-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                            {% if is_gift_active %}disabled{% endif %}
+                        ></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- 2B. GIFT ORDER FORM PANELS (FLOW ORGANIZED) -->
+            <!-- ========================================== -->
+            <div id="panel-gift-order" class="{% if not is_gift_active %}hidden{% endif %} space-y-4">
+                
+                <!-- Section A: Buyer Details (المشتري / صاحب الطلب) -->
+                <div class="bg-white rounded-2xl p-4 sm:p-5 border border-pink-200 shadow-2xs space-y-3.5">
+                    <div class="flex items-center justify-between pb-2.5 border-b border-pink-100">
+                        <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-brand-500 text-white font-bold text-[11px] flex items-center justify-center font-num">1</span>
+                            <span>بياناتك (صاحب الطلب والمشتري)</span>
+                        </h3>
+                        <span class="text-[10px] text-brand-700 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-200 font-bold">خاص بك</span>
+                    </div>
+
+                    <div class="p-2.5 rounded-xl bg-pink-50/50 border border-pink-100 flex items-start gap-2 text-xs text-slate-600">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-brand-600 shrink-0 mt-0.5"></i>
+                        <p class="text-[11px] leading-relaxed">
+                            هذه البيانات للتواصل معك وإرسال الفاتورة الرسمية وتأكيد التحويل المصرفي؛ <strong>ولن تظهر للمستلم نهائياً</strong>.
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">اسمك الكامل *</label>
+                            <input 
+                                type="text" 
+                                name="customer_name" 
+                                id="gift_customer_name"
+                                value="{% if user.is_authenticated %}{{ user.get_full_name|default:user.username }}{% endif %}"
+                                placeholder="اسم صاحب الطلب" 
+                                class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                                {% if is_gift_active %}required{% else %}disabled{% endif %}
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">رقم هاتفك / الواتساب لإرسال الفاتورة *</label>
+                            <input 
+                                type="tel" 
+                                name="customer_phone" 
+                                id="gift_customer_phone"
+                                value="{% if user_profile and user_profile.phone %}{{ user_profile.phone }}{% endif %}"
+                                placeholder="مثال: 966500000000 أو 770000000" 
+                                class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-right font-num"
+                                dir="ltr"
+                                {% if is_gift_active %}required{% else %}disabled{% endif %}
+                            >
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">البريد الإلكتروني (اختياري)</label>
+                            <input 
+                                type="email" 
+                                name="customer_email" 
+                                id="gift_customer_email"
+                                value="{% if user.is_authenticated %}{{ user.email }}{% endif %}"
+                                placeholder="name@example.com" 
+                                class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                                {% if not is_gift_active %}disabled{% endif %}
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section B: Recipient & Yemen Delivery (المستلم في اليمن) -->
+                <div class="bg-white rounded-2xl p-4 sm:p-5 border border-pink-200 shadow-2xs space-y-3.5">
+                    <div class="flex items-center justify-between pb-2.5 border-b border-pink-100">
+                        <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-brand-500 text-white font-bold text-[11px] flex items-center justify-center font-num">2</span>
+                            <span>بيانات المستلم وعنوان التوصيل في اليمن</span>
+                        </h3>
+                        <span class="text-[10px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">جهة التسليم</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">اسم الشخص المهدى إليه (المستلم) *</label>
                             <input 
                                 type="text" 
                                 name="recipient_name" 
+                                id="gift_recipient_name"
                                 value="{{ gift_data.recipient_name|default:'' }}"
-                                placeholder="الاسم الكامل للشخص المهدى إليه" 
-                                class="w-full h-9.5 bg-white border border-pink-200 rounded-xl px-2.5 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500"
+                                placeholder="الاسم الكامل للمستلم" 
+                                class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                                {% if is_gift_active %}required{% else %}disabled{% endif %}
                             >
                         </div>
+
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">رقم هاتف المستلم (للتنسيق والتسليم) *</label>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">رقم هاتف المستلم في اليمن (للتنسيق والتسليم) *</label>
                             <input 
                                 type="tel" 
                                 name="recipient_phone" 
+                                id="gift_recipient_phone"
                                 value="{{ gift_data.recipient_phone|default:'' }}"
                                 placeholder="مثال: 770000000" 
-                                class="w-full h-9.5 bg-white border border-pink-200 rounded-xl px-2.5 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500 font-num text-right"
+                                class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-right font-num"
                                 dir="ltr"
+                                {% if is_gift_active %}required{% else %}disabled{% endif %}
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">محافظة / مدينة التسليم في اليمن *</label>
+                            <select 
+                                name="shipping_city" 
+                                id="gift_shipping_city"
+                                hx-get="{% url 'store:get_shipping_fee' %}" 
+                                hx-include="#checkout-form"
+                                hx-target="#checkout-totals" 
+                                hx-trigger="change"
+                                class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 cursor-pointer"
+                                {% if is_gift_active %}required{% else %}disabled{% endif %}
+                            >
+                                {% for zone in shipping_zones %}
+                                <option value="{{ zone.id }}" {% if user_profile and user_profile.preferred_city == zone.city_name %}selected{% elif forloop.first %}selected{% endif %}>
+                                    {{ zone.city_name }} (التوصيل: {% if zone.delivery_fee_yer == 0 %}مجاناً{% else %}{{ zone.delivery_fee_yer|floatformat:0 }} ر.ي{% endif %})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">العنوان التفصيلي للتسليم في اليمن *</label>
+                            <input 
+                                type="text" 
+                                name="shipping_address" 
+                                id="gift_shipping_address"
+                                placeholder="مثال: صنعاء - حدة - بالقرب من جولة الرويشان" 
+                                class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                                {% if is_gift_active %}required{% else %}disabled{% endif %}
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">تاريخ التسليم المفضل (اختياري)</label>
+                            <input 
+                                type="date" 
+                                name="preferred_delivery_date" 
+                                id="gift_preferred_delivery_date"
+                                value="{{ gift_data.preferred_delivery_date|default:'' }}"
+                                class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500 font-num"
+                                {% if not is_gift_active %}disabled{% endif %}
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">ملاحظات تسليم الهدية (اختياري)</label>
+                            <input 
+                                type="text" 
+                                name="customer_notes" 
+                                id="gift_customer_notes"
+                                placeholder="مثال: التسليم في الفترة المسائية..." 
+                                class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs text-slate-900 focus:outline-none focus:border-brand-500"
+                                {% if not is_gift_active %}disabled{% endif %}
                             >
                         </div>
                     </div>
+                </div>
 
-                    <!-- Greeting Card -->
-                    <div class="p-3.5 rounded-xl bg-white border border-pink-200 space-y-2.5 shadow-2xs">
-                        <div class="flex items-center justify-between pb-1.5 border-b border-pink-100">
-                            <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                                <i data-lucide="mail-open" class="w-3.5 h-3.5 text-brand-600"></i>
-                                <span>بطاقة الإهداء (مرفقة مع الطلب)</span>
-                            </span>
-                            <span class="text-[10px] text-slate-400">تطبع داخل ظرف مغلق</span>
-                        </div>
+                <!-- Section C: Gift Card & Packaging (بطاقة الإهداء والتغليف) -->
+                <div class="bg-white rounded-2xl p-4 sm:p-5 border border-pink-200 shadow-2xs space-y-3.5">
+                    <div class="flex items-center justify-between pb-2.5 border-b border-pink-100">
+                        <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-brand-500 text-white font-bold text-[11px] flex items-center justify-center font-num">3</span>
+                            <span>بطاقة الإهداء والتغليف الفاخر</span>
+                        </h3>
+                        <span class="text-[10px] text-brand-700 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-200 font-bold">تطبع داخل ظرف مغلق</span>
+                    </div>
 
-                        <div class="grid grid-cols-2 gap-2.5">
+                    <!-- Greeting Card Fields -->
+                    <div class="p-3.5 rounded-xl bg-pink-50/30 border border-pink-200 space-y-3 shadow-2xs">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-[11px] font-bold text-slate-600 mb-1">اسم المُهدي (من):</label>
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">اسم المُهدي (من):</label>
                                 <input 
                                     type="text" 
                                     name="gift_card_sender" 
+                                    id="gift_card_sender"
                                     value="{{ gift_data.gift_card_sender|default:'' }}"
-                                    placeholder="مثال: محمد" 
-                                    class="w-full h-8.5 bg-pink-50/30 border border-pink-200 rounded-lg px-2.5 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500"
+                                    placeholder="اسمك الذي سيظهر بالبطاقة" 
+                                    class="w-full h-9 bg-white border border-pink-200 rounded-lg px-2.5 text-xs text-slate-900 focus:outline-none focus:border-brand-500"
+                                    {% if not is_gift_active %}disabled{% endif %}
                                 >
                             </div>
                             <div>
-                                <label class="block text-[11px] font-bold text-slate-600 mb-1">اسم المهدى إليه (إلى):</label>
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">اسم المهدى إليه (إلى):</label>
                                 <input 
                                     type="text" 
                                     name="gift_card_recipient" 
+                                    id="gift_card_recipient"
                                     value="{{ gift_data.gift_card_recipient|default:gift_data.recipient_name|default:'' }}"
-                                    placeholder="مثال: سارة" 
-                                    class="w-full h-8.5 bg-pink-50/30 border border-pink-200 rounded-lg px-2.5 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500"
+                                    placeholder="اسم الشخص بالبطاقة" 
+                                    class="w-full h-9 bg-white border border-pink-200 rounded-lg px-2.5 text-xs text-slate-900 focus:outline-none focus:border-brand-500"
+                                    {% if not is_gift_active %}disabled{% endif %}
                                 >
                             </div>
                         </div>
 
                         <div>
-                            <label class="block text-[11px] font-bold text-slate-600 mb-1">رسالة الإهداء المكتوبة:</label>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">نص بطاقة الإهداء المكتوبة:</label>
                             <textarea 
                                 name="gift_card_message" 
+                                id="gift_card_message"
                                 rows="2" 
-                                placeholder="اكتب هنا كلمات الإهداء التي ترغب بتضمينها..." 
-                                class="w-full bg-pink-50/30 border border-pink-200 rounded-lg p-2.5 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500"
+                                placeholder="اكتب كلمات الإهداء التي ترغب بتضمينها..." 
+                                class="w-full bg-white border border-pink-200 rounded-lg p-2.5 text-xs text-slate-900 focus:outline-none focus:border-brand-500 resize-none"
+                                {% if not is_gift_active %}disabled{% endif %}
                             >{{ gift_data.gift_card_message|default:'' }}</textarea>
                         </div>
                     </div>
 
-                    <!-- Preferred Delivery Date -->
-                    <div class="p-3.5 rounded-xl bg-white border border-pink-200 space-y-1 shadow-2xs">
-                        <label class="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-brand-600"></i>
-                            <span>موعد التسليم المفضل:</span>
-                        </label>
-                        <input 
-                            type="date" 
-                            name="preferred_delivery_date" 
-                            value="{{ gift_data.preferred_delivery_date|default:'' }}"
-                            class="w-full h-8.5 bg-pink-50/30 border border-pink-200 rounded-lg px-2.5 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500 font-num"
-                        >
-                        <span class="text-[10px] text-slate-400 block">سنقوم بالتنسيق لتسليم الهدية في التاريخ المحدد</span>
-                    </div>
-
-                    <!-- Hide Prices on Invoice Checkbox -->
-                    <label class="flex items-center justify-between p-3 rounded-xl bg-white border border-pink-200 hover:border-pink-300 cursor-pointer transition shadow-2xs">
-                        <div class="flex items-center gap-2">
-                            <input 
-                                type="checkbox" 
-                                name="hide_invoice_prices" 
-                                value="true"
-                                {% if gift_data.hide_invoice_prices or not gift_data %}checked{% endif %}
-                                class="w-4 h-4 text-brand-500 rounded focus:ring-brand-500 cursor-pointer"
-                            >
-                            <div>
-                                <span class="font-bold text-slate-900 text-xs flex items-center gap-1">
-                                    <i data-lucide="eye-off" class="w-3.5 h-3.5 text-brand-600"></i>
-                                    <span>إخفاء الأسعار من فاتورة ورسالة المستلم</span>
-                                </span>
-                                <span class="text-[10px] text-slate-400 block">لن تظهر أي مبالغ مالية للمستلم، وستصلك أنت فقط الفاتورة الرسمية</span>
-                            </div>
-                        </div>
-                        <span class="px-2 py-0.5 rounded-full bg-pink-50 text-brand-700 text-[10px] font-bold border border-pink-200 shrink-0">موصى به</span>
-                    </label>
-
                     <!-- Luxury Gift Wrapping Checkbox -->
-                    <label class="flex items-center justify-between p-3 rounded-xl bg-white border border-pink-200 hover:border-pink-300 cursor-pointer transition shadow-2xs">
-                        <div class="flex items-center gap-2">
+                    <label class="flex items-center justify-between p-3.5 rounded-xl bg-white border border-pink-200 hover:border-pink-300 cursor-pointer transition shadow-2xs">
+                        <div class="flex items-center gap-2.5">
                             <input 
                                 type="checkbox" 
                                 id="gift-wrapping-checkbox" 
                                 name="is_luxury_gift_wrapping" 
                                 value="true"
-                                {% if gift_data.is_luxury_gift_wrapping %}checked{% endif %}
+                                {% if is_luxury_gift_wrapping or gift_data.is_luxury_gift_wrapping %}checked{% endif %}
                                 hx-get="{% url 'store:get_shipping_fee' %}" 
                                 hx-include="#checkout-form"
                                 hx-target="#checkout-totals" 
                                 class="w-4 h-4 text-brand-500 rounded focus:ring-brand-500 cursor-pointer"
+                                {% if not is_gift_active %}disabled{% endif %}
                             >
                             <div>
-                                <span class="font-bold text-slate-900 text-xs">إضافة تغليف هدايا</span>
-                                <span class="text-[10px] text-slate-400 block">صندوق هدايا أنيق مع شريط تقديم</span>
+                                <span class="font-bold text-slate-900 text-xs block">إضافة تغليف هدايا فاخر</span>
+                                <span class="text-[10px] text-slate-400 block">صندوق هدايا أنيق مع شريط تقديم وبطاقة الإهداء</span>
                             </div>
                         </div>
-                        <span class="px-2 py-0.5 rounded-full bg-pink-50 text-brand-700 text-[11px] font-bold font-num border border-pink-200 shrink-0">+{{ store_settings.gift_wrapping_fee_yer|floatformat:0 }} ر.ي</span>
+                        <span class="px-2.5 py-1 rounded-full bg-pink-50 text-brand-700 text-xs font-bold font-num border border-pink-200 shrink-0">
+                            +{{ store_settings.gift_wrapping_fee_yer|floatformat:0 }} ر.ي
+                        </span>
+                    </label>
+
+                    <!-- Hide Prices on Invoice Checkbox -->
+                    <label class="flex items-center justify-between p-3.5 rounded-xl bg-white border border-pink-200 hover:border-pink-300 cursor-pointer transition shadow-2xs">
+                        <div class="flex items-center gap-2.5">
+                            <input 
+                                type="checkbox" 
+                                name="hide_invoice_prices" 
+                                id="hide_invoice_prices_checkbox"
+                                value="true"
+                                {% if gift_data.hide_invoice_prices or not gift_data %}checked{% endif %}
+                                class="w-4 h-4 text-brand-500 rounded focus:ring-brand-500 cursor-pointer"
+                                {% if not is_gift_active %}disabled{% endif %}
+                            >
+                            <div>
+                                <span class="font-bold text-slate-900 text-xs flex items-center gap-1">
+                                    <i data-lucide="eye-off" class="w-3.5 h-3.5 text-brand-600"></i>
+                                    <span>حجب الأسعار في الفاتورة والتسليم</span>
+                                </span>
+                                <span class="text-[10px] text-slate-400 block">لن تظهر أي مبالغ مالية للمستلم، وستصلك أنت فقط الفاتورة الرسمية</span>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200 shrink-0">موصى به</span>
                     </label>
                 </div>
+
             </div>
 
+            <!-- ========================================== -->
             <!-- 3. PAYMENT METHOD SELECTOR -->
+            <!-- ========================================== -->
             <div class="bg-white rounded-2xl p-4 sm:p-5 border border-pink-200 shadow-2xs space-y-3.5">
                 <div class="pb-2.5 border-b border-pink-100">
                     <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
@@ -491,7 +685,7 @@
             <div class="bg-white rounded-2xl p-4 sm:p-5 border border-pink-200 shadow-2xs space-y-4">
                 <h3 class="font-bold text-slate-900 text-sm pb-2.5 border-b border-pink-100 flex items-center justify-between">
                     <span>ملخص الطلب</span>
-                    <a href="{% url 'store:cart_view' %}" class="text-xs text-brand-600 hover:underline">تعديل</a>
+                    <a href="{% url 'store:cart_view' %}" class="text-xs text-brand-600 hover:underline">تعديل السلة</a>
                 </h3>
 
                 <!-- Items Mini List -->
@@ -515,7 +709,7 @@
                 </div>
 
                 <!-- Totals Section (Dynamic HTMX Swap) -->
-                {% include 'store/partials/checkout_totals.html' with subtotal_yer=subtotal_yer shipping_fee=shipping_fee_yer total_yer=total_yer total_sar=total_sar delivery_time=default_zone.estimated_delivery_time %}
+                {% include 'store/partials/checkout_totals.html' with subtotal_yer=subtotal_yer shipping_fee=shipping_fee_yer gift_wrapping_fee=gift_wrapping_fee_yer total_yer=total_yer total_sar=total_sar delivery_time=default_zone.estimated_delivery_time %}
 
                 <!-- Submit Button -->
                 <button 
@@ -524,21 +718,11 @@
                     class="w-full h-12 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 group mt-3 cursor-pointer shadow-xs active:scale-98"
                 >
                     <i data-lucide="check" class="w-4 h-4"></i>
-                    <span>تأكيد الطلب</span>
+                    <span>تأكيد الطلب الآن</span>
                 </button>
 
                 <p class="text-[10px] text-slate-400 text-center leading-relaxed">
-                    سيتم مراجعة الطلب وتأكيد الشحن والتسليم.
-                </p>
-            </div>
-        </div>
-    </form>
-                    <i data-lucide="check" class="w-4 h-4"></i>
-                    <span>تأكيد الطلب</span>
-                </button>
-
-                <p class="text-[10px] text-slate-400 text-center leading-relaxed">
-                    سيتم مراجعة الطلب وتأكيد الشحن والتسليم.
+                    سيتم مراجعة الطلب وتأكيد الشحن والتسليم فور إتمامه.
                 </p>
             </div>
         </div>
@@ -548,6 +732,70 @@
 
 {% block extra_scripts %}
 <script>
+    function setOrderType(type) {
+        const orderTypeInput = document.getElementById('order_type_input');
+        const isGiftCheckbox = document.getElementById('is_gift_hidden_checkbox');
+        const btnPersonal = document.getElementById('btn-type-personal');
+        const btnGift = document.getElementById('btn-type-gift');
+        const panelPersonal = document.getElementById('panel-personal-order');
+        const panelGift = document.getElementById('panel-gift-order');
+        
+        const personalInputs = panelPersonal.querySelectorAll('input, select, textarea');
+        const giftInputs = panelGift.querySelectorAll('input, select, textarea');
+
+        orderTypeInput.value = type;
+
+        if (type === 'gift') {
+            isGiftCheckbox.checked = true;
+
+            // Update button styles
+            btnGift.className = "p-3.5 rounded-xl border text-right transition-all cursor-pointer flex items-start gap-3 border-brand-500 bg-pink-50/40 ring-1 ring-brand-500";
+            btnPersonal.className = "p-3.5 rounded-xl border text-right transition-all cursor-pointer flex items-start gap-3 border-pink-200 bg-white hover:border-pink-300";
+
+            // Switch panels
+            panelPersonal.classList.add('hidden');
+            panelGift.classList.remove('hidden');
+
+            // Toggle disabled state so browser submits the correct fields
+            personalInputs.forEach(el => el.disabled = true);
+            giftInputs.forEach(el => el.disabled = false);
+
+            // Re-trigger HTMX on the gift city select
+            const giftCity = document.getElementById('gift_shipping_city');
+            if (giftCity) {
+                htmx.trigger(giftCity, 'change');
+            }
+        } else {
+            isGiftCheckbox.checked = false;
+
+            // Update button styles
+            btnPersonal.className = "p-3.5 rounded-xl border text-right transition-all cursor-pointer flex items-start gap-3 border-brand-500 bg-pink-50/40 ring-1 ring-brand-500";
+            btnGift.className = "p-3.5 rounded-xl border text-right transition-all cursor-pointer flex items-start gap-3 border-pink-200 bg-white hover:border-pink-300";
+
+            // Switch panels
+            panelGift.classList.add('hidden');
+            panelPersonal.classList.remove('hidden');
+
+            // Toggle disabled state
+            giftInputs.forEach(el => el.disabled = true);
+            personalInputs.forEach(el => el.disabled = false);
+
+            // If gift wrapping was checked, uncheck it
+            const wrapBox = document.getElementById('gift-wrapping-checkbox');
+            if (wrapBox) {
+                wrapBox.checked = false;
+            }
+
+            // Re-trigger HTMX on the personal city select
+            const personalCity = document.getElementById('personal_shipping_city');
+            if (personalCity) {
+                htmx.trigger(personalCity, 'change');
+            }
+        }
+
+        if (window.lucide) window.lucide.createIcons();
+    }
+
     function previewReceiptImage(event) {
         const file = event.target.files[0];
         if (file) {
@@ -572,26 +820,10 @@
         }
     }
 
-    function toggleGiftFields(event) {
-        const checkbox = document.getElementById('is_gift_checkbox');
-        if (event && event.target !== checkbox) {
-            checkbox.checked = !checkbox.checked;
-        }
-        const container = document.getElementById('gift-fields-container');
-        if (checkbox.checked) {
-            container.classList.remove('hidden');
-        } else {
-            container.classList.add('hidden');
-            const wrapBox = document.getElementById('gift-wrapping-checkbox');
-            if (wrapBox && wrapBox.checked) {
-                wrapBox.checked = false;
-                htmx.trigger(wrapBox, 'change');
-            }
-        }
-    }
-
     function copyToClipboard(elementId, btn) {
-        const text = document.getElementById(elementId).innerText.trim();
+        const target = document.getElementById(elementId);
+        if (!target) return;
+        const text = target.innerText.trim();
         navigator.clipboard.writeText(text).then(() => {
             const originalHTML = btn.innerHTML;
             btn.innerHTML = '<span>تم النسخ ✓</span>';
@@ -606,11 +838,33 @@
         });
     }
 
+    // Synchronize payment cards with live HTMX totals
+    window.syncPaymentAmounts = function(totalYer, totalSar) {
+        document.querySelectorAll('[id^="amount-val-"]').forEach(el => {
+            const card = el.closest('.payment-detail-card');
+            if (card) {
+                if (card.innerHTML.includes('ريال سعودي') && !card.innerHTML.includes('ر.ي')) {
+                    el.innerText = totalSar;
+                } else {
+                    el.innerText = totalYer;
+                    const sarSub = card.querySelector('.font-num.text-slate-500');
+                    if (sarSub) {
+                        sarSub.innerText = '(' + totalSar + ' ر.س)';
+                    }
+                }
+            }
+        });
+    };
+
     document.addEventListener('DOMContentLoaded', () => {
         const select = document.getElementById('payment-method-select');
         if (select && select.value) {
             onPaymentMethodSelect(select.value);
         }
+
+        // Initialize active order type
+        const initialType = document.getElementById('order_type_input').value || 'personal';
+        setOrderType(initialType);
 
         const checkoutForm = document.getElementById('checkout-form');
         if (checkoutForm) {

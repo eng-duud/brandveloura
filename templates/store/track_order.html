@@ -44,19 +44,38 @@
                             <span class="text-xs text-slate-500 mr-3">بتاريخ {{ order.created_at|date:"Y/m/d - h:i A" }}</span>
                         </div>
                         <div class="text-left">
+                            {% if order.is_gift and order.hide_invoice_prices %}
+                            <span class="px-3 py-1 rounded-full bg-pink-50 text-brand-700 text-xs font-bold border border-pink-200">
+                                طلب إهداء (الأسعار محجوبة)
+                            </span>
+                            {% else %}
                             <span class="font-black text-slate-950 text-sm sm:text-base font-num">{{ order.total_yer|floatformat:0 }} ر.ي</span>
                             <span class="text-xs text-brand-600 font-bold mr-1.5 font-num">({{ order.total_sar }} ر.س)</span>
+                            {% endif %}
                         </div>
                     </div>
 
                     {% if order.is_gift %}
-                    <div class="p-3.5 rounded-xl bg-pink-50/40 border border-pink-200 text-xs text-slate-900 flex items-center justify-between shadow-2xs">
-                        <span class="flex items-center gap-1.5 font-bold">
-                            <i data-lucide="gift" class="w-4 h-4 text-brand-600"></i>
-                            <span>طلب إهداء للمستلم: {{ order.recipient_name }}</span>
-                        </span>
-                        {% if order.is_luxury_gift_wrapping %}
-                        <span class="px-2.5 py-0.5 rounded-full bg-pink-100 text-brand-700 text-[10px] font-bold border border-pink-200">تغليف هدايا</span>
+                    <div class="p-3.5 rounded-xl bg-pink-50/40 border border-pink-200 text-xs text-slate-900 space-y-1.5 shadow-2xs">
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <span class="flex items-center gap-1.5 font-bold">
+                                <i data-lucide="gift" class="w-4 h-4 text-brand-600"></i>
+                                <span>طلب إهداء للمستلم: {{ order.recipient_name|default:order.customer_name }}</span>
+                            </span>
+                            <div class="flex items-center gap-1.5">
+                                {% if order.hide_invoice_prices %}
+                                <span class="px-2 py-0.5 rounded-full bg-white text-slate-600 text-[10px] font-bold border border-pink-200">الأسعار محجوبة</span>
+                                {% endif %}
+                                {% if order.is_luxury_gift_wrapping %}
+                                <span class="px-2.5 py-0.5 rounded-full bg-pink-100 text-brand-700 text-[10px] font-bold border border-pink-200">تغليف هدايا فاخر</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if order.gift_card_message %}
+                        <div class="p-2.5 rounded-lg bg-white border border-pink-100 text-[11px] text-slate-700 leading-relaxed">
+                            <span class="font-bold text-slate-900">رسالة الإهداء (من: {{ order.gift_card_sender|default:order.customer_name }}):</span>
+                            <p class="mt-0.5 italic">"{{ order.gift_card_message }}"</p>
+                        </div>
                         {% endif %}
                     </div>
                     {% endif %}
@@ -125,7 +144,9 @@
                                     {% endif %}
                                 {% endif %}
                             </div>
+                            {% if not order.is_gift or not order.hide_invoice_prices %}
                             <span class="font-bold text-slate-900 font-num">{{ item.total_price_yer|floatformat:0 }} ر.ي</span>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     </div>

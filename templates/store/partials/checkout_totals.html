@@ -1,4 +1,4 @@
-<div id="checkout-totals" class="space-y-2.5 pt-3 border-t border-pink-200 text-xs">
+<div id="checkout-totals" class="space-y-2.5 pt-3 border-t border-pink-200 text-xs" data-total-yer="{{ total_yer|floatformat:0 }}" data-total-sar="{{ total_sar }}">
     <div class="flex items-center justify-between text-slate-600">
         <span>المجموع الفرعي للمنتجات:</span>
         <span class="font-bold text-slate-900 font-num">{{ subtotal_yer|floatformat:0 }} ر.ي</span>
@@ -26,7 +26,7 @@
         <div class="flex items-baseline justify-between">
             <span class="font-bold text-slate-900 text-xs sm:text-sm">المجموع الإجمالي:</span>
             <div class="text-left">
-                <span class="text-lg sm:text-xl font-black text-slate-950 font-num">{{ total_yer|floatformat:0 }}</span>
+                <span class="text-lg sm:text-xl font-black text-slate-950 font-num" id="summary-total-yer-display">{{ total_yer|floatformat:0 }}</span>
                 <span class="text-xs font-bold text-slate-600 mr-0.5">ر.ي</span>
             </div>
         </div>
@@ -36,7 +36,16 @@
                 <span class="w-2 h-2 rounded-full bg-brand-500"></span>
                 <span>الإجمالي بالريال السعودي:</span>
             </span>
-            <span class="text-sm sm:text-base font-black font-num text-slate-950">{{ total_sar }} ر.س</span>
+            <span class="text-sm sm:text-base font-black font-num text-slate-950" id="summary-total-sar-display">{{ total_sar }} ر.س</span>
         </div>
     </div>
+
+    <script>
+        if (typeof window.syncPaymentAmounts === 'function') {
+            window.syncPaymentAmounts("{{ total_yer|floatformat:0 }}", "{{ total_sar }}");
+        }
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    </script>
 </div>

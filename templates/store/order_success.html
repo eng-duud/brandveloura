@@ -64,25 +64,37 @@
 
             <!-- Gift Order Details Card (if applicable) -->
             {% if order.is_gift %}
-            <div class="p-3 rounded-xl bg-white border border-pink-200 space-y-1.5 shadow-2xs">
-                <div class="flex items-center justify-between text-xs font-bold text-slate-900">
+            <div class="p-4 rounded-xl bg-white border border-pink-200 space-y-2 text-right shadow-2xs">
+                <div class="flex items-center justify-between text-xs font-bold text-slate-900 pb-2 border-b border-pink-100">
                     <span class="flex items-center gap-1.5">
                         <i data-lucide="gift" class="w-4 h-4 text-brand-600"></i>
-                        <span>طلب إهداء للمستلم: {{ order.recipient_name }}</span>
+                        <span>تفاصيل باقة الإهداء والتسليم</span>
                     </span>
-                    {% if order.is_luxury_gift_wrapping %}
-                    <span class="px-2 py-0.5 rounded-full bg-pink-50 text-brand-700 text-[10px] font-bold border border-pink-200">تغليف هدايا</span>
-                    {% endif %}
-                </div>
-                <div class="text-[11px] text-slate-600">
-                    <div>هاتف المستلم: <span class="font-bold text-slate-900 font-num" dir="ltr">{{ order.recipient_phone }}</span></div>
-                    {% if order.gift_card_message %}
-                    <div class="mt-1.5 p-2 rounded-lg bg-pink-50/30 border border-pink-100 text-[11px] text-slate-700">
-                        كارت الإهداء (من: {{ order.gift_card_sender|default:order.customer_name }} إلى: {{ order.gift_card_recipient|default:order.recipient_name }}):
-                        <div class="font-medium text-slate-900 mt-0.5">"{{ order.gift_card_message }}"</div>
+                    <div class="flex items-center gap-1.5">
+                        {% if order.hide_invoice_prices %}
+                        <span class="px-2 py-0.5 rounded-full bg-pink-50 text-brand-700 text-[10px] font-bold border border-pink-200">الأسعار محجوبة للمستلم</span>
+                        {% endif %}
+                        {% if order.is_luxury_gift_wrapping %}
+                        <span class="px-2 py-0.5 rounded-full bg-brand-500 text-white text-[10px] font-bold">تغليف هدايا فاخر</span>
+                        {% endif %}
                     </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-600 pt-1">
+                    <div>المستلم في اليمن: <span class="font-bold text-slate-900">{{ order.recipient_name }}</span></div>
+                    <div>هاتف المستلم: <span class="font-bold text-slate-900 font-num" dir="ltr">{{ order.recipient_phone }}</span></div>
+                    <div>مدينة وعنوان التسليم: <span class="font-bold text-slate-900">{{ order.shipping_city }} — {{ order.shipping_address }}</span></div>
+                    {% if order.preferred_delivery_date %}
+                    <div>تاريخ التسليم المفضل: <span class="font-bold text-slate-900 font-num">{{ order.preferred_delivery_date|date:"Y/m/d" }}</span></div>
                     {% endif %}
                 </div>
+                {% if order.gift_card_message %}
+                <div class="mt-2 p-2.5 rounded-lg bg-pink-50/40 border border-pink-100 text-[11px] text-slate-700">
+                    <div class="font-bold text-slate-900 mb-0.5">
+                        كارت الإهداء (من: {{ order.gift_card_sender|default:order.customer_name }} إلى: {{ order.gift_card_recipient|default:order.recipient_name }}):
+                    </div>
+                    <div class="font-medium text-slate-900 italic">"{{ order.gift_card_message }}"</div>
+                </div>
+                {% endif %}
             </div>
             {% endif %}
 

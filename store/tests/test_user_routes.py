@@ -494,4 +494,53 @@ class UserRoutesAndOperationsTests(TestCase):
         self.assertEqual(str(order.preferred_delivery_date), '2026-11-20')
         self.assertEqual(order.gift_card_sender, 'صالح (جدة)')
         self.assertTrue(order.is_luxury_gift_wrapping)
+        self.assertEqual(order.gift_wrapping_fee_yer, Decimal('3000.00'))
+
+        # 3. فحص التتبع وإخفاء الأسعار عند تتبع الهدية
+        res_track = self.client.get(reverse('store:track_order') + f"?q={order.order_number}")
+        self.assertEqual(res_track.status_code, 200)
+        track_html = res_track.content.decode('utf-8')
+        self.assertIn('طلب إهداء (الأسعار محجوبة)', track_html)
+        self.assertNotIn(f"{order.total_yer:,.0f} ر.ي", track_html)
+
+    def test_get_shipping_fee_htmx_with_gifting(self):
+        """فحص حساب الشحن والتغليف اللحظي عبر HTMX عند اختيار المدينة وتغليف الهدايا"""
+        # تجهيز سلة
+        session = self.client.session
+        session['cart'] = {
+            'item_1': {
+                'product_id': self.perfume.id,
+                'name': self.perfume.name_ar,
+                'price_yer': 100000,
+                'quantity': 1
+            }
+        }
+        session.save()
+
+        # طلب HTMX مع مدينة وتغليف هدايا
+        get_params = {
+            'shipping_city': self.zone_sanaa.id,
+            'order_type': 'gift',
+            'is_gift': 'true',
+            'is_luxury_gift_wrapping': 'true',
+        }
+        res = self.client.get(reverse('store:get_shipping_fee'), get_params)
+        self.assertEqual(res.status_code, 200)
+        self.assertTemplateUsed(res, 'store/partials/checkout_totals.html')
+        content = res.content.decode('utf-8')
+        # subtotal: 100,000 + shipping: 2,000 + wrapping: 3,000 = 105,000
+        self.assertIn('105000', content)
+        self.assertIn('تغليف هدايا:', content)
+
+        # طلب HTMX لنفس السلة كطلب شخصي بدون تغليف
+        get_params_personal = {
+            'shipping_city': self.zone_sanaa.id,
+            'order_type': 'personal',
+        }
+        res_personal = self.client.get(reverse('store:get_shipping_fee'), get_params_personal)
+        self.assertEqual(res_personal.status_code, 200)
+        content_personal = res_personal.content.decode('utf-8')
+        # subtotal: 100,000 + shipping: 2,000 = 102,000
+        self.assertIn('102000', content_personal)
+        self.assertNotIn('تغليف هدايا:', content_personal)
 
