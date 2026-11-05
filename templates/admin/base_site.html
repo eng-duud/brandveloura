@@ -28,21 +28,21 @@
 {% block nav-global %}
 <div style="display: flex; align-items: center; gap: 14px; margin-right: auto; padding: 0 16px;">
     <!-- Live Currency Rate Pill -->
-    <a href="{% url 'admin:store_storesettings_change' 1 %}" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(244, 63, 94, 0.3); color: #ffe4e6; padding: 5px 12px; border-radius: 20px; font-size: 0.76rem; font-weight: 600; text-decoration: none; transition: all 0.2s;" title="انقر لتعديل سعر الصرف اليومي">
+    <a href="{% url 'admin:store_storesettings_changelist' %}" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(244, 63, 94, 0.3); color: #ffe4e6; padding: 5px 12px; border-radius: 20px; font-size: 0.76rem; font-weight: 600; text-decoration: none; transition: all 0.2s;" title="انقر لتعديل سعر الصرف اليومي">
         <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #10b981;"></span>
         <span>1 ر.س = <strong class="font-num" style="color: #ffffff;">{{ yer_per_sar|default:"530" }}</strong> ر.ي</span>
     </a>
 
     <!-- Pending Verification Orders Badge -->
     {% if admin_pending_orders %}
-    <a href="/admin/store/order/?status__exact=pending_verification" style="display: inline-flex; align-items: center; gap: 6px; background: #be123f; color: #ffffff; padding: 5px 12px; border-radius: 20px; font-size: 0.76rem; font-weight: 700; text-decoration: none; box-shadow: 0 2px 8px rgba(190, 18, 63, 0.4); animation: pulse 2s infinite;" title="طلبات بانتظار التحقق من الإشعار">
+    <a href="{% url 'admin:store_order_changelist' %}?status__exact=pending_verification" style="display: inline-flex; align-items: center; gap: 6px; background: #be123f; color: #ffffff; padding: 5px 12px; border-radius: 20px; font-size: 0.76rem; font-weight: 700; text-decoration: none; box-shadow: 0 2px 8px rgba(190, 18, 63, 0.4); animation: pulse 2s infinite;" title="طلبات بانتظار التحقق من الإشعار">
         <span>⚠️ {{ admin_pending_orders }} سند جديد للتحقق</span>
     </a>
     {% endif %}
 
     <!-- Admin Unread Notifications Badge -->
     {% if admin_unread_notifications_count %}
-    <a href="/admin/store/notification/?for_admin__exact=1&is_read__exact=0" style="display: inline-flex; align-items: center; gap: 6px; background: #ea580c; color: #ffffff; padding: 5px 12px; border-radius: 20px; font-size: 0.76rem; font-weight: 700; text-decoration: none; box-shadow: 0 2px 8px rgba(234, 88, 12, 0.4);" title="تنبيهات إدارية غير مقروءة">
+    <a href="{% url 'admin:store_notification_changelist' %}?for_admin__exact=1&is_read__exact=0" style="display: inline-flex; align-items: center; gap: 6px; background: #ea580c; color: #ffffff; padding: 5px 12px; border-radius: 20px; font-size: 0.76rem; font-weight: 700; text-decoration: none; box-shadow: 0 2px 8px rgba(234, 88, 12, 0.4);" title="تنبيهات إدارية غير مقروءة">
         <span>🔔 {{ admin_unread_notifications_count }} تنبيه جديد</span>
     </a>
     {% endif %}

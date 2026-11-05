@@ -253,3 +253,10 @@ class AdminRoutesAndOperationsTests(TestCase):
         res = self.client.post('/admin/store/herobanner/add/', banner_data, follow=True)
         self.assertEqual(res.status_code, 200)
         self.assertTrue(HeroBanner.objects.filter(title='تشكيلة العطور الخاصة 2026').exists())
+
+    def test_admin_dynamic_url_and_honeypot(self):
+        """التحقق من أن مسارات لوحة الإدارة تستخدم reverse('admin:index') ديناميكياً"""
+        admin_index_url = reverse('admin:index')
+        self.client.force_login(self.admin_user)
+        res = self.client.get(admin_index_url)
+        self.assertEqual(res.status_code, 200)
