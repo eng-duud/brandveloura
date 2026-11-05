@@ -36,6 +36,13 @@ if railway_domain:
     if railway_origin not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(railway_origin)
 
+# Automatically add any custom domain from ALLOWED_HOSTS to CSRF_TRUSTED_ORIGINS
+for host in ALLOWED_HOSTS:
+    if host not in ['*', 'localhost', '127.0.0.1'] and not host.startswith('.'):
+        origin = f"https://{host}"
+        if origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(origin)
+
 # Reverse Proxy & SSL Configuration (Essential for Railway SSL & Google OAuth Redirect URIs)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
