@@ -544,3 +544,94 @@ class UserRoutesAndOperationsTests(TestCase):
         self.assertIn('102000', content_personal)
         self.assertNotIn('تغليف هدايا:', content_personal)
 
+    def test_multi_item_gift_builder_and_live_calculate(self):
+        """فحص تجهيز باقة إهداء متعددة العطور والملحقات وحساب التكلفة اللحظية"""
+        # عطر ثانٍ
+        perfume_2 = Product.objects.create(
+            category=self.cat_perfumes,
+            name_ar="عطر مسك روز فاخر",
+            name_en="Musk Rose",
+            slug="musk-rose",
+            brand_name="Veloura Rose",
+            price_yer=Decimal('45000'),
+            has_grades=True,
+            price_original_yer=Decimal('80000'),
+            price_master_yer=Decimal('40000'),
+            stock_quantity=10,
+            is_active=True
+        )
+
+        # ملحق ثانٍ (مستحضر تجميل)
+        cosmetic_item = Product.objects.create(
+            category=self.cat_cosmetics,
+            name_ar="سيروم العناية الذهبي",
+            name_en="Golden Serum",
+            slug="golden-serum",
+            brand_name="Veloura Care",
+            price_yer=Decimal('15000'),
+            stock_quantity=8,
+            is_active=True
+        )
+
+        # 1. اختبار الحساب اللحظي المباشر عبر HTMX مع عطرين وملحقين وتغليف
+        calc_data = {
+            'perfume_id': [str(self.perfume.id), str(perfume_2.id)],
+            f'grade_{self.perfume.id}': 'original',  # 100,000 YER
+            f'grade_{perfume_2.id}': 'master',       # 40,000 YER
+            'accessory_id': [str(self.watch.id), str(cosmetic_item.id)],  # 120,000 + 15,000 YER
+            'is_luxury_gift_wrapping': 'true',       # 3,000 YER
+        }
+        res_calc = self.client.post(reverse('store:gift_calculate'), calc_data)
+        self.assertEqual(res_calc.status_code, 200)
+        calc_html = res_calc.content.decode('utf-8')
+        
+        # مجموع: 100000 + 40000 + 120000 + 15000 + 3000 = 278,000
+        self.assertIn('278000', calc_html)
+        self.assertIn('عطر عود ملكي فاخر', calc_html)
+        self.assertIn('عطر مسك روز فاخر', calc_html)
+        self.assertIn('ساعة رولكس دايتونا ستيل', calc_html)
+        self.assertIn('سيروم العناية الذهبي', calc_html)
+
+        # 2. اختبار إرسال الفورم وحفظ كافة العطور والملحقات في السلة والجلسة
+        post_data = {
+            'perfume_id': [str(self.perfume.id), str(perfume_2.id)],
+            f'grade_{self.perfume.id}': 'original',
+            f'grade_{perfume_2.id}': 'master',
+            'accessory_id': [str(self.watch.id), str(cosmetic_item.id)],
+            'recipient_name': 'ياسر اليماني',
+            'gift_card_sender': 'أحمد سعيد',
+            'gift_card_message': 'مبارك الترقية ومنها للأعلى',
+            'is_luxury_gift_wrapping': 'true',
+        }
+        res_submit = self.client.post(reverse('store:gift_builder'), post_data)
+        self.assertRedirects(res_submit, reverse('store:checkout'))
+
+        # فحص محتويات سلة الجلسة
+        cart = self.client.session.get('cart', {})
+        self.assertEqual(len(cart), 4)
+
+        # التحقق من مفاتيح العطور ودرجاتها وأسعارها
+        p1_key = f"{self.perfume.id}_original_gift"
+        p2_key = f"{perfume_2.id}_master_gift"
+        self.assertIn(p1_key, cart)
+        self.assertIn(p2_key, cart)
+        self.assertEqual(cart[p1_key]['price_yer'], 100000.0)
+        self.assertEqual(cart[p1_key]['grade'], 'original')
+        self.assertEqual(cart[p2_key]['price_yer'], 40000.0)
+        self.assertEqual(cart[p2_key]['grade'], 'master')
+
+        # التحقق من مفاتيح الملحقات وأسعارها
+        acc1_key = f"{self.watch.id}_acc_gift"
+        acc2_key = f"{cosmetic_item.id}_acc_gift"
+        self.assertIn(acc1_key, cart)
+        self.assertIn(acc2_key, cart)
+        self.assertEqual(cart[acc1_key]['price_yer'], 120000.0)
+        self.assertEqual(cart[acc2_key]['price_yer'], 15000.0)
+
+        # فحص بيانات الهدية في الجلسة
+        gift_data = self.client.session.get('gift_data', {})
+        self.assertTrue(gift_data.get('is_gift'))
+        self.assertEqual(gift_data.get('recipient_name'), 'ياسر اليماني')
+        self.assertEqual(gift_data.get('gift_card_sender'), 'أحمد سعيد')
+
+

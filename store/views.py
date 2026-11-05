@@ -631,14 +631,24 @@ def gift_builder_view(request):
     ).order_by('-created_at')[:10]
 
     if request.method == 'POST':
-        perfume_id = request.POST.get('perfume_id')
-        perfume_grade = request.POST.get('perfume_grade', 'original')
-        accessory_id = request.POST.get('accessory_id')
+        perfume_ids = request.POST.getlist('perfume_id')
+        if not perfume_ids and request.POST.get('perfume_id'):
+            perfume_ids = [request.POST.get('perfume_id')]
+        perfume_ids = [p for p in perfume_ids if p]
+
+        perfume_grade_default = request.POST.get('perfume_grade', 'original')
+
+        accessory_ids = request.POST.getlist('accessory_id')
+        if not accessory_ids and request.POST.get('accessory_id'):
+            accessory_ids = [request.POST.get('accessory_id')]
+        accessory_ids = [a for a in accessory_ids if a]
+
         post_bundle_id = request.POST.get('bundle_id')
         
         recipient_name = request.POST.get('recipient_name', '').strip()
         recipient_phone = request.POST.get('recipient_phone', '').strip()
         gift_card_sender = request.POST.get('gift_card_sender', '').strip()
+        gift_card_recipient = request.POST.get('gift_card_recipient', '').strip() or recipient_name
         gift_card_message = request.POST.get('gift_card_message', '').strip()
         preferred_delivery_date = request.POST.get('preferred_delivery_date', '').strip() or None
         is_luxury_gift_wrapping = request.POST.get('is_luxury_gift_wrapping') in ['true', '1', 'on']
@@ -659,11 +669,16 @@ def gift_builder_view(request):
                 'grade': '',
             }
         else:
-            if perfume_id:
-                perfume_obj = get_object_or_404(Product, id=perfume_id, is_active=True)
-                p_price = float(perfume_obj.price_master_yer if perfume_grade == 'master' and perfume_obj.price_master_yer else (perfume_obj.price_original_yer or perfume_obj.price_yer))
-                grade_name = 'ماستر' if perfume_grade == 'master' else 'أصلي'
-                p_key = f"{perfume_obj.id}_{perfume_grade}_gift"
+            if not perfume_ids:
+                messages.warning(request, 'يرجى اختيار عطر واحد على الأقل لتجهيز باقة الإهداء.')
+                return redirect('store:gift_builder')
+
+            for pid in perfume_ids:
+                perfume_obj = get_object_or_404(Product, id=pid, is_active=True)
+                p_grade = request.POST.get(f'grade_{pid}') or perfume_grade_default
+                p_price = float(perfume_obj.price_master_yer if p_grade == 'master' and perfume_obj.price_master_yer else (perfume_obj.price_original_yer or perfume_obj.price_yer))
+                grade_name = 'ماستر' if p_grade == 'master' else 'أصلي'
+                p_key = f"{perfume_obj.id}_{p_grade}_gift"
                 cart[p_key] = {
                     'product_id': perfume_obj.id,
                     'name': perfume_obj.name_ar,
@@ -672,10 +687,11 @@ def gift_builder_view(request):
                     'image_url': perfume_obj.primary_image_url,
                     'quantity': 1,
                     'variant_info': f"باقة إهداء ({grade_name})",
-                    'grade': perfume_grade,
+                    'grade': p_grade,
                 }
-            if accessory_id:
-                acc_obj = get_object_or_404(Product, id=accessory_id, is_active=True)
+
+            for aid in accessory_ids:
+                acc_obj = get_object_or_404(Product, id=aid, is_active=True)
                 a_key = f"{acc_obj.id}_acc_gift"
                 cart[a_key] = {
                     'product_id': acc_obj.id,
@@ -684,7 +700,7 @@ def gift_builder_view(request):
                     'price_yer': float(acc_obj.price_yer),
                     'image_url': acc_obj.primary_image_url,
                     'quantity': 1,
-                    'variant_info': 'ملحق إضافي',
+                    'variant_info': acc_obj.category.name_ar if acc_obj.category else 'ملحق إضافي',
                     'grade': '',
                 }
 
@@ -694,7 +710,7 @@ def gift_builder_view(request):
             'recipient_name': recipient_name,
             'recipient_phone': recipient_phone,
             'gift_card_sender': gift_card_sender,
-            'gift_card_recipient': recipient_name,
+            'gift_card_recipient': gift_card_recipient,
             'gift_card_message': gift_card_message,
             'is_luxury_gift_wrapping': is_luxury_gift_wrapping,
             'preferred_delivery_date': preferred_delivery_date,
@@ -716,14 +732,23 @@ def gift_builder_view(request):
 
 
 def gift_calculate_live(request):
-    """حساب أسعار صندوق الهدية وتحديث المعاينة المباشرة عبر HTMX"""
+    """حساب أسعار صندوق الهدية وتحديث المعاينة المباشرة عبر HTMX مع دعم العناصر المتعددة"""
     settings = StoreSettings.get_settings()
     yer_per_sar = settings.yer_per_sar or Decimal('530.00')
     wrapping_fee = settings.gift_wrapping_fee_yer or Decimal('2500.00')
 
-    perfume_id = request.POST.get('perfume_id')
-    perfume_grade = request.POST.get('perfume_grade', 'original')
-    accessory_id = request.POST.get('accessory_id')
+    perfume_ids = request.POST.getlist('perfume_id')
+    if not perfume_ids and request.POST.get('perfume_id'):
+        perfume_ids = [request.POST.get('perfume_id')]
+    perfume_ids = [p for p in perfume_ids if p]
+
+    perfume_grade_default = request.POST.get('perfume_grade', 'original')
+
+    accessory_ids = request.POST.getlist('accessory_id')
+    if not accessory_ids and request.POST.get('accessory_id'):
+        accessory_ids = [request.POST.get('accessory_id')]
+    accessory_ids = [a for a in accessory_ids if a]
+
     bundle_id = request.POST.get('bundle_id')
     is_wrapping = request.POST.get('is_luxury_gift_wrapping') in ['true', '1', 'on']
 
@@ -740,23 +765,26 @@ def gift_calculate_live(request):
                 'price_yer': bundle_obj.price_yer
             })
     else:
-        if perfume_id:
-            p_obj = Product.objects.filter(id=perfume_id, is_active=True).first()
+        for pid in perfume_ids:
+            p_obj = Product.objects.filter(id=pid, is_active=True).first()
             if p_obj:
-                p_price = p_obj.price_master_yer if perfume_grade == 'master' and p_obj.price_master_yer else (p_obj.price_original_yer or p_obj.price_yer)
+                p_grade = request.POST.get(f'grade_{pid}') or perfume_grade_default
+                p_price = p_obj.price_master_yer if p_grade == 'master' and p_obj.price_master_yer else (p_obj.price_original_yer or p_obj.price_yer)
                 total_yer += p_price
+                grade_name = 'ماستر' if p_grade == 'master' else 'أصلي'
                 items_breakdown.append({
                     'title': p_obj.name_ar,
-                    'type': f"عطر أساسي ({'ماستر' if perfume_grade == 'master' else 'أصلي'})",
+                    'type': f"عطر ({grade_name})",
                     'price_yer': p_price
                 })
-        if accessory_id:
-            a_obj = Product.objects.filter(id=accessory_id, is_active=True).first()
+
+        for aid in accessory_ids:
+            a_obj = Product.objects.filter(id=aid, is_active=True).first()
             if a_obj:
                 total_yer += a_obj.price_yer
                 items_breakdown.append({
                     'title': a_obj.name_ar,
-                    'type': 'ملحق إضافي',
+                    'type': a_obj.category.name_ar if a_obj.category else 'ملحق إضافي',
                     'price_yer': a_obj.price_yer
                 })
 
