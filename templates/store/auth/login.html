@@ -187,10 +187,7 @@
         } else if (hasClientId) {
             window.location.href = "{% url 'store:google_login' %}{% if next_url %}?next={{ next_url }}{% endif %}";
         } else {
-            // Notice for admin / preview test mode
-            if (confirm("مرحباً بكم. لمعاينة تسجيل الدخول بحساب Google التجريبي، اضغط موافق. لتفعيل الحساب الحقيقي في الإنتاج، يرجى حفظ Google Client ID في الإعدادات.")) {
-                window.location.href = "{% url 'store:google_callback' %}?demo=1{% if next_url %}&next={{ next_url }}{% endif %}";
-            }
+            alert("خدمة تسجيل الدخول السريع عبر Google غير مهيأة بعد. يرجى تسجيل الدخول بواسطة البريد الإلكتروني أو الهاتف وكلمة المرور.");
         }
     }
 </script>

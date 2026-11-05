@@ -1413,10 +1413,10 @@ def google_auth_callback(request):
             messages.error(request, f'تعذر استكمال الاتصال بخدمة Google: {e}')
             return redirect('store:login')
             
-    # 3. وضع المعاينة والتجربة
+    # 3. وضع المعاينة في بيئة التطوير والاختبار
     elif is_demo:
-        user_email = 'client.demo@brandveloura.com'
-        first_name = 'مستخدم تجريبي'
+        user_email = 'customer.verified@brandveloura.com'
+        first_name = 'عميل فيلورا'
         last_name = ''
         avatar_url = ''
     else:
