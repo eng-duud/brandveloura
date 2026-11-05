@@ -1,0 +1,529 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}حسابي | Brand Veloura{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-6">
+    
+    <!-- 1. Header Card (بطاقة الحساب الرسمية) -->
+    <div class="bg-white rounded-2xl p-5 sm:p-6 border border-rose-100/90 shadow-sm">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-slate-900 text-white font-serif font-bold text-xl flex items-center justify-center shrink-0">
+                    {{ request.user.first_name|default:request.user.username|slice:":1"|upper }}
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900">
+                        {{ request.user.get_full_name|default:request.user.username }}
+                    </h1>
+                    <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-0.5">
+                        <span>{{ request.user.email|default:"لا يوجد بريد مسجل" }}</span>
+                        {% if profile.phone %}
+                        <span>•</span>
+                        <span class="font-num" dir="ltr">{{ profile.phone }}</span>
+                        {% endif %}
+                        <span>•</span>
+                        <span>تاريخ التسجيل: {{ request.user.date_joined|date:"Y/m/d" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 self-end sm:self-center">
+                <a href="{% url 'store:track_order' %}" class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5">
+                    <i data-lucide="truck" class="w-3.5 h-3.5"></i>
+                    <span>تتبع الطلبات</span>
+                </a>
+                <a href="{% url 'store:logout' %}" class="px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition flex items-center gap-1.5">
+                    <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                    <span>تسجيل الخروج</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Overview Stats (ملخص النشاط) -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div class="bg-white rounded-2xl p-4 border border-rose-100/80 shadow-2xs">
+            <span class="text-xs text-slate-500 block mb-1">إجمالي الطلبات</span>
+            <div class="flex items-baseline gap-1.5">
+                <span class="text-2xl font-bold text-slate-900 font-num">{{ total_orders_count }}</span>
+                <span class="text-xs text-slate-400">طلب</span>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 border border-rose-100/80 shadow-2xs">
+            <span class="text-xs text-slate-500 block mb-1">الطلبات الجارية</span>
+            <div class="flex items-baseline gap-1.5">
+                <span class="text-2xl font-bold text-amber-600 font-num">{{ active_orders_count }}</span>
+                <span class="text-xs text-slate-400">قيد المعالجة والتوصيل</span>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 border border-rose-100/80 shadow-2xs">
+            <span class="text-xs text-slate-500 block mb-1">إجمالي المشتريات</span>
+            <div class="flex items-baseline gap-1.5">
+                <span class="text-xl font-bold text-slate-900 font-num">{{ total_spent_yer|floatformat:0 }}</span>
+                <span class="text-xs text-slate-400">ر.ي ({{ total_spent_sar|floatformat:1 }} ر.س)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Navigation Tabs -->
+    <div class="border-b border-rose-100 flex items-center gap-6 text-xs font-bold">
+        <button 
+            type="button" 
+            onclick="switchTab('orders')" 
+            id="tab-btn-orders"
+            class="tab-button pb-3 border-b-2 border-brand-600 text-brand-600 cursor-pointer transition flex items-center gap-1.5">
+            <i data-lucide="package" class="w-4 h-4"></i>
+            <span>سجل الطلبات ({{ total_orders_count }})</span>
+        </button>
+
+        <button 
+            type="button" 
+            onclick="switchTab('profile')" 
+            id="tab-btn-profile"
+            class="tab-button pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 cursor-pointer transition flex items-center gap-1.5">
+            <i data-lucide="user" class="w-4 h-4"></i>
+            <span>بيانات التوصيل</span>
+        </button>
+
+        <button 
+            type="button" 
+            onclick="switchTab('security')" 
+            id="tab-btn-security"
+            class="tab-button pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 cursor-pointer transition flex items-center gap-1.5">
+            <i data-lucide="lock" class="w-4 h-4"></i>
+            <span>أمان الحساب</span>
+        </button>
+
+        <button 
+            type="button" 
+            onclick="switchTab('notifications')" 
+            id="tab-btn-notifications"
+            class="tab-button pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 cursor-pointer transition flex items-center gap-1.5">
+            <i data-lucide="bell" class="w-4 h-4"></i>
+            <span>الإشعارات</span>
+            {% if notifications_unread_count > 0 %}
+            <span class="px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold font-num">{{ notifications_unread_count }}</span>
+            {% endif %}
+        </button>
+    </div>
+
+    <!-- 4. Tab Contents -->
+
+    <!-- TAB 1: ORDERS -->
+    <div id="tab-content-orders" class="tab-pane space-y-4">
+        {% if orders %}
+        <div class="space-y-4">
+            {% for order in orders %}
+            <div class="bg-white rounded-2xl p-5 border border-rose-100/90 shadow-2xs space-y-4">
+                
+                <!-- Order Header -->
+                <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-sm text-slate-900 font-num">طلب رقم: #{{ order.order_number }}</span>
+                        <button onclick="copyToClipboard('{{ order.order_number }}', 'تم نسخ رقم الطلب')" class="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer" title="نسخ">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                        </button>
+                        {% if order.is_gift %}
+                        <span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded">
+                            طلب كهدية
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-slate-400">{{ order.created_at|date:"Y/m/d - H:i" }}</span>
+                        
+                        <!-- Status Badge -->
+                        {% if order.status == 'delivered' %}
+                        <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-[11px] font-bold px-3 py-1 rounded-full shadow-2xs">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                            <span>تم التسليم بنجاح</span>
+                        </span>
+                        {% elif order.status == 'out_for_delivery' %}
+                        <span class="inline-flex items-center gap-1.5 bg-purple-50 text-purple-800 border border-purple-200/80 text-[11px] font-bold px-3 py-1 rounded-full shadow-2xs">
+                            <span class="w-1.5 h-1.5 rounded-full bg-purple-600 animate-pulse"></span>
+                            <span>في الطريق إليك</span>
+                        </span>
+                        {% elif order.status == 'processing' or order.status == 'payment_verified' %}
+                        <span class="inline-flex items-center gap-1.5 bg-blue-50 text-blue-800 border border-blue-200/80 text-[11px] font-bold px-3 py-1 rounded-full shadow-2xs">
+                            <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                            <span>{{ order.get_status_display }}</span>
+                        </span>
+                        {% elif order.status == 'cancelled' %}
+                        <span class="inline-flex items-center gap-1.5 bg-rose-50 text-rose-800 border border-rose-200/80 text-[11px] font-bold px-3 py-1 rounded-full shadow-2xs">
+                            <span class="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+                            <span>ملغي</span>
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-200/80 text-[11px] font-bold px-3 py-1 rounded-full shadow-2xs">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                            <span>بانتظار التحقق من الإشعار</span>
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Order Items -->
+                <div class="space-y-2">
+                    {% for item in order.items.all %}
+                    <div class="flex items-center justify-between text-xs py-1.5 border-b border-slate-50 last:border-none">
+                        <div class="flex items-center gap-3">
+                            {% if item.product_image_url %}
+                            <img src="{{ item.product_image_url }}" alt="{{ item.product_name }}" class="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0">
+                            {% endif %}
+                            <div>
+                                <p class="font-bold text-slate-800">{{ item.product_name }}</p>
+                                <p class="text-[11px] text-slate-400">
+                                    الكمية: {{ item.quantity }} {% if item.variant_info %}• {{ item.variant_info }}{% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        <span class="font-bold text-slate-800 font-num">
+                            {{ item.total_price_yer|floatformat:0 }} ر.ي
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Order Footer -->
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                    <div class="text-xs">
+                        <span class="text-slate-400">الإجمالي: </span>
+                        <span class="font-bold text-slate-900 font-num">{{ order.total_yer|floatformat:0 }} ر.ي</span>
+                        <span class="text-slate-400 font-num">({{ order.total_sar|floatformat:1 }} ر.س)</span>
+                        <span class="text-slate-400 mr-2">• طريقة الدفع: {{ order.payment_method_name|default:"تحويل بنكي" }}</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <!-- Reorder Button -->
+                        <form method="POST" action="{% url 'store:reorder' order_number=order.order_number %}">
+                            {% csrf_token %}
+                            <button type="submit" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-brand-600 text-white font-semibold text-xs transition cursor-pointer">
+                                إعادة الطلب
+                            </button>
+                        </form>
+
+                        <a href="{% url 'store:track_order' %}?order_number={{ order.order_number }}" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition">
+                            تتبع الطلب
+                        </a>
+
+                        <a href="https://wa.me/{{ store_settings.contact_whatsapp }}?text=استفسار+عن+الطلب+رقم+{{ order.order_number }}" target="_blank" class="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs transition">
+                            تواصل واتساب
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-white rounded-2xl p-10 border border-rose-100/90 text-center space-y-3">
+            <p class="text-sm font-bold text-slate-700">لا توجد طلبات سابقة مسجلة في حسابكم</p>
+            <a href="{% url 'store:product_list' %}" class="inline-block px-4 py-2 bg-slate-900 text-white text-xs font-semibold rounded-xl hover:bg-brand-600 transition">
+                تصفح المنتجات
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- TAB 2: PROFILE & ADDRESS -->
+    <div id="tab-content-profile" class="tab-pane hidden">
+        <div class="bg-white rounded-2xl p-6 border border-rose-100/90 shadow-2xs space-y-5">
+            <div>
+                <h2 class="text-sm font-bold text-slate-900">بيانات التوصيل والعنوان</h2>
+                <p class="text-xs text-slate-400 mt-0.5">تُعتمد هذه البيانات تلقائياً عند إتمام أي طلب جديد</p>
+            </div>
+
+            <form method="POST" action="{% url 'store:account_profile' %}" class="space-y-4">
+                {% csrf_token %}
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">الاسم الأول *</label>
+                        <input 
+                            type="text" 
+                            name="first_name" 
+                            required 
+                            value="{{ request.user.first_name }}"
+                            class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3 text-xs font-medium text-slate-900 transition"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">اسم العائلة</label>
+                        <input 
+                            type="text" 
+                            name="last_name" 
+                            value="{{ request.user.last_name }}"
+                            class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3 text-xs font-medium text-slate-900 transition"
+                        >
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">البريد الإلكتروني</label>
+                        <input 
+                            type="email" 
+                            value="{{ request.user.email }}" 
+                            disabled 
+                            class="w-full h-10 bg-slate-100 border border-slate-200 text-slate-500 rounded-xl px-3 text-xs font-medium cursor-not-allowed"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف / الواتساب للتوصيل *</label>
+                        <input 
+                            type="tel" 
+                            name="phone" 
+                            value="{{ profile.phone|default:'' }}"
+                            placeholder="770000000"
+                            class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3 text-xs font-medium text-slate-900 transition text-right font-num"
+                            dir="ltr"
+                        >
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">المدينة / المحافظة</label>
+                        <select 
+                            name="preferred_city" 
+                            class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3 text-xs font-medium text-slate-900 transition cursor-pointer">
+                            <option value="">اختر المدينة</option>
+                            {% for zone in shipping_zones %}
+                            <option value="{{ zone.city_name }}" {% if profile.preferred_city == zone.city_name %}selected{% endif %}>
+                                {{ zone.city_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">العنوان التفصيلي (الشارع والحي)</label>
+                        <input 
+                            type="text" 
+                            name="shipping_address" 
+                            value="{{ profile.shipping_address|default:'' }}"
+                            placeholder="اسم الشارع والحي"
+                            class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3 text-xs font-medium text-slate-900 transition"
+                        >
+                    </div>
+                </div>
+
+                <div class="pt-2 flex justify-end">
+                    <button 
+                        type="submit" 
+                        class="px-5 py-2.5 bg-slate-900 hover:bg-brand-600 text-white font-bold text-xs rounded-xl transition cursor-pointer">
+                        حفظ التغييرات
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TAB 3: SECURITY -->
+    <div id="tab-content-security" class="tab-pane hidden">
+        <div class="bg-white rounded-2xl p-6 border border-rose-100/90 shadow-2xs space-y-5 max-w-xl">
+            <div>
+                <h2 class="text-sm font-bold text-slate-900">تغيير كلمة المرور</h2>
+                <p class="text-xs text-slate-400 mt-0.5">يجب أن تتكون كلمة المرور من 6 خانات على الأقل</p>
+            </div>
+
+            {% if not request.user.has_usable_password %}
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-600">
+                هذا الحساب مسجل ومؤمن عبر Google ولا يتطلب كلمة مرور تقليدية.
+            </div>
+            {% else %}
+            <form method="POST" action="{% url 'store:account_profile' %}" class="space-y-3.5">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="change_password">
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور الحالية *</label>
+                    <input 
+                        type="password" 
+                        name="current_password" 
+                        required 
+                        class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3 text-xs font-medium text-slate-900 transition"
+                    >
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور الجديدة *</label>
+                    <input 
+                        type="password" 
+                        name="new_password" 
+                        required 
+                        class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3 text-xs font-medium text-slate-900 transition"
+                    >
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">تأكيد كلمة المرور الجديدة *</label>
+                    <input 
+                        type="password" 
+                        name="confirm_password" 
+                        required 
+                        class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3 text-xs font-medium text-slate-900 transition"
+                    >
+                </div>
+
+                <div class="pt-1">
+                    <button 
+                        type="submit" 
+                        class="px-5 py-2 bg-slate-900 hover:bg-brand-600 text-white font-bold text-xs rounded-xl transition cursor-pointer">
+                        تحديث كلمة المرور
+                    </button>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- TAB 4: NOTIFICATIONS -->
+    <div id="tab-content-notifications" class="tab-pane hidden space-y-4">
+        <div class="bg-white rounded-2xl p-5 border border-rose-100/90 shadow-2xs space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div>
+                    <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                        <i data-lucide="bell" class="w-4 h-4 text-brand-600"></i>
+                        <span>مركز الإشعارات والتنبيهات الخاصة بحسابك</span>
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">تتبع دوري لجميع التحديثات وحالات طلباتك وعروض المتجر</p>
+                </div>
+                {% if notifications_unread_count > 0 %}
+                <form method="POST" action="{% url 'store:mark_all_notifications_read' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-2xs">
+                        <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
+                        <span>تحديد الكل كمقروء ({{ notifications_unread_count }})</span>
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+
+            {% if notifications %}
+            <div class="divide-y divide-rose-50/80">
+                {% for n in notifications %}
+                <div class="py-3.5 px-2.5 rounded-xl transition flex items-start gap-3.5 {% if not n.is_read %}bg-rose-50/40 border border-rose-100/70{% else %}hover:bg-slate-50/60{% endif %}">
+                    <div class="shrink-0 mt-1">
+                        {% if n.notification_type == 'payment_verified' %}
+                        <span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i>
+                        </span>
+                        {% elif n.notification_type == 'out_for_delivery' %}
+                        <span class="w-8 h-8 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center">
+                            <i data-lucide="truck" class="w-4 h-4"></i>
+                        </span>
+                        {% elif n.notification_type == 'delivered' %}
+                        <span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                            <i data-lucide="package-check" class="w-4 h-4"></i>
+                        </span>
+                        {% elif n.notification_type == 'cancelled' %}
+                        <span class="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                            <i data-lucide="x-circle" class="w-4 h-4"></i>
+                        </span>
+                        {% elif n.notification_type == 'order_created' %}
+                        <span class="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+                            <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+                        </span>
+                        {% else %}
+                        <span class="w-8 h-8 rounded-xl bg-rose-100 text-brand-600 flex items-center justify-center">
+                            <i data-lucide="bell" class="w-4 h-4"></i>
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-bold text-slate-900 text-xs sm:text-sm">{{ n.title }}</h4>
+                                {% if not n.is_read %}
+                                <span class="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[9px] font-extrabold">جديد</span>
+                                {% endif %}
+                                {% if n.order %}
+                                <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold font-num">طلب #{{ n.order.order_number }}</span>
+                                {% endif %}
+                            </div>
+                            <span class="text-[11px] text-slate-400 font-num">{{ n.created_at|date:"Y-m-d H:i" }}</span>
+                        </div>
+                        <p class="text-slate-600 text-xs leading-relaxed mb-2">{{ n.message }}</p>
+                        
+                        <div class="flex items-center gap-3">
+                            {% if n.link %}
+                            <a href="{{ n.link }}" class="text-xs font-bold text-brand-600 hover:text-brand-800 transition inline-flex items-center gap-1">
+                                <span>عرض تفاصيل الطلب</span>
+                                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                            </a>
+                            {% endif %}
+                            {% if not n.is_read %}
+                            <form method="POST" action="{% url 'store:mark_notification_read' n.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="text-slate-400 hover:text-slate-700 text-[11px] font-medium cursor-pointer">
+                                    تحديد كمقروء
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="py-12 text-center">
+                <div class="w-12 h-12 rounded-full bg-rose-50 text-rose-300 flex items-center justify-center mx-auto mb-2">
+                    <i data-lucide="bell-off" class="w-6 h-6"></i>
+                </div>
+                <p class="font-bold text-slate-700 text-sm">سجل الإشعارات فارغ</p>
+                <p class="text-xs text-slate-400 mt-1">ستظهر هنا أي تنبيهات تخص طلباتك وتحديثات الشحن فور صدورها.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.className = 'tab-button pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 cursor-pointer transition flex items-center gap-1.5';
+        });
+
+        const activePane = document.getElementById('tab-content-' + tabId);
+        if (activePane) activePane.classList.remove('hidden');
+
+        const activeBtn = document.getElementById('tab-btn-' + tabId);
+        if (activeBtn) {
+            activeBtn.className = 'tab-button pb-3 border-b-2 border-brand-600 text-brand-600 cursor-pointer transition flex items-center gap-1.5';
+        }
+        if (window.lucide) lucide.createIcons();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tab = urlParams.get('tab');
+        if (tab && ['orders', 'profile', 'security', 'notifications'].includes(tab)) {
+            switchTab(tab);
+        }
+    });
+
+    function copyToClipboard(text, successMsg) {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(successMsg, 'success');
+            }).catch(() => {
+                prompt("انسخ:", text);
+            });
+        } else {
+            prompt("انسخ:", text);
+        }
+    }
+</script>
+{% endblock %}

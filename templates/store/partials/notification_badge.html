@@ -1,0 +1,4 @@
+<span id="notification-badge" class="{% if unread_count > 0 %}inline-flex{% else %}hidden{% endif %} items-center justify-center px-1.5 py-0.5 text-[9px] font-extrabold leading-none text-white bg-rose-600 rounded-full shadow-sm animate-pulse min-w-[18px]">
+    {% if unread_count > 9 %}9+{% else %}{{ unread_count }}{% endif %}
+</span>
+

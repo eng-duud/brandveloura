@@ -1,0 +1,382 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block coltype %}colMS{% endblock %}
+{% block bodyclass %}{{ block.super }} dashboard{% endblock %}
+{% block nav-breadcrumbs %}{% endblock %}
+
+{% block content %}
+<div id="content-main">
+
+    <!-- 1. Top KPI Summary Cards -->
+    <div class="bv-kpi-grid">
+        <!-- Total Orders Card -->
+        <a href="/admin/store/order/" style="text-decoration: none;" class="bv-kpi-card">
+            <div class="bv-kpi-info">
+                <h4>إجمالي الطلبات</h4>
+                <div class="bv-kpi-val">{{ admin_total_orders|default:"0" }}</div>
+                <span style="font-size: 0.72rem; color: #10b981; font-weight: 600;">سجل العمليات الكامل</span>
+            </div>
+            <div class="bv-kpi-icon" style="background: #eff6ff; color: #2563eb;">
+                📦
+            </div>
+        </a>
+
+        <!-- Pending Orders Verification Card -->
+        <a href="/admin/store/order/?status__exact=pending_verification" style="text-decoration: none;" class="bv-kpi-card" style="border-color: #fde68a;">
+            <div class="bv-kpi-info">
+                <h4 style="color: #b45309;">بانتظار التحقق من الإشعار</h4>
+                <div class="bv-kpi-val" style="color: #d97706;">{{ admin_pending_orders|default:"0" }}</div>
+                <span style="font-size: 0.72rem; color: #b45309; font-weight: 600;">سندات تتطلب اعتمادك</span>
+            </div>
+            <div class="bv-kpi-icon" style="background: #fef3c7; color: #d97706;">
+                ⏳
+            </div>
+        </a>
+
+        <!-- Total Revenue Card -->
+        <div class="bv-kpi-card">
+            <div class="bv-kpi-info">
+                <h4>إجمالي المبيعات المؤكدة</h4>
+                <div class="bv-kpi-val" style="font-size: 1.35rem; color: #047857;">
+                    {{ admin_total_sales_yer|floatformat:0|default:"0" }} <span style="font-size: 0.78rem;">ر.ي</span>
+                </div>
+                <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">
+                    ≈ {{ admin_total_sales_sar|floatformat:1|default:"0" }} ر.س
+                </span>
+            </div>
+            <div class="bv-kpi-icon" style="background: #ecfdf5; color: #059669;">
+                💰
+            </div>
+        </div>
+
+        <!-- Low Stock Alerts Card -->
+        <a href="/admin/store/product/?stock_quantity__lte=3" style="text-decoration: none;" class="bv-kpi-card">
+            <div class="bv-kpi-info">
+                <h4 style="color: #dc2626;">تنبيهات انخفاض المخزون</h4>
+                <div class="bv-kpi-val" style="color: #dc2626;">{{ admin_low_stock_count|default:"0" }}</div>
+                <span style="font-size: 0.72rem; color: #ef4444; font-weight: 600;">منتجات متبقي 3 أو أقل</span>
+            </div>
+            <div class="bv-kpi-icon" style="background: #fef2f2; color: #dc2626;">
+                ⚠️
+            </div>
+        </a>
+    </div>
+
+    <!-- 2. Quick Operations Action Bar -->
+    <div style="margin-bottom: 24px;">
+        <h3 style="font-size: 0.82rem; font-weight: 700; color: #64748b; margin-bottom: 10px; text-transform: uppercase;">
+            إجراءات الإدارة السريعة
+        </h3>
+        <div class="bv-quick-actions">
+            <a href="/admin/store/product/add/" class="bv-action-btn">
+                <span>➕</span>
+                <span>إضافة منتج / عطر جديد</span>
+            </a>
+            <a href="/admin/store/storesettings/1/change/" class="bv-action-btn" style="border-color: #fbcfe8; color: #be185d;">
+                <span>💱</span>
+                <span>تحديث سعر الصرف اليومي ({{ yer_per_sar }} ر.ي)</span>
+            </a>
+            <a href="/admin/store/order/?status__exact=pending_verification" class="bv-action-btn" style="border-color: #fde68a; color: #b45309;">
+                <span>🧾</span>
+                <span>فحص ومراجعة إشعارات التحويل</span>
+            </a>
+            <a href="/admin/store/herobanner/add/" class="bv-action-btn">
+                <span>🖼️</span>
+                <span>إضافة بانر متحرك للرئيسية</span>
+            </a>
+            <a href="/admin/store/paymentaccount/add/" class="bv-action-btn">
+                <span>💳</span>
+                <span>إضافة حساب بنكي / محفظة</span>
+            </a>
+            <a href="/admin/store/notification/" class="bv-action-btn" style="border-color: #fed7aa; color: #c2410c;">
+                <span>🔔</span>
+                <span>مركز الإشعارات {% if admin_unread_notifications_count %}({{ admin_unread_notifications_count }} جديد){% endif %}</span>
+            </a>
+            <a href="/" target="_blank" class="bv-action-btn" style="background: #0f172a; color: #ffffff; border-color: #0f172a;">
+                <span>🌐</span>
+                <span>معاينة المتجر المباشر</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- 3. Recent Orders Summary Table -->
+    {% if admin_recent_orders %}
+    <div class="module" style="margin-bottom: 30px;">
+        <h2 style="display: flex; align-items: center; justify-content: space-between;">
+            <span>أحدث الطلبات المستلمة</span>
+            <a href="/admin/store/order/" style="font-size: 0.78rem; color: #be123f; font-weight: 600; text-decoration: none;">عرض كافة الطلبات ←</a>
+        </h2>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="text-align: right;">رقم الطلب</th>
+                        <th style="text-align: right;">العميل</th>
+                        <th style="text-align: right;">المدينة</th>
+                        <th style="text-align: right;">المبلغ المطلوب</th>
+                        <th style="text-align: right;">الحالة</th>
+                        <th style="text-align: right;">تواصل سريع</th>
+                        <th style="text-align: center;">إجراء</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ord in admin_recent_orders %}
+                    <tr>
+                        <td>
+                            <strong style="color: #0f172a; font-family: var(--bv-font-num);">{{ ord.order_number }}</strong>
+                            {% if ord.is_gift %}
+                            <span style="background: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-right: 4px;">🎁 هدية</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="font-weight: 600; color: #0f172a;">{{ ord.customer_name }}</div>
+                            <div style="font-size: 11px; color: #64748b; font-family: var(--bv-font-num);" dir="ltr">{{ ord.customer_phone }}</div>
+                        </td>
+                        <td>{{ ord.shipping_city }}</td>
+                        <td>
+                            {% if ord.payment_currency_selected == 'SAR' %}
+                            <span style="font-weight: 700; color: #047857; font-family: var(--bv-font-num);">{{ ord.total_sar }} ر.س</span>
+                            {% else %}
+                            <span style="font-weight: 700; color: #0f172a; font-family: var(--bv-font-num);">{{ ord.total_yer|floatformat:0 }} ر.ي</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span style="font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 9999px; {% if ord.status == 'pending_verification' %}background:#fef3c7; color:#b45309;{% elif ord.status == 'payment_verified' %}background:#d1fae5; color:#065f46;{% elif ord.status == 'delivered' %}background:#ecfdf5; color:#047857;{% else %}background:#f1f5f9; color:#475569;{% endif %}">
+                                {{ ord.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if ord.customer_phone %}
+                            <a href="https://wa.me/{{ ord.customer_phone|cut:'+'|cut:' ' }}" target="_blank" style="display: inline-flex; align-items: center; gap: 4px; background: #25D366; color: white; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; text-decoration: none;">
+                                <span>واتساب</span>
+                            </a>
+                            {% else %}
+                            —
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center;">
+                            <a href="/admin/store/order/{{ ord.id }}/change/" style="display: inline-block; background: #f1f5f9; color: #0f172a; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; text-decoration: none;">
+                                فحص السند / تعديل
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 4. Bespoke Store Management Hub (أقسام المتجر الميسرة) -->
+    <div style="margin-bottom: 30px;">
+        <h3 style="font-size: 0.88rem; font-weight: 800; color: #0f172a; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+            <span>بوابة إدارة أقسام المتجر</span>
+            <span style="font-size: 0.72rem; font-weight: 500; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 10px;">واجهة مباشرة وميسرة</span>
+        </h3>
+
+        <div class="bv-portal-grid">
+            
+            <!-- SECTION 1: ORDERS & NOTIFICATIONS -->
+            <div class="bv-portal-card">
+                <div class="bv-portal-header">
+                    <div class="bv-portal-header-icon" style="background: #eff6ff; color: #2563eb;">
+                        🛍️
+                    </div>
+                    <div>
+                        <h4 class="bv-portal-header-title">الطلبات والمبيعات</h4>
+                        <p class="bv-portal-header-subtitle">متابعة طلبات الزوار، مراجعة سندات التحويل، والتنبيهات</p>
+                    </div>
+                </div>
+                <div class="bv-portal-body">
+                    <div class="bv-portal-item">
+                        <div class="bv-portal-item-info">
+                            <div class="bv-portal-item-name">
+                                <span>سجل الطلبات والتحقق</span>
+                                {% if admin_pending_orders %}
+                                <span style="background: #be123f; color: white; padding: 1px 6px; border-radius: 8px; font-size: 10px; font-weight: 700;">{{ admin_pending_orders }} معلق</span>
+                                {% endif %}
+                            </div>
+                            <div class="bv-portal-item-desc">مراجعة سندات الدفع واعتماد الحالات والتوصيل</div>
+                        </div>
+                        <div class="bv-portal-item-actions">
+                            <a href="/admin/store/order/" class="bv-portal-btn bv-portal-btn-primary">استعراض</a>
+                        </div>
+                    </div>
+
+                    <div class="bv-portal-item">
+                        <div class="bv-portal-item-info">
+                            <div class="bv-portal-item-name">
+                                <span>مركز الإشعارات والتنبيهات</span>
+                                {% if admin_unread_notifications_count %}
+                                <span style="background: #ea580c; color: white; padding: 1px 6px; border-radius: 8px; font-size: 10px; font-weight: 700;">{{ admin_unread_notifications_count }} جديد</span>
+                                {% endif %}
+                            </div>
+                            <div class="bv-portal-item-desc">تنبيهات انخفاض المخزون وإشعارات الطلبات</div>
+                        </div>
+                        <div class="bv-portal-item-actions">
+                            <a href="/admin/store/notification/" class="bv-portal-btn bv-portal-btn-primary">استعراض</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2: PRODUCTS & CATALOG -->
+            <div class="bv-portal-card">
+                <div class="bv-portal-header">
+                    <div class="bv-portal-header-icon" style="background: #fdf2f8; color: #db2777;">
+                        ✨
+                    </div>
+                    <div>
+                        <h4 class="bv-portal-header-title">الكتالوج والمنتجات</h4>
+                        <p class="bv-portal-header-subtitle">إضافة وتعديل العطور والساعات، الأسعار، والمخزون</p>
+                    </div>
+                </div>
+                <div class="bv-portal-body">
+                    <div class="bv-portal-item">
+                        <div class="bv-portal-item-info">
+                            <div class="bv-portal-item-name">
+                                <span>المنتجات والعطور والساعات</span>
+                            </div>
+                            <div class="bv-portal-item-desc">إدارة الأسعار، الصور، والكميات المتوفرة</div>
+                        </div>
+                        <div class="bv-portal-item-actions">
+                            <a href="/admin/store/product/" class="bv-portal-btn bv-portal-btn-primary">استعراض</a>
+                            <a href="/admin/store/product/add/" class="bv-portal-btn bv-portal-btn-add">➕ إضافة</a>
+                        </div>
+                    </div>
+
+                    <div class="bv-portal-item">
+                        <div class="bv-portal-item-info">
+                            <div class="bv-portal-item-name">
+                                <span>أقسام وتصنيفات المتجر</span>
+                            </div>
+                            <div class="bv-portal-item-desc">أقسام العطور، الساعات، ومستحضرات التجميل</div>
+                        </div>
+                        <div class="bv-portal-item-actions">
+                            <a href="/admin/store/category/" class="bv-portal-btn bv-portal-btn-primary">استعراض</a>
+                            <a href="/admin/store/category/add/" class="bv-portal-btn bv-portal-btn-add">➕ إضافة</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 3: PAYMENTS & OPERATIONS -->
+            <div class="bv-portal-card">
+                <div class="bv-portal-header">
+                    <div class="bv-portal-header-icon" style="background: #ecfdf5; color: #059669;">
+                        💳
+                    </div>
+                    <div>
+                        <h4 class="bv-portal-header-title">الدفع والشحن والعروض</h4>
+                        <p class="bv-portal-header-subtitle">الحسابات البنكية، مدن التوصيل، وبانرات المتجر</p>
+                    </div>
+                </div>
+                <div class="bv-portal-body">
+                    <div class="bv-portal-item">
+                        <div class="bv-portal-item-info">
+                            <div class="bv-portal-item-name">
+                                <span>حسابات التحويل والمحافظ</span>
+                            </div>
+                            <div class="bv-portal-item-desc">الكريمي، الراجحي، والمحافظ باليمن والسعودية</div>
+                        </div>
+                        <div class="bv-portal-item-actions">
+                            <a href="/admin/store/paymentaccount/" class="bv-portal-btn bv-portal-btn-primary">استعراض</a>
+                            <a href="/admin/store/paymentaccount/add/" class="bv-portal-btn bv-portal-btn-add">➕ إضافة</a>
+                        </div>
+                    </div>
+
+                    <div class="bv-portal-item">
+                        <div class="bv-portal-item-info">
+                            <div class="bv-portal-item-name">
+                                <span>مناطق ورسوم التوصيل</span>
+                            </div>
+                            <div class="bv-portal-item-desc">تكاليف ومدة الشحن لكل مدينة ومحافظة</div>
+                        </div>
+                        <div class="bv-portal-item-actions">
+                            <a href="/admin/store/shippingzone/" class="bv-portal-btn bv-portal-btn-primary">استعراض</a>
+                            <a href="/admin/store/shippingzone/add/" class="bv-portal-btn bv-portal-btn-add">➕ إضافة</a>
+                        </div>
+                    </div>
+
+                    <div class="bv-portal-item">
+                        <div class="bv-portal-item-info">
+                            <div class="bv-portal-item-name">
+                                <span>البانرات والعروض الترويجية</span>
+                            </div>
+                            <div class="bv-portal-item-desc">البانرات المتحركة في أعلى الصفحة الرئيسية</div>
+                        </div>
+                        <div class="bv-portal-item-actions">
+                            <a href="/admin/store/herobanner/" class="bv-portal-btn bv-portal-btn-primary">استعراض</a>
+                            <a href="/admin/store/herobanner/add/" class="bv-portal-btn bv-portal-btn-add">➕ إضافة</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 4: SETTINGS & CUSTOMERS -->
+            <div class="bv-portal-card">
+                <div class="bv-portal-header">
+                    <div class="bv-portal-header-icon" style="background: #f8fafc; color: #475569;">
+                        ⚙️
+                    </div>
+                    <div>
+                        <h4 class="bv-portal-header-title">إعدادات البوتيك والعملاء</h4>
+                        <p class="bv-portal-header-subtitle">سعر الصرف اليومي، بيانات التواصل، وملفات العملاء</p>
+                    </div>
+                </div>
+                <div class="bv-portal-body">
+                    <div class="bv-portal-item">
+                        <div class="bv-portal-item-info">
+                            <div class="bv-portal-item-name">
+                                <span>هوية المتجر وسعر الصرف</span>
+                            </div>
+                            <div class="bv-portal-item-desc">سعر صرف الريال السعودي، الاسم، الشعار، وأرقام التواصل</div>
+                        </div>
+                        <div class="bv-portal-item-actions">
+                            <a href="/admin/store/storesettings/1/change/" class="bv-portal-btn bv-portal-btn-primary">تعديل الإعدادات</a>
+                        </div>
+                    </div>
+
+                    <div class="bv-portal-item">
+                        <div class="bv-portal-item-info">
+                            <div class="bv-portal-item-name">
+                                <span>ملفات العملاء المسجلين</span>
+                            </div>
+                            <div class="bv-portal-item-desc">أرقام الهواتف وعناوين التوصيل للعملاء</div>
+                        </div>
+                        <div class="bv-portal-item-actions">
+                            <a href="/admin/store/userprofile/" class="bv-portal-btn bv-portal-btn-primary">استعراض</a>
+                        </div>
+                    </div>
+
+                    <div class="bv-portal-item">
+                        <div class="bv-portal-item-info">
+                            <div class="bv-portal-item-name">
+                                <span>حسابات مدراء اللوحة</span>
+                            </div>
+                            <div class="bv-portal-item-desc">صلاحيات دخول المشرفين للوحة الإدارة</div>
+                        </div>
+                        <div class="bv-portal-item-actions">
+                            <a href="/admin/auth/user/" class="bv-portal-btn bv-portal-btn-primary">استعراض</a>
+                            <a href="/admin/auth/user/add/" class="bv-portal-btn bv-portal-btn-add">➕ إضافة مشرف</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Optional developer table view toggle -->
+        <details style="margin-top: 24px; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 14px; background: #fafafa;">
+            <summary style="font-size: 0.76rem; font-weight: 600; color: #64748b; cursor: pointer; user-select: none;">
+                🔧 عرض النمط المتقدم للجداول وقواعد البيانات (للمطورين)
+            </summary>
+            <div style="margin-top: 14px;">
+                {% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}
+            </div>
+        </details>
+    </div>
+
+</div>
+{% endblock %}

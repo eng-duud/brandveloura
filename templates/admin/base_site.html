@@ -1,0 +1,56 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:"Brand Veloura الإدارة" }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Pacifico&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Readex+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Custom Luxury Admin Theme -->
+<link rel="stylesheet" href="{% static 'css/admin_theme.css' %}">
+{% endblock %}
+
+{% block branding %}
+<div id="site-name" style="display: flex; align-items: center; gap: 12px;">
+    <a href="{% url 'admin:index' %}" style="display: flex; align-items: center; gap: 12px; text-decoration: none;">
+        <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" style="width: 36px; height: 36px; border-radius: 10px; object-fit: cover; border: 1.5px solid rgba(254, 205, 211, 0.6); box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+        <div>
+            <span class="font-brand-logo" style="font-size: 1.4rem; color: #ffffff; letter-spacing: 0.5px; display: block; line-height: 1.1;">Brand Veloura</span>
+            <span style="font-size: 0.68rem; color: #f43f5e; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;">لوحة إدارة البوتيك</span>
+        </div>
+    </a>
+</div>
+{% endblock %}
+
+{% block nav-global %}
+<div style="display: flex; align-items: center; gap: 14px; margin-right: auto; padding: 0 16px;">
+    <!-- Live Currency Rate Pill -->
+    <a href="{% url 'admin:store_storesettings_change' 1 %}" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(244, 63, 94, 0.3); color: #ffe4e6; padding: 5px 12px; border-radius: 20px; font-size: 0.76rem; font-weight: 600; text-decoration: none; transition: all 0.2s;" title="انقر لتعديل سعر الصرف اليومي">
+        <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #10b981;"></span>
+        <span>1 ر.س = <strong class="font-num" style="color: #ffffff;">{{ yer_per_sar|default:"530" }}</strong> ر.ي</span>
+    </a>
+
+    <!-- Pending Verification Orders Badge -->
+    {% if admin_pending_orders %}
+    <a href="/admin/store/order/?status__exact=pending_verification" style="display: inline-flex; align-items: center; gap: 6px; background: #be123f; color: #ffffff; padding: 5px 12px; border-radius: 20px; font-size: 0.76rem; font-weight: 700; text-decoration: none; box-shadow: 0 2px 8px rgba(190, 18, 63, 0.4); animation: pulse 2s infinite;" title="طلبات بانتظار التحقق من الإشعار">
+        <span>⚠️ {{ admin_pending_orders }} سند جديد للتحقق</span>
+    </a>
+    {% endif %}
+
+    <!-- Admin Unread Notifications Badge -->
+    {% if admin_unread_notifications_count %}
+    <a href="/admin/store/notification/?for_admin__exact=1&is_read__exact=0" style="display: inline-flex; align-items: center; gap: 6px; background: #ea580c; color: #ffffff; padding: 5px 12px; border-radius: 20px; font-size: 0.76rem; font-weight: 700; text-decoration: none; box-shadow: 0 2px 8px rgba(234, 88, 12, 0.4);" title="تنبيهات إدارية غير مقروءة">
+        <span>🔔 {{ admin_unread_notifications_count }} تنبيه جديد</span>
+    </a>
+    {% endif %}
+
+    <!-- View Storefront Link -->
+    <a href="/" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.1); color: #ffffff; padding: 5px 12px; border-radius: 20px; font-size: 0.76rem; font-weight: 600; text-decoration: none; transition: all 0.2s;" title="فتح المتجر للعملاء في نافذة جديدة">
+        <span>زيارة المتجر ↗</span>
+    </a>
+</div>
+{% endblock %}
+

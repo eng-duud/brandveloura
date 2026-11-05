@@ -1,0 +1,409 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ product.name_ar }} | {{ product.brand_name }} — {{ store_settings.store_name }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumbs Navigation -->
+<div class="bg-rose-50/40 py-2.5 sm:py-3 border-b border-rose-100/70">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <nav class="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-slate-500 font-medium">
+            <a href="{% url 'store:home' %}" class="hover:text-brand-600 transition cursor-pointer">الرئيسية</a>
+            <i data-lucide="chevron-left" class="w-3 h-3 text-rose-300"></i>
+            {% if product.category %}
+            <a href="{% url 'store:product_list' %}?category={{ product.category.slug }}" class="hover:text-brand-600 transition cursor-pointer">{{ product.category.name_ar }}</a>
+            <i data-lucide="chevron-left" class="w-3 h-3 text-rose-300"></i>
+            {% endif %}
+            <span class="text-brand-700 font-bold truncate max-w-[200px] sm:max-w-sm">{{ product.name_ar }}</span>
+        </nav>
+    </div>
+</div>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-10">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+        
+        <!-- =================================================================== -->
+        <!-- 1. Visual Section: Product Image Gallery (5 Cols)                   -->
+        <!-- =================================================================== -->
+        <div class="lg:col-span-5 space-y-3">
+            <div class="aspect-square w-full rounded-2xl sm:rounded-3xl overflow-hidden bg-gradient-to-b from-rose-50/20 to-white border border-rose-100/90 shadow-luxury relative group flex items-center justify-center p-4">
+                <img 
+                    id="main-product-image"
+                    src="{{ product.primary_image_url }}" 
+                    alt="{{ product.name_ar }}" 
+                    class="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+                >
+                {% if product.discount_percentage > 0 %}
+                <span class="absolute top-4 right-4 px-2.5 py-1 rounded-full bg-brand-600 text-white text-[11px] font-black shadow-md tracking-wider">
+                    خصم {{ product.discount_percentage }}%
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Gallery Thumbnails (only if multiple images exist) -->
+            {% if images.count > 1 %}
+            <div class="flex items-center gap-2.5 overflow-x-auto pb-1 no-scrollbar">
+                {% for img in images %}
+                <button 
+                    type="button"
+                    onclick="document.getElementById('main-product-image').src = '{{ img.get_image_url }}'"
+                    class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 border-rose-100 hover:border-brand-500 transition-all shrink-0 bg-white p-1 shadow-2xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    aria-label="عرض الصورة"
+                >
+                    <img src="{{ img.get_image_url }}" alt="معاينة" class="w-full h-full object-contain">
+                </button>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Micro-Trust Highlights -->
+            <div class="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-white border border-rose-100/80 text-[11px] text-slate-700 shadow-2xs text-center">
+                <div class="flex flex-col items-center justify-center gap-1">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+                    <span class="font-bold">أصالة معتمدة</span>
+                </div>
+                <div class="flex flex-col items-center justify-center gap-1 border-x border-rose-100">
+                    <i data-lucide="truck" class="w-4 h-4 text-brand-600"></i>
+                    <span class="font-bold">توصيل لكافة المدن</span>
+                </div>
+                <div class="flex flex-col items-center justify-center gap-1">
+                    <i data-lucide="eye" class="w-4 h-4 text-amber-600"></i>
+                    <span class="font-bold">معاينة قبل الدفع</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- 2. Purchase & Conversion Section (7 Cols) - Above-the-Fold Priority -->
+        <!-- =================================================================== -->
+        <div class="lg:col-span-7 space-y-4 sm:space-y-5">
+            
+            <!-- Title & Brand Header -->
+            <div>
+                <div class="flex items-center justify-between gap-2 mb-1.5">
+                    {% if product.brand_name %}
+                    <span class="px-3 py-0.5 rounded-full bg-rose-50 text-brand-700 text-[11px] font-bold uppercase tracking-wider border border-rose-200/60 font-serif">
+                        {{ product.brand_name }}
+                    </span>
+                    {% endif %}
+
+                    <!-- Stock Availability Pill -->
+                    {% if product.stock_quantity <= 0 %}
+                    <span class="px-2.5 py-0.5 rounded-full bg-slate-900 text-white text-[10px] font-bold">
+                        نفد من المخزون
+                    </span>
+                    {% elif product.stock_quantity <= 3 %}
+                    <span class="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-bold border border-amber-200 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                        <span>متبقي {{ product.stock_quantity }} قطع فقط</span>
+                    </span>
+                    {% else %}
+                    <span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        <span>متوفر في المخزون</span>
+                    </span>
+                    {% endif %}
+                </div>
+
+                <h1 class="text-xl sm:text-3xl font-serif font-bold text-slate-900 leading-snug">
+                    {{ product.name_ar }}
+                </h1>
+                
+                {% if product.name_en %}
+                <p class="text-xs sm:text-sm text-slate-400 font-sans tracking-wide mt-1 font-medium" dir="ltr">
+                    {{ product.name_en }}
+                </p>
+                {% endif %}
+            </div>
+
+            <!-- Pricing Box: Clear YER Price & SAR Equivalent -->
+            <div class="p-4 sm:p-5 rounded-2xl bg-white border border-rose-100/90 shadow-2xs space-y-2.5">
+                <div class="flex items-baseline justify-between flex-wrap gap-2">
+                    <div class="flex items-baseline gap-2">
+                        <span id="display-price-yer" class="text-2xl sm:text-3xl font-black text-slate-950 font-num">
+                            {% if product.has_grades and product.price_original_yer %}
+                                {{ product.price_original_yer|floatformat:0 }}
+                            {% else %}
+                                {{ product.price_yer|floatformat:0 }}
+                            {% endif %}
+                        </span>
+                        <span class="text-xs font-bold text-slate-600">ريال يمني</span>
+                        
+                        {% if product.compare_at_price_yer %}
+                        <span class="text-sm text-slate-400 line-through mr-2 font-num">
+                            {{ product.compare_at_price_yer|floatformat:0 }} ر.ي
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- SAR Equivalent Pill -->
+                    <div class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-900 bg-emerald-50/80 px-3 py-1 rounded-xl border border-emerald-200/80">
+                        <span>المعادل:</span>
+                        <span id="display-price-sar" class="font-black font-num text-sm text-emerald-950">{% if product.has_grades and product.price_original_sar %}{{ product.price_original_sar }}{% else %}{{ product.price_sar }}{% endif %}</span>
+                        <span>ر.س</span>
+                    </div>
+                </div>
+
+                <div class="text-[10px] text-slate-400 font-normal">
+                    * يتم احتساب المعادل بالريال السعودي آلياً بناءً على سعر الصرف اليومي (1 ر.س = {{ yer_per_sar }} ر.ي).
+                </div>
+            </div>
+
+            <!-- Perfume Quality Grade Selector (Only if product.has_grades) -->
+            {% if product.has_grades %}
+            <div class="p-4 rounded-2xl bg-gradient-to-br from-rose-50/60 to-white border border-rose-200/80 shadow-2xs space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-brand-600"></i>
+                        <span>اختر درجة العطر المطلوبة:</span>
+                    </span>
+                    <span class="text-[10px] font-bold text-brand-700 bg-rose-100/70 px-2 py-0.5 rounded-full">نفس الزجاجة والرائحة</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5" id="grade-selector-container">
+                    <!-- Grade 1: الأصلي 100% -->
+                    {% if product.price_original_yer %}
+                    <div 
+                        id="grade-card-original" 
+                        onclick="setProductGrade('original', {{ product.price_original_yer }}, {{ product.price_original_sar }})"
+                        class="grade-card p-3 rounded-xl border-2 border-brand-600 bg-white shadow-2xs cursor-pointer transition-all duration-150 relative"
+                    >
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
+                                <span id="radio-dot-original" class="w-2.5 h-2.5 rounded-full bg-brand-600"></span>
+                                <span>الأصلي (وكالة 100%)</span>
+                            </span>
+                            <span class="px-1.5 py-0.2 rounded bg-brand-50 text-brand-700 text-[9px] font-bold border border-brand-200/60">ضمان وكيل</span>
+                        </div>
+                        <div class="flex items-baseline gap-1 mt-0.5">
+                            <span class="text-sm font-black text-slate-950 font-num">{{ product.price_original_yer|floatformat:0 }}</span>
+                            <span class="text-[10px] font-bold text-slate-500">ر.ي</span>
+                            <span class="text-[10px] text-brand-700 font-bold mr-1.5 font-num">({{ product.price_original_sar }} ر.س)</span>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Grade 2: ماستر طبق الأصل -->
+                    {% if product.price_master_yer %}
+                    <div 
+                        id="grade-card-master" 
+                        onclick="setProductGrade('master', {{ product.price_master_yer }}, {{ product.price_master_sar }})"
+                        class="grade-card p-3 rounded-xl border-2 border-rose-200/80 bg-white/70 shadow-2xs cursor-pointer transition-all duration-150 hover:border-brand-400 relative"
+                    >
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
+                                <span id="radio-dot-master" class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+                                <span>ماستر (طبق الأصل)</span>
+                            </span>
+                            <span class="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 text-[9px] font-bold border border-emerald-200/60">خيار اقتصادي</span>
+                        </div>
+                        <div class="flex items-baseline gap-1 mt-0.5">
+                            <span class="text-sm font-black text-slate-950 font-num">{{ product.price_master_yer|floatformat:0 }}</span>
+                            <span class="text-[10px] font-bold text-slate-500">ر.ي</span>
+                            <span class="text-[10px] text-brand-700 font-bold mr-1.5 font-num">({{ product.price_master_sar }} ر.س)</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Immediate Add to Cart & Buy Actions Form -->
+            <form hx-post="{% url 'store:cart_add' %}" hx-target="#cart-badge-container" class="space-y-3 pt-1">
+                <input type="hidden" name="product_id" value="{{ product.id }}">
+                <input type="hidden" id="selected-grade-input" name="grade" value="{% if product.has_grades %}original{% endif %}">
+                
+                <div class="flex items-center gap-2.5 sm:gap-3">
+                    <!-- Quantity Stepper -->
+                    <div class="flex items-center border border-rose-200 rounded-xl bg-white p-1 shadow-2xs">
+                        <button type="button" onclick="const q = document.getElementById('qty-input'); if(q.value > 1) q.value--;" class="w-9 h-9 rounded-lg hover:bg-rose-50 flex items-center justify-center font-bold text-slate-700 text-sm cursor-pointer" aria-label="تقليل الكمية">-</button>
+                        <input type="number" id="qty-input" name="quantity" value="1" min="1" max="{{ product.stock_quantity|default:99 }}" class="w-10 text-center text-xs font-black font-num bg-transparent focus:outline-none">
+                        <button type="button" onclick="const q = document.getElementById('qty-input'); q.value++;" class="w-9 h-9 rounded-lg hover:bg-rose-50 flex items-center justify-center font-bold text-slate-700 text-sm cursor-pointer" aria-label="زيادة الكمية">+</button>
+                    </div>
+
+                    <!-- Add to Cart CTA -->
+                    {% if product.stock_quantity <= 0 %}
+                    <button 
+                        type="button" 
+                        disabled 
+                        class="flex-1 py-3 px-5 rounded-xl bg-slate-200 text-slate-500 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-not-allowed min-h-[46px]"
+                    >
+                        <span>نفد من المخزون حالياً</span>
+                    </button>
+                    {% else %}
+                    <button 
+                        type="submit" 
+                        class="flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-brand-600 to-rose-500 hover:from-brand-500 hover:to-rose-400 text-white font-bold text-xs sm:text-sm shadow-luxury transition-all duration-200 hover:scale-[1.01] flex items-center justify-center gap-2 cursor-pointer min-h-[46px] active:scale-98"
+                        onclick="if(typeof showToast === 'function') showToast('تمت إضافة {{ product.name_ar }} إلى سلة المشتريات بنجاح');"
+                    >
+                        <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+                        <span>إضافة لسلة المشتريات</span>
+                    </button>
+                    {% endif %}
+                </div>
+
+                <!-- WhatsApp Direct Order & Consultation Link -->
+                <a 
+                    id="whatsapp-inquiry-btn"
+                    href="https://wa.me/{{ store_settings.contact_whatsapp }}?text=مرحباً، أود الاستفسار عن {{ product.name_ar }}{% if product.has_grades %} (النسخة الأصلية){% endif %}" 
+                    target="_blank"
+                    class="w-full py-2.5 px-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                >
+                    <i data-lucide="message-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
+                    <span>طلب مباشر أو استشارة عبر واتساب</span>
+                </a>
+            </form>
+
+            <!-- =============================================================== -->
+            <!-- 3. Compact Progressive Disclosure Accordion / Tabs              -->
+            <!-- =============================================================== -->
+            <div class="pt-2 space-y-2 text-xs">
+                
+                <!-- Section A: Product Description & Notes -->
+                <details class="group rounded-2xl bg-white border border-rose-100/90 shadow-2xs overflow-hidden" open>
+                    <summary class="flex items-center justify-between p-3.5 font-bold text-slate-900 cursor-pointer select-none hover:text-brand-600 transition">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="file-text" class="w-4 h-4 text-brand-600"></i>
+                            <span>تفاصيل ووصف المنتج</span>
+                        </span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform duration-200"></i>
+                    </summary>
+                    <div class="px-4 pb-4 pt-1 border-t border-rose-50 text-slate-600 leading-relaxed font-light space-y-3">
+                        {% if product.description %}
+                        <p class="whitespace-pre-line">{{ product.description }}</p>
+                        {% else %}
+                        <p>عطر فاخر أصلي من أرقى التشكيلات العالمية بتركيز وثبات يدوم طويلاً.</p>
+                        {% endif %}
+
+                        <!-- Specifications Grid if present -->
+                        {% if product.specifications %}
+                        <div class="pt-2 grid grid-cols-2 gap-2 text-[11px]">
+                            {% if product.specifications.concentration %}
+                            <div class="p-2.5 rounded-xl bg-rose-50/50 border border-rose-100">
+                                <span class="text-slate-400 block text-[10px] font-medium">التركيز</span>
+                                <span class="font-bold text-slate-800">{{ product.specifications.concentration }}</span>
+                            </div>
+                            {% endif %}
+                            {% if product.specifications.volume_ml %}
+                            <div class="p-2.5 rounded-xl bg-rose-50/50 border border-rose-100">
+                                <span class="text-slate-400 block text-[10px] font-medium">الحجم</span>
+                                <span class="font-bold text-slate-800 font-num">{{ product.specifications.volume_ml }} مل</span>
+                            </div>
+                            {% endif %}
+                            {% if product.specifications.top_notes %}
+                            <div class="col-span-2 p-2.5 rounded-xl bg-rose-50/50 border border-rose-100">
+                                <span class="text-slate-400 block text-[10px] font-medium">الهرم العطري</span>
+                                <span class="font-medium text-slate-700">{{ product.specifications.top_notes|join:"، " }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </details>
+
+                <!-- Section B: Delivery & Shipping Policy -->
+                <details class="group rounded-2xl bg-white border border-rose-100/90 shadow-2xs overflow-hidden">
+                    <summary class="flex items-center justify-between p-3.5 font-bold text-slate-900 cursor-pointer select-none hover:text-brand-600 transition">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="truck" class="w-4 h-4 text-brand-600"></i>
+                            <span>التوصيل والشحن لكافة المحافظات</span>
+                        </span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform duration-200"></i>
+                    </summary>
+                    <div class="px-4 pb-4 pt-1 border-t border-rose-50 text-slate-600 leading-relaxed font-light text-[11px] space-y-1.5">
+                        <p>• <strong>صنعاء:</strong> توصيل سريع لباب المنزل خلال 24 ساعة مع إمكانية الدفع عند الاستلام.</p>
+                        <p>• <strong>بقية المحافظات (عدن، تعز، إب، حضرموت، الحديدة):</strong> شحن مؤمن عبر مكاتب النقل المعتمدة خلال 24-48 ساعة.</p>
+                        <p>• تغليف محكم وفاخر يضمن وصول العطر بأمان تام.</p>
+                    </div>
+                </details>
+
+                <!-- Section C: Authenticity & Guarantees -->
+                <details class="group rounded-2xl bg-white border border-rose-100/90 shadow-2xs overflow-hidden">
+                    <summary class="flex items-center justify-between p-3.5 font-bold text-slate-900 cursor-pointer select-none hover:text-brand-600 transition">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
+                            <span>الضمان وسياسة الاستبدال</span>
+                        </span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform duration-200"></i>
+                    </summary>
+                    <div class="px-4 pb-4 pt-1 border-t border-rose-50 text-slate-600 leading-relaxed font-light text-[11px] space-y-1.5">
+                        <p>• نضمن مطابقة كافة المنتجات للمواصفات المعلنة 100%.</p>
+                        <p>• يحق للعميل فحص الشحنة ومطابقتها فور استلامها من المندوب.</p>
+                    </div>
+                </details>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Products Carousel -->
+    {% if related_products %}
+    <div class="mt-12 sm:mt-16 pt-8 border-t border-rose-100/80">
+        <div class="flex items-center justify-between mb-5">
+            <h3 class="text-lg sm:text-2xl font-serif font-bold text-slate-900">منتجات مشابهة قد تناسب ذوقكم</h3>
+            {% if product.category %}
+            <a href="{% url 'store:product_list' %}?category={{ product.category.slug }}" class="text-xs font-bold text-brand-600 hover:underline">عرض المزيد ←</a>
+            {% endif %}
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+            {% for rel_prod in related_products %}
+                {% include 'store/components/product_card.html' with product=rel_prod %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function setProductGrade(grade, priceYer, priceSar) {
+        const gradeInput = document.getElementById('selected-grade-input');
+        if (gradeInput) gradeInput.value = grade;
+        
+        const priceYerEl = document.getElementById('display-price-yer');
+        if (priceYerEl) priceYerEl.innerText = Number(priceYer).toLocaleString();
+        
+        const priceSarEl = document.getElementById('display-price-sar');
+        if (priceSarEl) priceSarEl.innerText = priceSar;
+        
+        const originalCard = document.getElementById('grade-card-original');
+        const masterCard = document.getElementById('grade-card-master');
+        const dotOriginal = document.getElementById('radio-dot-original');
+        const dotMaster = document.getElementById('radio-dot-master');
+        
+        const whatsappBtn = document.getElementById('whatsapp-inquiry-btn');
+        const productName = "{{ product.name_ar|escapejs }}";
+        const storePhone = "{{ store_settings.contact_whatsapp }}";
+        
+        if (grade === 'original') {
+            if (originalCard) {
+                originalCard.className = "grade-card p-3 rounded-xl border-2 border-brand-600 bg-white shadow-2xs cursor-pointer transition-all duration-150 relative";
+            }
+            if (masterCard) {
+                masterCard.className = "grade-card p-3 rounded-xl border-2 border-rose-200/80 bg-white/70 shadow-2xs cursor-pointer transition-all duration-150 hover:border-brand-400 relative";
+            }
+            if (dotOriginal) dotOriginal.className = "w-2.5 h-2.5 rounded-full bg-brand-600";
+            if (dotMaster) dotMaster.className = "w-2.5 h-2.5 rounded-full bg-slate-300";
+            
+            if (whatsappBtn) {
+                const msg = encodeURIComponent(`مرحباً، أود الاستفسار عن ${productName} (النسخة الأصلية) بسعر ${Number(priceYer).toLocaleString()} ر.ي`);
+                whatsappBtn.href = `https://wa.me/${storePhone}?text=${msg}`;
+            }
+        } else {
+            if (masterCard) {
+                masterCard.className = "grade-card p-3 rounded-xl border-2 border-brand-600 bg-white shadow-2xs cursor-pointer transition-all duration-150 relative";
+            }
+            if (originalCard) {
+                originalCard.className = "grade-card p-3 rounded-xl border-2 border-rose-200/80 bg-white/70 shadow-2xs cursor-pointer transition-all duration-150 hover:border-brand-400 relative";
+            }
+            if (dotMaster) dotMaster.className = "w-2.5 h-2.5 rounded-full bg-brand-600";
+            if (dotOriginal) dotOriginal.className = "w-2.5 h-2.5 rounded-full bg-slate-300";
+            
+            if (whatsappBtn) {
+                const msg = encodeURIComponent(`مرحباً، أود الاستفسار عن ${productName} (ماستر طبق الأصل) بسعر ${Number(priceYer).toLocaleString()} ر.ي`);
+                whatsappBtn.href = `https://wa.me/${storePhone}?text=${msg}`;
+            }
+        }
+    }
+</script>
+{% endblock %}

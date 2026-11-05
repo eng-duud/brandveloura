@@ -1,0 +1,597 @@
+{% extends 'base.html' %}
+
+{% block title %}إتمام الطلب وتأكيد السداد | {{ store_settings.store_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+    
+    <!-- Breadcrumb & Formal Header (Concise & Proportional) -->
+    <div class="mb-6 pb-4 border-b border-rose-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+            <nav class="flex items-center gap-1.5 text-[11px] text-slate-400 mb-1 font-medium">
+                <a href="{% url 'store:home' %}" class="hover:text-brand-600 transition cursor-pointer">الرئيسية</a>
+                <i data-lucide="chevron-left" class="w-3 h-3 text-rose-300"></i>
+                <a href="{% url 'store:cart_view' %}" class="hover:text-brand-600 transition cursor-pointer">سلة المشتريات</a>
+                <i data-lucide="chevron-left" class="w-3 h-3 text-rose-300"></i>
+                <span class="text-brand-600 font-bold">إتمام الشراء</span>
+            </nav>
+            <h1 class="text-xl sm:text-3xl font-serif font-bold text-slate-900">إتمام الشراء وتأكيد السداد</h1>
+        </div>
+        <div class="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-[11px] font-bold px-3 py-1.5 rounded-xl border border-emerald-200/80 shadow-2xs self-start sm:self-auto">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>سداد رسمي موثق واعتماد فوري</span>
+        </div>
+    </div>
+
+    <form id="checkout-form" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+        {% csrf_token %}
+
+        <!-- Left Column: Shipping, Gifting & Payment Dropdown (7 Cols) -->
+        <div class="lg:col-span-7 space-y-5">
+            
+            {% if not user.is_authenticated %}
+            <!-- Fast Login Banner for Guests -->
+            <div class="bg-gradient-to-r from-rose-50/80 via-white to-rose-50/80 rounded-2xl p-4 border border-rose-200/90 shadow-2xs flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 flex items-center justify-center shrink-0">
+                        <i data-lucide="user-check" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <p class="font-bold text-slate-800 text-xs">هل لديكم حساب بالفعل في Brand Veloura؟</p>
+                        <p class="text-[11px] text-slate-500">سجلوا الدخول لتعبئة بيانات الشحن وتتبع الطلب بضغطة زر</p>
+                    </div>
+                </div>
+                <a href="{% url 'store:login' %}?next={% url 'store:checkout' %}" class="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-brand-600 text-white font-bold text-xs transition shadow-2xs shrink-0 cursor-pointer">
+                    تسجيل الدخول
+                </a>
+            </div>
+            {% endif %}
+
+            <!-- 1. Customer & Shipping Details (البيانات الرسمية للمشتري) -->
+            <div class="bg-white rounded-2xl p-5 sm:p-6 border border-rose-100/90 shadow-luxury space-y-4">
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2 pb-3 border-b border-rose-100">
+                    <i data-lucide="map-pin" class="w-4 h-4 text-brand-600"></i>
+                    <span>بيانات المشتري وعنوان التوصيل المعتمد</span>
+                </h3>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1.5">الاسم الكامل لصاحب الطلب *</label>
+                        <input 
+                            type="text" 
+                            name="customer_name" 
+                            required 
+                            value="{% if user.is_authenticated %}{{ user.get_full_name|default:user.username }}{% endif %}"
+                            placeholder="الاسم الثلاثي أو اللقب الرسمي" 
+                            class="w-full h-11 bg-white border border-rose-200/90 focus:border-brand-500 focus:outline-none focus:ring-3 focus:ring-brand-500/10 rounded-xl px-3.5 text-xs font-medium text-slate-900 transition shadow-2xs"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1.5">رقم الهاتف / الواتساب للتأكيد *</label>
+                        <input 
+                            type="tel" 
+                            name="customer_phone" 
+                            required 
+                            value="{% if user_profile and user_profile.phone %}{{ user_profile.phone }}{% endif %}"
+                            placeholder="مثال: 770000000 أو +9665..." 
+                            class="w-full h-11 bg-white border border-rose-200/90 focus:border-brand-500 focus:outline-none focus:ring-3 focus:ring-brand-500/10 rounded-xl px-3.5 text-xs font-medium text-slate-900 transition text-right font-num shadow-2xs"
+                            dir="ltr"
+                        >
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1.5">البريد الإلكتروني المعتمد للإشعار (اختياري)</label>
+                        <input 
+                            type="email" 
+                            name="customer_email" 
+                            value="{% if user.is_authenticated %}{{ user.email }}{% endif %}"
+                            placeholder="name@example.com" 
+                            class="w-full h-11 bg-white border border-rose-200/90 focus:border-brand-500 focus:outline-none focus:ring-3 focus:ring-brand-500/10 rounded-xl px-3.5 text-xs font-medium text-slate-900 transition shadow-2xs"
+                        >
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1.5">المحافظة / المدينة المستهدفة *</label>
+                        <select 
+                            id="shipping_city_select"
+                            name="shipping_city" 
+                            required 
+                            hx-get="{% url 'store:get_shipping_fee' %}" 
+                            hx-include="#checkout-form"
+                            hx-target="#checkout-totals" 
+                            hx-trigger="change"
+                            class="w-full h-11 bg-white border border-rose-200/90 focus:border-brand-500 focus:outline-none focus:ring-3 focus:ring-brand-500/10 rounded-xl px-3.5 text-xs font-bold text-slate-900 transition cursor-pointer shadow-2xs"
+                        >
+                            {% for zone in shipping_zones %}
+                            <option value="{{ zone.id }}" {% if user_profile and user_profile.preferred_city == zone.city_name %}selected{% elif forloop.first %}selected{% endif %}>
+                                {{ zone.city_name }} (التوصيل: {% if zone.delivery_fee_yer == 0 %}مجاناً{% else %}{{ zone.delivery_fee_yer|floatformat:0 }} ر.ي{% endif %})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1.5">العنوان التفصيلي (الشارع والحي) *</label>
+                        <input 
+                            type="text" 
+                            name="shipping_address" 
+                            required 
+                            value="{% if user_profile and user_profile.shipping_address %}{{ user_profile.shipping_address }}{% endif %}"
+                            placeholder="مثال: شارع حدة - بالقرب من مركز الكميم" 
+                            class="w-full h-11 bg-white border border-rose-200/90 focus:border-brand-500 focus:outline-none focus:ring-3 focus:ring-brand-500/10 rounded-xl px-3.5 text-xs font-medium text-slate-900 transition shadow-2xs"
+                        >
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">ملاحظات خاصة بمندوب التوصيل (اختياري)</label>
+                    <textarea 
+                        name="customer_notes" 
+                        rows="2" 
+                        placeholder="أي توجيهات محددة تخص موعد الاستلام أو معالم الموقع..." 
+                        class="w-full bg-white border border-rose-200/90 focus:border-brand-500 focus:outline-none focus:ring-3 focus:ring-brand-500/10 rounded-xl p-3 text-xs font-medium text-slate-900 transition shadow-2xs"
+                    ></textarea>
+                </div>
+            </div>
+
+            <!-- 2. GIFT ORDER WORKFLOW (خدمة الإهداء) -->
+            <div class="bg-gradient-to-br from-pink-50/60 via-rose-50/30 to-white rounded-2xl p-4 sm:p-5 border border-brand-200/80 shadow-2xs space-y-3.5">
+                <div class="flex items-center justify-between cursor-pointer select-none" onclick="toggleGiftFields(event)">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-600 to-rose-500 text-white flex items-center justify-center shadow-2xs">
+                            <i data-lucide="gift" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+                                <span>طلب إهداء لشخص آخر</span>
+                                <span class="px-2 py-0.5 rounded-full bg-brand-100 text-brand-800 text-[9px] font-bold">خدمة إهداء</span>
+                            </h3>
+                            <p class="text-[11px] text-slate-400 font-light">تسليم مباشر للمستلم مع بطاقة إهداء وحجب بيانات الفاتورة</p>
+                        </div>
+                    </div>
+                    <input type="checkbox" id="is_gift_checkbox" name="is_gift" value="true" class="w-4 h-4 text-brand-600 rounded focus:ring-brand-500 cursor-pointer" onchange="toggleGiftFields(event)">
+                </div>
+
+                <!-- Gift Extended Fields (Toggled) -->
+                <div id="gift-fields-container" class="hidden pt-3 border-t border-rose-200/60 space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">اسم المستلم في اليمن *</label>
+                            <input 
+                                type="text" 
+                                name="recipient_name" 
+                                placeholder="الاسم الكامل للشخص المهدى إليه" 
+                                class="w-full h-10 bg-white border border-rose-200 rounded-xl px-3 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">رقم هاتف المستلم (للتنسيق والتسليم) *</label>
+                            <input 
+                                type="tel" 
+                                name="recipient_phone" 
+                                placeholder="مثال: 770000000" 
+                                class="w-full h-10 bg-white border border-rose-200 rounded-xl px-3 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500 font-num text-right"
+                                dir="ltr"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Greeting Card -->
+                    <div class="p-3 rounded-xl bg-white border border-rose-200/80 space-y-2.5">
+                        <div class="flex items-center justify-between pb-1.5 border-b border-rose-100">
+                            <span class="text-[11px] font-bold text-brand-800 flex items-center gap-1">
+                                <i data-lucide="mail-open" class="w-3 h-3 text-brand-600"></i>
+                                <span>بطاقة الإهداء (مرفقة مع الطلب)</span>
+                            </span>
+                            <span class="text-[9px] text-slate-400">تطبع داخل ظرف مغلق</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600 mb-1">اسم المُهدي (من):</label>
+                                <input 
+                                    type="text" 
+                                    name="gift_card_sender" 
+                                    placeholder="مثال: محمد" 
+                                    class="w-full h-9 bg-rose-50/20 border border-rose-200 rounded-lg px-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-brand-500"
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600 mb-1">اسم المهدى إليه (إلى):</label>
+                                <input 
+                                    type="text" 
+                                    name="gift_card_recipient" 
+                                    placeholder="مثال: سارة" 
+                                    class="w-full h-9 bg-rose-50/20 border border-rose-200 rounded-lg px-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-brand-500"
+                                >
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 mb-1">رسالة الإهداء المكتوبة:</label>
+                            <textarea 
+                                name="gift_card_message" 
+                                rows="2" 
+                                placeholder="اكتب هنا كلمات الإهداء التي ترغب بتضمينها..." 
+                                class="w-full bg-rose-50/20 border border-rose-200 rounded-lg p-2.5 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500"
+                            ></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Luxury Gift Wrapping Checkbox -->
+                    <label class="flex items-center justify-between p-3 rounded-xl bg-white border border-rose-200/80 hover:border-brand-400 cursor-pointer transition shadow-2xs">
+                        <div class="flex items-center gap-2">
+                            <input 
+                                type="checkbox" 
+                                id="gift-wrapping-checkbox" 
+                                name="is_luxury_gift_wrapping" 
+                                value="true"
+                                hx-get="{% url 'store:get_shipping_fee' %}" 
+                                hx-include="#checkout-form"
+                                hx-target="#checkout-totals"
+                                class="w-4 h-4 text-brand-600 rounded focus:ring-brand-500 cursor-pointer"
+                            >
+                            <div>
+                                <span class="font-bold text-slate-900 text-xs">إضافة تغليف هدايا (صندوق هدايا مع شريط)</span>
+                                <span class="text-[10px] text-slate-400 block">تغليف مخصص لتقديم الطلب كهدية</span>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full bg-rose-100 text-brand-800 text-[11px] font-bold font-num shrink-0">+{{ store_settings.gift_wrapping_fee_yer|floatformat:0 }} ر.ي</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 3. PAYMENT METHOD SELECTOR (قائمة منسدلة أنيقة مريحة بصرياً) -->
+            <div class="bg-white rounded-2xl p-5 sm:p-6 border border-rose-100/90 shadow-luxury space-y-4">
+                <div class="pb-3 border-b border-rose-100">
+                    <h3 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                        <i data-lucide="credit-card" class="w-4 h-4 text-brand-600"></i>
+                        <span>تحديد وسيلة السداد والتحويل المعتمدة</span>
+                    </h3>
+                    <p class="text-[11px] text-slate-400 mt-0.5 font-light">
+                        اختر الحساب البنكي أو وسيلة السداد من القائمة المنسدلة لإظهار بيانات التحويل بدقة
+                    </p>
+                </div>
+
+                <!-- Ergonomic Payment Select Dropdown -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-800 mb-1.5">
+                        اختر وسيلة الدفع / الحساب البنكي:
+                    </label>
+                    <div class="relative">
+                        <select 
+                            id="payment-method-select" 
+                            name="payment_method" 
+                            required 
+                            onchange="onPaymentMethodSelect(this.value)"
+                            class="w-full h-12 bg-rose-50/30 border-2 border-brand-500/50 hover:border-brand-500 focus:border-brand-600 focus:bg-white focus:outline-none focus:ring-3 focus:ring-brand-500/10 rounded-xl px-3.5 text-xs sm:text-[13px] font-bold text-slate-900 cursor-pointer shadow-2xs transition"
+                        >
+                            <option value="" disabled>— يرجى تحديد وسيلة السداد المعتمدة —</option>
+                            {% for method in payment_methods %}
+                            <option 
+                                value="{{ method.id }}" 
+                                data-currency="{{ method.currency }}"
+                                data-country="{{ method.bank_country }}"
+                                data-iscod="{{ method.is_cod|yesno:'true,false' }}"
+                                {% if forloop.first %}selected{% endif %}
+                            >
+                                {{ method.provider_name }} 
+                                {% if method.bank_country == 'SA' %}
+                                    — [🇸🇦 تحويل مباشر بالريال السعودي للمغتربين]
+                                {% elif method.is_cod %}
+                                    — [الدفع نقداً عند الاستلام]
+                                {% elif method.currency == 'YER' %}
+                                    — [🇾🇪 تحويل بالريال اليمني]
+                                {% else %}
+                                    — [تحويل معتمد يمني وسعودي]
+                                {% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Dynamic Container: Displays the Details of the Selected Payment Method -->
+                <div id="payment-details-wrapper" class="pt-1">
+                    {% for method in payment_methods %}
+                    <div 
+                        id="payment-card-{{ method.id }}" 
+                        class="payment-detail-card {% if not forloop.first %}hidden{% endif %} rounded-2xl p-4 sm:p-5 border-2 border-brand-500 bg-rose-50/20 shadow-2xs space-y-3.5 transition-all duration-300"
+                    >
+                        <!-- Method Title Header -->
+                        <div class="flex items-center justify-between flex-wrap gap-2 pb-2.5 border-b border-rose-200/60">
+                            <div class="flex items-center gap-2">
+                                <span class="w-7 h-7 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+                                    <i data-lucide="building" class="w-3.5 h-3.5"></i>
+                                </span>
+                                <div>
+                                    <span class="font-bold text-slate-900 text-xs sm:text-sm">{{ method.provider_name }}</span>
+                                    <span class="text-[9px] text-slate-400 block font-light">
+                                        {% if method.bank_country == 'SA' %}حساب معتمد في السعودية (للمغتربين){% elif method.is_cod %}تسليم نقدي عند باب المنزل{% else %}حساب معتمد في اليمن{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {% if method.is_cod %}
+                            <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">الدفع عند الاستلام</span>
+                            {% elif method.currency == 'SAR' or method.bank_country == 'SA' %}
+                            <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-300">🇸🇦 تحويل بالسعودي</span>
+                            {% else %}
+                            <span class="px-2.5 py-0.5 rounded-full bg-rose-100 text-brand-800 text-[10px] font-bold">🇾🇪 تحويل باليمني</span>
+                            {% endif %}
+                        </div>
+
+                        {% if not method.is_cod %}
+                        <!-- Exact Amount to Transfer Card with Copy Button -->
+                        <div class="p-3 rounded-xl bg-gradient-to-r from-rose-50 via-white to-pink-50 border border-rose-200 flex items-center justify-between flex-wrap gap-2">
+                            <div>
+                                <span class="text-[11px] text-slate-500 font-bold block">المبلغ المطلوب تحويله:</span>
+                                {% if method.currency == 'SAR' or method.bank_country == 'SA' %}
+                                <div class="flex items-baseline gap-1 mt-0.5">
+                                    <span id="amount-val-{{ method.id }}" class="font-black text-emerald-700 text-base sm:text-lg font-num">{{ total_sar }}</span>
+                                    <span class="text-xs font-bold text-emerald-700">ريال سعودي</span>
+                                </div>
+                                {% else %}
+                                <div class="flex items-baseline gap-1.5 mt-0.5">
+                                    <span id="amount-val-{{ method.id }}" class="font-black text-slate-950 text-base sm:text-lg font-num">{{ total_yer|floatformat:0 }}</span>
+                                    <span class="text-xs font-bold text-slate-600">ر.ي</span>
+                                    <span class="text-[10px] text-brand-700 font-semibold font-num">({{ total_sar }} ر.س)</span>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <button 
+                                type="button" 
+                                onclick="copyToClipboard('amount-val-{{ method.id }}', this); event.stopPropagation();" 
+                                class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-900 hover:text-white text-slate-800 text-[11px] font-bold border border-rose-200 shadow-2xs transition flex items-center gap-1.5 cursor-pointer h-8"
+                            >
+                                <i data-lucide="copy" class="w-3 h-3"></i>
+                                <span>نسخ المبلغ</span>
+                            </button>
+                        </div>
+
+                        <!-- Account Number with Copy Button -->
+                        {% if method.account_number %}
+                        <div class="p-2.5 rounded-xl bg-white border border-rose-200/80 flex items-center justify-between gap-2 flex-wrap">
+                            <div>
+                                <span class="text-[10px] text-slate-400 font-semibold block">رقم الحساب / المحفظة المعتمد:</span>
+                                <span id="acc-num-{{ method.id }}" class="font-mono font-black text-slate-950 text-xs sm:text-sm font-num select-all" dir="ltr">{{ method.account_number }}</span>
+                            </div>
+                            <button 
+                                type="button" 
+                                onclick="copyToClipboard('acc-num-{{ method.id }}', this); event.stopPropagation();" 
+                                class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-brand-600 text-white text-[11px] font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer h-8"
+                            >
+                                <i data-lucide="copy" class="w-3 h-3"></i>
+                                <span>نسخ الحساب</span>
+                            </button>
+                        </div>
+                        {% endif %}
+
+                        <!-- IBAN Number with Copy Button (If Available) -->
+                        {% if method.iban %}
+                        <div class="p-2.5 rounded-xl bg-white border border-rose-200/80 flex items-center justify-between gap-2 flex-wrap">
+                            <div>
+                                <span class="text-[10px] text-slate-400 font-semibold block">رقم الآيبان (IBAN):</span>
+                                <span id="iban-num-{{ method.id }}" class="font-mono font-bold text-slate-900 text-xs font-num select-all" dir="ltr">{{ method.iban }}</span>
+                            </div>
+                            <button 
+                                type="button" 
+                                onclick="copyToClipboard('iban-num-{{ method.id }}', this); event.stopPropagation();" 
+                                class="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer h-8"
+                            >
+                                <i data-lucide="copy" class="w-3 h-3"></i>
+                                <span>نسخ الآيبان</span>
+                            </button>
+                        </div>
+                        {% endif %}
+
+                        <!-- Beneficiary Account Holder Name -->
+                        {% if method.account_holder_name %}
+                        <div class="flex items-center justify-between text-[11px] text-slate-600 px-1">
+                            <span class="font-medium text-slate-400">اسم صاحب الحساب المعتمد:</span>
+                            <span class="font-bold text-slate-900">{{ method.account_holder_name }}</span>
+                        </div>
+                        {% endif %}
+
+                        <!-- Official Transfer Instructions -->
+                        {% if method.instructions %}
+                        <div class="text-[10px] text-brand-950 bg-rose-50/70 p-2.5 rounded-xl border border-rose-200/70 leading-relaxed font-medium">
+                            <span class="font-bold block mb-0.5">تعليمات التحويل:</span>
+                            {{ method.instructions }}
+                        </div>
+                        {% endif %}
+
+                        {% else %}
+                        <!-- Cash On Delivery Details -->
+                        <div class="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200 space-y-1 text-xs text-emerald-950">
+                            <div class="flex items-center gap-1.5 font-bold text-emerald-900">
+                                <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                <span>خدمة الدفع نقداً عند الاستلام (COD)</span>
+                            </div>
+                            <p class="text-[10px] text-slate-500 leading-relaxed">
+                                يتم سداد إجمالي قيمة الفاتورة نقداً للمندوب المعتمد عند باب المنزل فور فحص الشحنة واستلامها.
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- 4. Upload Receipt Slip & Transaction Number (توثيق الحوالة البنكية) -->
+                <div class="pt-3 border-t border-rose-100 space-y-3 bg-gradient-to-br from-rose-50/30 to-pink-50/20 p-4 rounded-2xl border border-rose-200/80">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center shrink-0">
+                            <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i>
+                        </div>
+                        <h4 class="font-bold text-slate-900 text-xs sm:text-sm">إرفاق إشعار أو سند التحويل البنكي (اختياري)</h4>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">صورة إشعار / سند التحويل</label>
+                            <input 
+                                type="file" 
+                                id="payment-receipt-input"
+                                name="payment_receipt" 
+                                accept="image/*"
+                                onchange="previewReceiptImage(event)"
+                                class="w-full text-xs text-slate-500 file:mr-0 file:ml-2.5 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-brand-600 file:text-white hover:file:bg-brand-500 file:cursor-pointer cursor-pointer border border-rose-200 rounded-xl bg-white p-1 shadow-2xs h-11"
+                            >
+                            <div id="receipt-preview-container" class="hidden mt-2 p-2 bg-white rounded-xl border border-rose-200 flex items-center gap-2.5 shadow-2xs">
+                                <img id="receipt-preview-img" src="" alt="معاينة السند" class="w-12 h-12 object-cover rounded-lg border border-rose-100 shrink-0">
+                                <div class="text-[10px]">
+                                    <span class="font-bold text-emerald-700 block">✓ تم اختيار ملف الإشعار بنجاح</span>
+                                    <span id="receipt-preview-name" class="text-slate-500 truncate max-w-[180px] block font-mono"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">رقم الحوالة أو المرجع المصرفي</label>
+                            <input 
+                                type="text" 
+                                name="payment_reference_no" 
+                                placeholder="مثال: 948201482" 
+                                class="w-full h-11 bg-white border border-rose-200 rounded-xl px-3 text-xs font-bold text-slate-900 transition font-num shadow-2xs focus:outline-none focus:border-brand-500"
+                            >
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Right Column: Order Summary (5 Cols) -->
+        <div class="lg:col-span-5 sticky top-24 space-y-3.5">
+            <div class="bg-white rounded-2xl p-5 sm:p-6 border border-rose-100/90 shadow-luxury space-y-4">
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base pb-3 border-b border-rose-100 flex items-center justify-between">
+                    <span>ملخص سلة المشتريات</span>
+                    <a href="{% url 'store:cart_view' %}" class="text-xs text-brand-600 hover:underline font-bold">تعديل</a>
+                </h3>
+
+                <!-- Items Mini List -->
+                <div class="space-y-3 max-h-56 overflow-y-auto pr-1">
+                    {% for item in items %}
+                    <div class="flex items-center justify-between text-xs pb-2 border-b border-rose-50 last:border-0">
+                        <div class="flex-1 pr-2">
+                            <span class="font-bold text-slate-900 block leading-tight">{{ item.name }}</span>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                <span class="text-[10px] text-slate-400 font-num">الكمية: {{ item.quantity }}</span>
+                                {% if item.variant_info %}
+                                <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-rose-50 text-brand-800 text-[9px] font-bold border border-rose-200">
+                                    {{ item.variant_info }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <span class="font-black text-slate-950 font-num shrink-0 text-xs sm:text-sm">{{ item.line_total|floatformat:0 }} ر.ي</span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Totals Section (Dynamic HTMX Swap) -->
+                {% include 'store/partials/checkout_totals.html' with subtotal_yer=subtotal_yer shipping_fee=shipping_fee_yer total_yer=total_yer total_sar=total_sar delivery_time=default_zone.estimated_delivery_time %}
+
+                <!-- Submit Button with Double-Submission Prevention -->
+                <button 
+                    type="submit" 
+                    id="submit-order-btn"
+                    class="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-brand-600 to-rose-500 hover:from-brand-500 hover:to-rose-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all duration-200 hover:scale-[1.01] flex items-center justify-center gap-2 group mt-3 cursor-pointer min-h-[46px]"
+                >
+                    <i data-lucide="check-circle" class="w-4 h-4 group-hover:scale-110 transition-transform"></i>
+                    <span>تأكيد وحجز الطلب رسمياً</span>
+                </button>
+
+                <p class="text-[10px] text-slate-400 text-center leading-relaxed font-light">
+                    بمجرد تأكيد الطلب، سيتم فحص إشعار السداد والتواصل معكم لتنسيق موعد التسليم مباشرة.
+                </p>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function previewReceiptImage(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('receipt-preview-img').src = e.target.result;
+                document.getElementById('receipt-preview-name').innerText = file.name;
+                document.getElementById('receipt-preview-container').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function onPaymentMethodSelect(methodId) {
+        document.querySelectorAll('.payment-detail-card').forEach(card => {
+            card.classList.add('hidden');
+        });
+        const selectedCard = document.getElementById(`payment-card-${methodId}`);
+        if (selectedCard) {
+            selectedCard.classList.remove('hidden');
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
+
+    function toggleGiftFields(event) {
+        const checkbox = document.getElementById('is_gift_checkbox');
+        if (event && event.target !== checkbox) {
+            checkbox.checked = !checkbox.checked;
+        }
+        const container = document.getElementById('gift-fields-container');
+        if (checkbox.checked) {
+            container.classList.remove('hidden');
+        } else {
+            container.classList.add('hidden');
+            const wrapBox = document.getElementById('gift-wrapping-checkbox');
+            if (wrapBox && wrapBox.checked) {
+                wrapBox.checked = false;
+                htmx.trigger(wrapBox, 'change');
+            }
+        }
+    }
+
+    function copyToClipboard(elementId, btn) {
+        const text = document.getElementById(elementId).innerText.trim();
+        navigator.clipboard.writeText(text).then(() => {
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<span>تم النسخ ✓</span>';
+            btn.classList.add('bg-emerald-600', 'text-white');
+            if (typeof showToast === 'function') {
+                showToast('تم نسخ القيمة بنجاح إلى الحافظة');
+            }
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.classList.remove('bg-emerald-600');
+            }, 2000);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const select = document.getElementById('payment-method-select');
+        if (select && select.value) {
+            onPaymentMethodSelect(select.value);
+        }
+
+        const checkoutForm = document.getElementById('checkout-form');
+        if (checkoutForm) {
+            checkoutForm.addEventListener('submit', function(e) {
+                const btn = document.getElementById('submit-order-btn');
+                if (btn && !btn.disabled) {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-75', 'cursor-not-allowed');
+                    btn.innerHTML = '<span class="inline-block animate-spin mr-1">⏳</span> <span>جاري تأكيد ومعالجة الطلب...</span>';
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

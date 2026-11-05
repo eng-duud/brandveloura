@@ -1,0 +1,40 @@
+services:
+  web:
+    build: .
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SECRET_KEY=brand-veloura-production-secure-key-2026
+      - DJANGO_DEBUG=False
+      - DJANGO_ALLOWED_HOSTS=*
+      - DATABASE_URL=postgresql://branduser:brandpass123@db:5432/brandvelouradb
+      # To use Cloudinary, uncomment and set your keys:
+      # - CLOUDINARY_CLOUD_NAME=your_cloud_name
+      # - CLOUDINARY_API_KEY=your_api_key
+      # - CLOUDINARY_API_SECRET=your_api_secret
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - media_volume:/app/media
+
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      - POSTGRES_DB=brandvelouradb
+      - POSTGRES_USER=branduser
+      - POSTGRES_PASSWORD=brandpass123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U branduser -d brandvelouradb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  media_volume:
+

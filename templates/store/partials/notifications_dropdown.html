@@ -1,0 +1,120 @@
+{% load static %}
+<div id="notifications-dropdown-content" class="w-80 sm:w-96 bg-white rounded-2xl shadow-luxury-lg border border-rose-100 overflow-hidden text-xs">
+    <!-- Header -->
+    <div class="px-4 py-3 bg-gradient-to-r from-rose-50/90 to-white border-b border-rose-100/80 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center">
+                <i data-lucide="bell" class="w-3.5 h-3.5"></i>
+            </div>
+            <div>
+                <h4 class="font-bold text-slate-900 text-xs">الإشعارات والتنبيهات</h4>
+                <p class="text-[10px] text-slate-400">تحديثات فورية لطلباتكم ومشترياتكم</p>
+            </div>
+        </div>
+        {% if unread_count > 0 %}
+        <form method="POST" action="{% url 'store:mark_all_notifications_read' %}" 
+              hx-post="{% url 'store:mark_all_notifications_read' %}" 
+              hx-target="#notifications-dropdown-content"
+              hx-swap="outerHTML">
+            {% csrf_token %}
+            <button type="submit" class="text-[10px] text-brand-600 hover:text-brand-800 font-bold hover:underline cursor-pointer bg-white px-2 py-1 rounded-lg border border-rose-200 shadow-2xs">
+                تحديد الكل كمقروء
+            </button>
+        </form>
+        {% endif %}
+    </div>
+
+    <!-- Notifications List -->
+    <div class="max-h-80 overflow-y-auto divide-y divide-rose-50/80">
+        {% if notifications %}
+            {% for n in notifications %}
+            <div class="relative p-3 transition flex items-start gap-3 {% if not n.is_read %}bg-rose-50/40 hover:bg-rose-50/70{% else %}bg-white hover:bg-slate-50/80{% endif %}">
+                <!-- Icon badge -->
+                <div class="shrink-0 mt-0.5">
+                    {% if n.notification_type == 'payment_verified' %}
+                    <span class="w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                    </span>
+                    {% elif n.notification_type == 'out_for_delivery' %}
+                    <span class="w-7 h-7 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                        <i data-lucide="truck" class="w-3.5 h-3.5"></i>
+                    </span>
+                    {% elif n.notification_type == 'delivered' %}
+                    <span class="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                        <i data-lucide="package-check" class="w-3.5 h-3.5"></i>
+                    </span>
+                    {% elif n.notification_type == 'cancelled' %}
+                    <span class="w-7 h-7 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center">
+                        <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+                    </span>
+                    {% elif n.notification_type == 'order_created' %}
+                    <span class="w-7 h-7 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+                        <i data-lucide="shopping-bag" class="w-3.5 h-3.5"></i>
+                    </span>
+                    {% elif n.notification_type == 'low_stock' %}
+                    <span class="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center">
+                        <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                    </span>
+                    {% else %}
+                    <span class="w-7 h-7 rounded-full bg-rose-100 text-brand-600 flex items-center justify-center">
+                        <i data-lucide="bell" class="w-3.5 h-3.5"></i>
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Content -->
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-1 mb-0.5">
+                        <a href="{% if n.link %}{{ n.link }}{% else %}{% url 'store:account_profile' %}?tab=notifications{% endif %}" 
+                           class="font-bold text-slate-900 hover:text-brand-600 transition truncate text-xs block">
+                            {{ n.title }}
+                        </a>
+                        {% if not n.is_read %}
+                        <span class="w-2 h-2 rounded-full bg-rose-600 shrink-0" title="غير مقروء"></span>
+                        {% endif %}
+                    </div>
+                    <p class="text-slate-600 text-[11px] leading-relaxed line-clamp-2">
+                        {{ n.message }}
+                    </p>
+                    <div class="flex items-center justify-between mt-1 text-[10px] text-slate-400">
+                        <span>{{ n.created_at|timesince }} مضت</span>
+                        {% if not n.is_read %}
+                        <form method="POST" action="{% url 'store:mark_notification_read' n.id %}" 
+                              hx-post="{% url 'store:mark_notification_read' n.id %}" 
+                              hx-target="#notifications-dropdown-content"
+                              hx-swap="outerHTML">
+                            {% csrf_token %}
+                            <button type="submit" class="text-slate-400 hover:text-brand-600 text-[10px] cursor-pointer">
+                                تحديد كمقروء
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="py-10 px-4 text-center">
+                <div class="w-12 h-12 rounded-full bg-rose-50 text-rose-300 flex items-center justify-center mx-auto mb-2">
+                    <i data-lucide="bell-off" class="w-6 h-6"></i>
+                </div>
+                <p class="font-bold text-slate-700 text-xs">لا توجد إشعارات جديدة</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">ستصلكم تنبيهات فورية عند تحديث حالة أي طلب أو تجهيزه للتوصيل.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Footer -->
+    <div class="p-2.5 bg-rose-50/50 border-t border-rose-100/80 text-center">
+        <a href="{% url 'store:account_profile' %}?tab=notifications" class="text-brand-700 hover:text-brand-900 font-bold text-xs inline-flex items-center gap-1.5 transition">
+            <span>عرض كل الإشعارات في حسابي</span>
+            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+        </a>
+    </div>
+</div>
+<script>
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+</script>
+

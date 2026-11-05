@@ -1,0 +1,182 @@
+<div id="cart-container" class="space-y-6">
+    {% if cart_items %}
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Cart Items List (8 Cols) -->
+        <div class="lg:col-span-8 bg-white rounded-2xl border border-rose-100 shadow-sm overflow-hidden divide-y divide-rose-100/70">
+            {% for item in cart_items %}
+            <div class="p-3.5 sm:p-4 flex items-center justify-between gap-3 sm:gap-4 transition hover:bg-rose-50/20">
+                
+                <!-- Product Thumbnail & Main Details -->
+                <div class="flex items-center gap-3 sm:gap-3.5 min-w-0 flex-1">
+                    <img 
+                        src="{{ item.image_url }}" 
+                        alt="{{ item.name }}" 
+                        class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-contain bg-rose-50/30 border border-rose-100 shrink-0 p-1"
+                    >
+                    <div class="min-w-0 flex-1 space-y-0.5">
+                        {% if item.brand %}
+                        <span class="text-[10px] font-bold text-brand-700 uppercase tracking-wider block font-serif">{{ item.brand }}</span>
+                        {% endif %}
+                        <h4 class="font-bold text-slate-900 text-xs sm:text-sm leading-snug break-words">{{ item.name }}</h4>
+                        
+                        <!-- Variant Info Pill -->
+                        {% if item.variant_info %}
+                        <div class="pt-0.5">
+                            {% if 'ماستر' in item.variant_info %}
+                            <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                {{ item.variant_info }}
+                            </span>
+                            {% elif 'أصلي' in item.variant_info %}
+                            <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-brand-50 text-brand-800 text-[10px] font-bold border border-brand-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-brand-600"></span>
+                                {{ item.variant_info }}
+                            </span>
+                            {% else %}
+                            <span class="text-[11px] text-slate-500 block">{{ item.variant_info }}</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Unit Price -->
+                        <div class="text-[11px] text-slate-500 font-medium pt-0.5">
+                            <span class="font-bold text-slate-700 font-num">{{ item.price_yer|floatformat:0 }} ر.ي</span>
+                            <span class="text-[10px] text-brand-700 font-num">({{ item.price_sar }} ر.س)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quantity Stepper & Line Total (Right) -->
+                <div class="flex items-center gap-2 sm:gap-4 shrink-0">
+                    <!-- Stepper -->
+                    <div class="flex items-center border border-rose-200 rounded-xl bg-white p-0.5 shadow-2xs">
+                        <button 
+                            hx-post="{% url 'store:cart_update' %}" 
+                            hx-target="#cart-container"
+                            hx-vals='{"item_key": "{{ item.key }}", "action": "decrease"}'
+                            class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-rose-50 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer transition"
+                            aria-label="تقليل الكمية"
+                        >-</button>
+                        <span class="w-7 sm:w-8 text-center text-xs font-bold font-num text-slate-900">{{ item.quantity }}</span>
+                        <button 
+                            hx-post="{% url 'store:cart_update' %}" 
+                            hx-target="#cart-container"
+                            hx-vals='{"item_key": "{{ item.key }}", "action": "increase"}'
+                            class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-rose-50 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer transition"
+                            aria-label="زيادة الكمية"
+                        >+</button>
+                    </div>
+
+                    <!-- Line Total -->
+                    <div class="text-left min-w-[70px] sm:min-w-[85px]">
+                        <div class="font-black text-slate-950 text-xs sm:text-sm font-num">{{ item.line_total_yer|floatformat:0 }} ر.ي</div>
+                        <div class="text-[10px] text-brand-700 font-bold font-num">{{ item.line_total_sar }} ر.س</div>
+                    </div>
+
+                    <!-- Remove Item Button -->
+                    <button 
+                        hx-post="{% url 'store:cart_remove' %}" 
+                        hx-target="#cart-container"
+                        hx-vals='{"item_key": "{{ item.key }}"}'
+                        class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                        title="حذف من السلة"
+                        aria-label="حذف العنصر"
+                    >
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+
+            <!-- Return to shopping link -->
+            <div class="p-3 bg-rose-50/30 flex items-center justify-between text-xs">
+                <a href="{% url 'store:product_list' %}" class="text-brand-700 hover:text-brand-900 font-bold inline-flex items-center gap-1.5 transition">
+                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                    <span>إضافة منتجات أخرى للسلة</span>
+                </a>
+                <span class="text-[11px] text-slate-400">الأسعار تشمل الضرائب</span>
+            </div>
+        </div>
+
+        <!-- Order Summary Card (4 Cols - Sticky on Desktop) -->
+        <div class="lg:col-span-4 sticky top-24 space-y-3">
+            <div class="bg-white rounded-2xl p-5 border border-rose-100 shadow-luxury space-y-4">
+                <h3 class="font-bold text-slate-900 text-sm pb-2.5 border-b border-rose-100 flex items-center justify-between">
+                    <span>ملخص الحساب</span>
+                    <span class="text-xs text-slate-500 font-normal">({{ cart_items|length }} منتج)</span>
+                </h3>
+
+                <!-- Subtotals -->
+                <div class="space-y-2.5 text-xs">
+                    <div class="flex items-center justify-between text-slate-600">
+                        <span>المجموع الفرعي للمنتجات:</span>
+                        <span class="font-bold text-slate-900 font-num">{{ subtotal_yer|floatformat:0 }} ر.ي</span>
+                    </div>
+
+                    <div class="flex items-center justify-between text-slate-600">
+                        <span>المعادل بالريال السعودي:</span>
+                        <span class="font-bold text-brand-700 font-num">{{ subtotal_sar }} ر.س</span>
+                    </div>
+
+                    <div class="flex items-center justify-between text-slate-500 text-[11px] pt-1 border-t border-rose-50">
+                        <span>رسوم الشحن والتوصيل:</span>
+                        <span class="text-emerald-700 font-medium">تُحسب بالخطوة التالية حسب المدينة</span>
+                    </div>
+                </div>
+
+                <!-- Final Estimate Box -->
+                <div class="p-3.5 rounded-xl bg-gradient-to-br from-rose-50 to-pink-50/40 border border-rose-200/80 space-y-1">
+                    <div class="flex items-baseline justify-between">
+                        <span class="font-bold text-slate-900 text-xs">المجموع المستحق:</span>
+                        <div class="text-left">
+                            <span class="text-xl font-black text-slate-950 font-num">{{ subtotal_yer|floatformat:0 }}</span>
+                            <span class="text-[11px] font-bold text-slate-600 mr-0.5">ر.ي</span>
+                        </div>
+                    </div>
+                    <div class="text-left text-[11px] font-bold text-brand-800 font-num">
+                        ≈ {{ subtotal_sar }} ريال سعودي
+                    </div>
+                </div>
+
+                <!-- Primary Checkout CTA -->
+                <a 
+                    href="{% url 'store:checkout' %}" 
+                    class="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-brand-600 to-rose-500 hover:from-brand-500 hover:to-rose-400 text-white font-bold text-xs sm:text-sm shadow-luxury transition-all duration-200 hover:scale-[1.01] flex items-center justify-center gap-2 cursor-pointer text-center min-h-[46px] active:scale-98"
+                >
+                    <span>متابعة إتمام الطلب</span>
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                </a>
+
+                <div class="flex items-center justify-center gap-1.5 text-[10px] text-slate-400 font-medium text-center pt-1">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
+                    <span>سداد آمن، معتمد، وفحص للشحنة قبل الدفع</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    {% else %}
+    <!-- Clean Minimalist Empty State -->
+    <div class="bg-white rounded-2xl p-10 sm:p-14 text-center border border-rose-100 shadow-sm space-y-4 max-w-md mx-auto">
+        <div class="w-16 h-16 rounded-2xl bg-rose-50 text-brand-600 flex items-center justify-center mx-auto shadow-2xs">
+            <i data-lucide="shopping-bag" class="w-8 h-8"></i>
+        </div>
+        <div class="space-y-1">
+            <h3 class="font-serif font-bold text-slate-900 text-lg sm:text-xl">سلة المشتريات فارغة</h3>
+            <p class="text-xs text-slate-500 font-light leading-relaxed">لم تقم بإضافة أي عطور أو ساعات أو منتجات حتى الآن.</p>
+        </div>
+        <div class="pt-2">
+            <a href="{% url 'store:product_list' %}" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-900 hover:bg-brand-600 text-white text-xs font-bold transition shadow-2xs cursor-pointer">
+                <span>تصفح تشكيلة المنتجات</span>
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+<script>
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+</script>
