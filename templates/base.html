@@ -445,13 +445,13 @@
     </div>
     {% endif %}
 
-    <!-- Dynamic Main Content (with bottom padding compensation for mobile bottom nav) -->
-    <main class="flex-grow pb-20 md:pb-0">
+    <!-- Dynamic Main Content -->
+    <main class="flex-grow">
         {% block content %}{% endblock %}
     </main>
 
     <!-- Luxury Structured Footer (شبكة 2*2 للجوال و 4 أعمدة للابتوب) -->
-    <footer class="bg-[#FFF0F7] border-t border-pink-200 mt-16 pt-12 pb-24 md:pb-10 text-slate-700 text-xs">
+    <footer class="bg-[#FFF0F7] border-t border-pink-200 mt-16 pt-12 pb-10 text-slate-700 text-xs">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
             
             <!-- 2x2 Grid on Mobile, 4 Columns on Laptop/Desktop -->
@@ -597,38 +597,6 @@
 
         </div>
     </footer>
-
-    <!-- Mobile Fixed Bottom Navigation Bar (شريط الأيقونات والتنقل السفلي السريع للجوال) -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-pink-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-2 py-1.5 flex items-center justify-around" aria-label="شريط التنقل السفلي">
-        <!-- 1. الرئيسية -->
-        <a href="{% url 'store:home' %}" class="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition min-w-[62px] {% if request.path == '/' %}text-brand-600 font-bold{% else %}text-slate-500 hover:text-slate-900 font-medium{% endif %}">
-            <i data-lucide="home" class="w-5 h-5 {% if request.path == '/' %}stroke-[2.5]{% else %}stroke-[1.8]{% endif %}"></i>
-            <span class="text-[10px]">الرئيسية</span>
-        </a>
-
-        <!-- 2. الإهداء -->
-        <a href="{% url 'store:gift_builder' %}" class="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition min-w-[62px] {% if 'gift' in request.path %}text-brand-600 font-bold{% else %}text-slate-500 hover:text-slate-900 font-medium{% endif %}">
-            <i data-lucide="gift" class="w-5 h-5 {% if 'gift' in request.path %}stroke-[2.5]{% else %}stroke-[1.8]{% endif %}"></i>
-            <span class="text-[10px]">الإهداء</span>
-        </a>
-
-        <!-- 3. السلة -->
-        <a href="{% url 'store:cart_view' %}" class="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition min-w-[62px] relative {% if 'cart' in request.path %}text-brand-600 font-bold{% else %}text-slate-500 hover:text-slate-900 font-medium{% endif %}">
-            <div class="relative">
-                <i data-lucide="shopping-bag" class="w-5 h-5 {% if 'cart' in request.path %}stroke-[2.5]{% else %}stroke-[1.8]{% endif %}"></i>
-                <div id="bottom-bar-cart-badge" class="absolute -top-1.5 -right-2">
-                    {% include 'store/partials/cart_badge.html' with cart_count=cart_count %}
-                </div>
-            </div>
-            <span class="text-[10px]">السلة</span>
-        </a>
-
-        <!-- 4. حسابي -->
-        <a href="{% if user.is_authenticated %}{% url 'store:account_profile' %}{% else %}{% url 'store:login' %}{% endif %}" class="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition min-w-[62px] {% if 'account' in request.path or 'login' in request.path or 'register' in request.path %}text-brand-600 font-bold{% else %}text-slate-500 hover:text-slate-900 font-medium{% endif %}">
-            <i data-lucide="user" class="w-5 h-5 {% if 'account' in request.path or 'login' in request.path or 'register' in request.path %}stroke-[2.5]{% else %}stroke-[1.8]{% endif %}"></i>
-            <span class="text-[10px]">حسابي</span>
-        </a>
-    </nav>
 
     <!-- Mobile Sidebar Drawer (نافبار جانبي بثلاث نقاط) -->
     <div id="mobile-sidebar-drawer" class="fixed inset-0 z-50 pointer-events-none transition-all duration-300">
@@ -783,25 +751,11 @@
     <script>
         lucide.createIcons();
 
-        // Sync mobile bottom navigation cart badge with top header badge
-        function syncCartBadges() {
-            const topBadge = document.getElementById('cart-badge');
-            const bottomBadge = document.getElementById('bottom-bar-cart-badge');
-            if (topBadge && bottomBadge) {
-                bottomBadge.innerHTML = topBadge.outerHTML;
-            }
-        }
-        document.body.addEventListener('cartUpdated', syncCartBadges);
-
         document.body.addEventListener('htmx:afterSwap', function(evt) {
             lucide.createIcons();
             // If swap targeted the quick view content, make sure modal is visible
             if (evt.detail.target && evt.detail.target.id === 'quick-view-content') {
                 openQuickViewModal();
-            }
-            // If swap updated cart badge container
-            if (evt.detail.target && evt.detail.target.id === 'cart-badge-container') {
-                syncCartBadges();
             }
         });
 
