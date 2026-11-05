@@ -1187,7 +1187,7 @@ def service_worker(request):
 
 def _get_safe_redirect(request, default='store:home'):
     """التحقق من رابط التوجيه والتأكد من أمانه لمنع Open Redirect"""
-    next_url = request.POST.get('next') or request.GET.get('next')
+    next_url = request.POST.get('next') or request.GET.get('next') or request.GET.get('state')
     if next_url and url_has_allowed_host_and_scheme(url=next_url, allowed_hosts={request.get_host()}):
         return next_url
     return reverse(default)
@@ -1325,6 +1325,9 @@ def google_login_redirect(request):
         return redirect(f"{reverse('store:login')}?next={next_url}")
         
     redirect_uri = request.build_absolute_uri(reverse('store:google_callback'))
+    if not os.getenv('DJANGO_DEBUG', 'False').lower() in ('true', '1') and redirect_uri.startswith('http://'):
+        redirect_uri = redirect_uri.replace('http://', 'https://', 1)
+
     params = {
         'client_id': client_id,
         'redirect_uri': redirect_uri,
@@ -1382,6 +1385,8 @@ def google_auth_callback(request):
         client_id = settings.effective_google_client_id
         client_secret = settings.effective_google_client_secret
         redirect_uri = request.build_absolute_uri(reverse('store:google_callback'))
+        if not os.getenv('DJANGO_DEBUG', 'False').lower() in ('true', '1') and redirect_uri.startswith('http://'):
+            redirect_uri = redirect_uri.replace('http://', 'https://', 1)
         
         try:
             token_res = requests.post(
@@ -1409,6 +1414,13 @@ def google_auth_callback(request):
                     first_name = u_data.get('given_name') or u_data.get('name', 'مستخدم')
                     last_name = u_data.get('family_name', '')
                     avatar_url = u_data.get('picture', '')
+                else:
+                    messages.error(request, 'تعذر قراءة بيانات الملف الشخصي من Google.')
+                    return redirect('store:login')
+            else:
+                err_desc = token_json.get('error_description') or token_json.get('error') or 'تعذر التحقق من كود المصادقة'
+                messages.error(request, f'تعذر تسجيل الدخول عبر Google: {err_desc}')
+                return redirect('store:login')
         except Exception as e:
             messages.error(request, f'تعذر استكمال الاتصال بخدمة Google: {e}')
             return redirect('store:login')

@@ -58,6 +58,10 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
 
+# Cross-Origin Policies (allows Google Sign-In popups/redirects without blocking window communication)
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
 # Production Security Enhancements (Enabled when DEBUG=False and not running tests)
 if not DEBUG and 'test' not in sys.argv:
     SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True') == 'True'

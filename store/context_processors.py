@@ -15,8 +15,15 @@ def store_context(request):
     # العملة النشطة الحالية (الافتراضي YER، مع إمكانية التبديل إلى SAR)
     active_currency = request.session.get('active_currency', 'YER')
     
-    # معرف عميل Google لتسجيل الدخول السريع
+    # معرف عميل Google ورابط الاستجابة المعتمد للمصادقة
     google_client_id = settings.effective_google_client_id
+    try:
+        from django.urls import reverse
+        google_callback_url = request.build_absolute_uri(reverse('store:google_callback'))
+        if not os.getenv('DJANGO_DEBUG', 'False').lower() in ('true', '1') and google_callback_url.startswith('http://'):
+            google_callback_url = google_callback_url.replace('http://', 'https://', 1)
+    except Exception:
+        google_callback_url = ''
     
     # إحصائيات الإشعارات والتنبيهات
     unread_notifications_count = 0
@@ -45,6 +52,7 @@ def store_context(request):
         'active_currency': active_currency,
         'yer_per_sar': settings.yer_per_sar or Decimal('530.00'),
         'google_client_id': google_client_id,
+        'google_callback_url': google_callback_url,
         'unread_notifications_count': unread_notifications_count,
         'admin_unread_notifications_count': admin_unread_notifications_count,
     }
