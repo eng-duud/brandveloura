@@ -27,11 +27,16 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('[OK] Store settings and exchange rate updated (1 SAR = 530 YER)'))
 
         # 2. إنشاء المستخدم المدير للوحة التحكم (Admin Superuser)
-        if not User.objects.filter(username='admin').exists():
-            User.objects.create_superuser('admin', 'admin@brandveloura.com', 'admin123456')
-            self.stdout.write(self.style.SUCCESS('[OK] Admin user created: admin / admin123456'))
+        import os
+        admin_user = os.getenv('DJANGO_SUPERUSER_USERNAME', 'admin')
+        admin_email = os.getenv('DJANGO_SUPERUSER_EMAIL', 'admin@brandveloura.com')
+        admin_pass = os.getenv('DJANGO_SUPERUSER_PASSWORD', 'admin123456')
+
+        if not User.objects.filter(username=admin_user).exists():
+            User.objects.create_superuser(admin_user, admin_email, admin_pass)
+            self.stdout.write(self.style.SUCCESS(f'[OK] Admin user created: {admin_user}'))
         else:
-            self.stdout.write(self.style.WARNING('[INFO] Admin user already exists.'))
+            self.stdout.write(self.style.WARNING(f'[INFO] Admin user {admin_user} already exists.'))
 
         # 3. وسائل الدفع وحسابات التحويل في اليمن والسعودية للمغتربين
         payment_methods_data = [

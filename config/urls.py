@@ -19,6 +19,10 @@ urlpatterns = [
     path('robots.txt', store_views.robots_txt, name='robots_txt'),
     path('sitemap.xml', store_views.sitemap_xml, name='sitemap_xml'),
     path('llms.txt', store_views.llms_txt, name='llms_txt'),
+    
+    # فحص سلامة النظام السحابي (Railway Healthcheck)
+    path('health/', store_views.health_check, name='health_check'),
+    path('healthz/', store_views.health_check, name='healthz_check'),
 ]
 
 if settings.DEBUG:

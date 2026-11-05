@@ -59,12 +59,25 @@
 docker compose up -d --build
 ```
 
-### الخيار 2: الرفع على المنصات السحابية (Railway / Render)
-1. قم برفع المشروع على حساب GitHub.
-2. اربط المستودع في Railway أو Render.
-3. أضف متغير البيئة `DATABASE_URL` (رابط قاعدة PostgreSQL السحابية).
-4. أضف مفاتيح Cloudinary في إعدادات البيئة (اختياري).
-5. سيتم البناء والتشغيل تلقائياً عبر `Dockerfile`.
+### الخيار 2: الرفع على منصة Railway السحابية (Railway.app) 🚀
+المشروع مهيأ ومضبوط بالكامل للعمل على Railway بضغطة زر عبر **Nixpacks** أو **Dockerfile**:
+
+#### الخطوات:
+1. ارفع المشروع إلى مستودع GitHub الخاص بك.
+2. في لوحة تحكم [Railway](https://railway.com)، انقر على **New Project** ثم **Deploy from GitHub repo** واختر المستودع.
+3. أضف قاعدة بيانات PostgreSQL بنقرة واحدة داخل المشروع: **+ New -> Database -> Add PostgreSQL**. (يقوم Railway بحقن متغير `DATABASE_URL` تلقائياً في خدمة المتجر).
+4. في تبويب **Variables** للخدمة، أضف المتغيرات التالية (انظر `.env.example` للتفاصيل):
+   - `DJANGO_SECRET_KEY`: مفتاح سري قوي للإنتاج.
+   - `DJANGO_DEBUG`: اضبطه على `False`.
+   - `DJANGO_ALLOWED_HOSTS`: `*` أو نطاق متجرك المخصص.
+   - `CSRF_TRUSTED_ORIGINS`: `https://*.railway.app,https://*.up.railway.app` أو نطاقك المخصص.
+   - `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET`: (اختياري لحفظ الصور سحابياً).
+5. سيقوم Railway بالبناء التلقائي وتشغيل الهجرات (`migrate`) ومراقبة جاهزية التطبيق عبر مسار `/health/`.
+6. لتعبئة المتجر بالبيانات الأولية الفاخرة وحسابات الدفع والمستخدم الإداري، افتح نافذة الأوامر **Terminal** في Railway ونفّذ:
+   ```bash
+   python manage.py seed_data
+   ```
+   أو قم بتسجيل الدخول إلى لوحة الإدارة عبر الرابط: `https://your-app.up.railway.app/admin/`
 
 ---
 

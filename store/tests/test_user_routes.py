@@ -634,4 +634,17 @@ class UserRoutesAndOperationsTests(TestCase):
         self.assertEqual(gift_data.get('recipient_name'), 'ياسر اليماني')
         self.assertEqual(gift_data.get('gift_card_sender'), 'أحمد سعيد')
 
+    def test_health_check_endpoint(self):
+        """فحص مسار الفحص السحابي Railway Health Check"""
+        res = self.client.get(reverse('health_check'))
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data.get('status'), 'healthy')
+        self.assertEqual(data.get('service'), 'brandveloura')
+
+        # فحص المسار البديل healthz
+        res_z = self.client.get(reverse('healthz_check'))
+        self.assertEqual(res_z.status_code, 200)
+
+
 

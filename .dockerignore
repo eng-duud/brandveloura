@@ -1,0 +1,40 @@
+# Git and VCS
+.git/
+.gitignore
+
+# Python Virtual Environments and Caches
+.venv/
+env/
+venv/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Local Environment Secrets
+.env
+.env.*
+!.env.example
+
+# Local SQLite Database and Logs
+*.log
+db.sqlite3
+db.sqlite3-journal
+
+# Local Media and Pre-existing Staticfiles
+media/
+staticfiles/
+
+# IDE and OS Artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Local Helper Scripts
+run.bat
+run.ps1

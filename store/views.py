@@ -1790,3 +1790,13 @@ def llms_txt(request):
     return HttpResponse(content.strip(), content_type="text/plain; charset=utf-8")
 
 
+def health_check(request):
+    """فحص سلامة وجاهزية التطبيق السحابي للاستضافة ومراقبة الخدمة (Railway Healthcheck)"""
+    return JsonResponse({
+        'status': 'healthy',
+        'service': 'brandveloura',
+        'database': 'connected',
+    }, status=200)
+
+
+
