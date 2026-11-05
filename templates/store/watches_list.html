@@ -1,16 +1,16 @@
 {% extends 'base.html' %}
 
-{% block title %}ساعات اليد للرجال والنساء | {{ store_settings.store_name }}{% endblock %}
+{% block title %}الساعات | {{ store_settings.store_name }}{% endblock %}
 
-{% block meta_description %}اكتشف تشكيلة الساعات الراقية للرجال والنساء بمحركات أوتوماتيكية ومحركات كوارتز فائقة الدقة بتصاميم كلاسيكية وعصرية من Brand Veloura.{% endblock %}
+{% block meta_description %}تشكيلة الساعات الرجالية والنسائية بمحركات أوتوماتيكية وكوارتز مع توصيل لكافة المحافظات والدفع بالريال السعودي واليمني.{% endblock %}
 {% block canonical %}{{ request.scheme }}://{{ request.get_host }}{% url 'store:watches_catalog' %}{% endblock %}
-{% block og_title %}ساعات فاخرة رجالية ونسائية | {{ store_settings.store_name }}{% endblock %}
-{% block og_description %}ساعات راقية بتصاميم استثنائية وأعلى معايير الدقة والأناقة.{% endblock %}
+{% block og_title %}الساعات | {{ store_settings.store_name }}{% endblock %}
+{% block og_description %}تسوق الساعات الرجالية والنسائية من متجر {{ store_settings.store_name }}.{% endblock %}
 
 {% block content %}
 
 <!-- Watches Hero Header -->
-<section class="bg-gradient-to-b from-slate-100/60 via-rose-50/20 to-white py-6 sm:py-8 border-b border-rose-200/70">
+<section class="bg-slate-50 py-6 sm:py-8 border-b border-slate-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div>
             <h1 class="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
@@ -27,8 +27,8 @@
 <section class="py-6 bg-white min-h-[500px]">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
 
-        <!-- SINGLE HORIZONTAL FILTER BAR (سطر واحد أفقي لكافة فلاتر الساعات) -->
-        <div class="bg-white rounded-2xl p-2 sm:p-2.5 border border-rose-100/90 shadow-luxury">
+        <!-- SINGLE HORIZONTAL FILTER BAR -->
+        <div class="bg-white rounded-xl p-2 sm:p-2.5 border border-slate-200">
             <form 
                 id="watches-filter-form"
                 hx-get="{% url 'store:watches_catalog' %}"
@@ -37,27 +37,27 @@
                 hx-push-url="true"
                 class="flex items-center gap-2 sm:gap-2.5 overflow-x-auto no-scrollbar flex-nowrap py-0.5"
             >
-                <!-- 1. Search Input (Flexible width) -->
+                <!-- 1. Search Input -->
                 <div class="relative flex-1 min-w-[170px] sm:min-w-[200px]">
                     <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
                     <input 
                         type="text" 
                         name="q" 
                         value="{{ search_query|default:'' }}"
-                        placeholder="ابحث باسم الساعة، الماركة، أو الموديل..." 
+                        placeholder="ابحث باسم الساعة أو الموديل..." 
                         hx-trigger="keyup changed delay:400ms"
-                        class="w-full h-10 bg-rose-50/40 border border-rose-200/80 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-3 focus:ring-brand-500/10 rounded-xl py-2 pr-9 pl-3 text-xs font-bold text-slate-900 transition shadow-2xs placeholder-slate-400"
+                        class="w-full h-9.5 bg-slate-50 border border-slate-200 focus:border-slate-900 focus:bg-white focus:outline-none rounded-lg py-2 pr-9 pl-3 text-xs text-slate-900 transition placeholder-slate-400"
                     >
                 </div>
 
-                <!-- 2. Gender Target (الفئة: رجالي / نسائي) -->
+                <!-- 2. Gender Target -->
                 <div class="relative shrink-0 min-w-[120px] sm:min-w-[135px]">
-                    <div class="flex items-center gap-1.5 w-full h-10 bg-rose-50/40 border border-rose-200/80 rounded-xl px-2.5 shadow-2xs focus-within:border-brand-500 focus-within:bg-white transition">
-                        <i data-lucide="users" class="w-3.5 h-3.5 text-brand-600 shrink-0"></i>
+                    <div class="flex items-center gap-1.5 w-full h-9.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 focus-within:border-slate-900 focus-within:bg-white transition">
+                        <i data-lucide="users" class="w-3.5 h-3.5 text-slate-600 shrink-0"></i>
                         <select 
                             name="gender" 
                             hx-trigger="change"
-                            class="w-full bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer py-1"
+                            class="w-full bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer py-1"
                         >
                             <option value="" {% if not gender_filter %}selected{% endif %}>كافة الساعات</option>
                             <option value="men" {% if gender_filter == 'men' %}selected{% endif %}>ساعات رجالية</option>
@@ -66,30 +66,30 @@
                     </div>
                 </div>
 
-                <!-- 3. Movement Type (نوع المحرك: أوتوماتيك / كوارتز) -->
+                <!-- 3. Movement Type -->
                 <div class="relative shrink-0 min-w-[125px] sm:min-w-[145px]">
-                    <div class="flex items-center gap-1.5 w-full h-10 bg-rose-50/40 border border-rose-200/80 rounded-xl px-2.5 shadow-2xs focus-within:border-brand-500 focus-within:bg-white transition">
-                        <i data-lucide="cpu" class="w-3.5 h-3.5 text-brand-600 shrink-0"></i>
+                    <div class="flex items-center gap-1.5 w-full h-9.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 focus-within:border-slate-900 focus-within:bg-white transition">
+                        <i data-lucide="cpu" class="w-3.5 h-3.5 text-slate-600 shrink-0"></i>
                         <select 
                             name="movement" 
                             hx-trigger="change"
-                            class="w-full bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer py-1"
+                            class="w-full bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer py-1"
                         >
-                            <option value="" {% if not movement_filter %}selected{% endif %}>الكل (المحرك)</option>
+                            <option value="" {% if not movement_filter %}selected{% endif %}>كافة المحركات</option>
                             <option value="أوتوماتيك" {% if movement_filter == 'أوتوماتيك' %}selected{% endif %}>محرك أوتوماتيكي</option>
                             <option value="كوارتز" {% if movement_filter == 'كوارتز' %}selected{% endif %}>محرك كوارتز</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- 4. Watch Brand (الماركة) -->
+                <!-- 4. Watch Brand -->
                 <div class="relative shrink-0 min-w-[125px] sm:min-w-[145px]">
-                    <div class="flex items-center gap-1.5 w-full h-10 bg-rose-50/40 border border-rose-200/80 rounded-xl px-2.5 shadow-2xs focus-within:border-brand-500 focus-within:bg-white transition">
-                        <i data-lucide="award" class="w-3.5 h-3.5 text-brand-600 shrink-0"></i>
+                    <div class="flex items-center gap-1.5 w-full h-9.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 focus-within:border-slate-900 focus-within:bg-white transition">
+                        <i data-lucide="award" class="w-3.5 h-3.5 text-slate-600 shrink-0"></i>
                         <select 
                             name="brand" 
                             hx-trigger="change"
-                            class="w-full bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer py-1"
+                            class="w-full bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer py-1"
                         >
                             <option value="" {% if not brand_filter %}selected{% endif %}>كافة الماركات</option>
                             {% for brand in available_brands %}
@@ -101,12 +101,12 @@
 
                 <!-- 5. Sorting Dropdown -->
                 <div class="relative shrink-0 min-w-[120px] sm:min-w-[135px]">
-                    <div class="flex items-center gap-1.5 w-full h-10 bg-rose-50/40 border border-rose-200/80 rounded-xl px-2.5 shadow-2xs focus-within:border-brand-500 focus-within:bg-white transition">
-                        <i data-lucide="arrow-down-up" class="w-3.5 h-3.5 text-brand-600 shrink-0"></i>
+                    <div class="flex items-center gap-1.5 w-full h-9.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 focus-within:border-slate-900 focus-within:bg-white transition">
+                        <i data-lucide="arrow-down-up" class="w-3.5 h-3.5 text-slate-600 shrink-0"></i>
                         <select 
                             name="sort" 
                             hx-trigger="change"
-                            class="w-full bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer py-1"
+                            class="w-full bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer py-1"
                         >
                             <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>وصل حديثاً</option>
                             <option value="best_sellers" {% if sort_by == 'best_sellers' %}selected{% endif %}>الأكثر طلباً</option>
@@ -116,7 +116,7 @@
                     </div>
                 </div>
 
-                <!-- 6. Quick Reset Button (Visible when filters are active) -->
+                <!-- 6. Quick Reset Button -->
                 {% if brand_filter or movement_filter or gender_filter or search_query or sort_by != 'newest' %}
                 <a 
                     href="{% url 'store:watches_catalog' %}" 
@@ -124,7 +124,7 @@
                     hx-target="#watches-grid"
                     hx-indicator="#filter-loading-spinner"
                     hx-push-url="true"
-                    class="shrink-0 h-10 px-3 rounded-xl bg-rose-100/70 hover:bg-brand-600 hover:text-white text-brand-800 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                    class="shrink-0 h-9.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-700 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
                     title="إعادة ضبط الفلاتر"
                 >
                     <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
@@ -137,26 +137,26 @@
 
         <!-- Loading Indicator -->
         <div id="filter-loading-spinner" class="htmx-indicator py-6 text-center">
-            <div class="w-8 h-8 border-3 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p class="text-xs font-bold text-slate-400 mt-2">جاري تحديث الساعات...</p>
+            <div class="w-8 h-8 border-2 border-slate-900 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p class="text-xs text-slate-400 mt-2">جاري تحديث الساعات...</p>
         </div>
 
         <!-- Products Grid Container -->
         <div id="watches-grid">
             {% if products %}
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-3.5">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
                 {% for product in products %}
                     {% include 'store/components/product_card.html' with product=product %}
                 {% endfor %}
             </div>
             {% else %}
-            <div class="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200 p-6 space-y-2.5">
-                <div class="w-11 h-11 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center mx-auto">
-                    <i data-lucide="watch" class="w-5 h-5"></i>
+            <div class="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200 p-6 space-y-2.5">
+                <div class="w-10 h-10 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center mx-auto">
+                    <i data-lucide="search" class="w-5 h-5"></i>
                 </div>
-                <h3 class="font-bold text-slate-900 text-sm sm:text-base">لم يتم العثور على ساعات تطابق خيارات البحث</h3>
-                <p class="text-xs text-slate-400 max-w-sm mx-auto">يرجى تعديل الفلاتر أو إعادة ضبط البحث لعرض كافة الموديلات.</p>
-                <a href="{% url 'store:watches_catalog' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs shadow-xs">
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base">لم يتم العثور على نتائج</h3>
+                <p class="text-xs text-slate-500 max-w-sm mx-auto">يرجى تعديل الفلاتر أو إعادة ضبط البحث لعرض المنتجات المتوفرة.</p>
+                <a href="{% url 'store:watches_catalog' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-900 text-white font-medium text-xs hover:bg-slate-800 transition">
                     <span>عرض كافة الساعات</span>
                 </a>
             </div>

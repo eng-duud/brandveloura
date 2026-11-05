@@ -7,15 +7,15 @@
 <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-6">
     
     <!-- 1. Header Card (بطاقة الحساب الرسمية) -->
-    <div class="bg-white rounded-2xl p-5 sm:p-6 border border-rose-100/90 shadow-sm">
+    <div class="bg-white rounded-xl p-5 sm:p-6 border border-slate-200">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             
             <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-slate-900 text-white font-serif font-bold text-xl flex items-center justify-center shrink-0">
+                <div class="w-12 h-12 rounded-xl bg-slate-900 text-white font-bold text-lg flex items-center justify-center shrink-0">
                     {{ request.user.first_name|default:request.user.username|slice:":1"|upper }}
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold text-slate-900">
+                    <h1 class="text-lg sm:text-xl font-bold text-slate-900">
                         {{ request.user.get_full_name|default:request.user.username }}
                     </h1>
                     <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-0.5">
@@ -31,11 +31,11 @@
             </div>
 
             <div class="flex items-center gap-2 self-end sm:self-center">
-                <a href="{% url 'store:track_order' %}" class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5">
+                <a href="{% url 'store:track_order' %}" class="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition flex items-center gap-1.5">
                     <i data-lucide="truck" class="w-3.5 h-3.5"></i>
                     <span>تتبع الطلبات</span>
                 </a>
-                <a href="{% url 'store:logout' %}" class="px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition flex items-center gap-1.5">
+                <a href="{% url 'store:logout' %}" class="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition flex items-center gap-1.5">
                     <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
                     <span>تسجيل الخروج</span>
                 </a>
@@ -45,7 +45,7 @@
 
     <!-- 2. Overview Stats (ملخص النشاط) -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <div class="bg-white rounded-2xl p-4 border border-rose-100/80 shadow-2xs">
+        <div class="bg-white rounded-xl p-4 border border-slate-200">
             <span class="text-xs text-slate-500 block mb-1">إجمالي الطلبات</span>
             <div class="flex items-baseline gap-1.5">
                 <span class="text-2xl font-bold text-slate-900 font-num">{{ total_orders_count }}</span>
@@ -53,15 +53,15 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl p-4 border border-rose-100/80 shadow-2xs">
+        <div class="bg-white rounded-xl p-4 border border-slate-200">
             <span class="text-xs text-slate-500 block mb-1">الطلبات الجارية</span>
             <div class="flex items-baseline gap-1.5">
-                <span class="text-2xl font-bold text-amber-600 font-num">{{ active_orders_count }}</span>
+                <span class="text-2xl font-bold text-slate-900 font-num">{{ active_orders_count }}</span>
                 <span class="text-xs text-slate-400">قيد المعالجة والتوصيل</span>
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl p-4 border border-rose-100/80 shadow-2xs">
+        <div class="bg-white rounded-xl p-4 border border-slate-200">
             <span class="text-xs text-slate-500 block mb-1">إجمالي المشتريات</span>
             <div class="flex items-baseline gap-1.5">
                 <span class="text-xl font-bold text-slate-900 font-num">{{ total_spent_yer|floatformat:0 }}</span>
@@ -71,12 +71,12 @@
     </div>
 
     <!-- 3. Navigation Tabs -->
-    <div class="border-b border-rose-100 flex items-center gap-6 text-xs font-bold">
+    <div class="border-b border-slate-200 flex items-center gap-6 text-xs font-bold">
         <button 
             type="button" 
             onclick="switchTab('orders')" 
             id="tab-btn-orders"
-            class="tab-button pb-3 border-b-2 border-brand-600 text-brand-600 cursor-pointer transition flex items-center gap-1.5">
+            class="tab-button pb-3 border-b-2 border-slate-900 text-slate-900 cursor-pointer transition flex items-center gap-1.5">
             <i data-lucide="package" class="w-4 h-4"></i>
             <span>سجل الطلبات ({{ total_orders_count }})</span>
         </button>
@@ -107,7 +107,7 @@
             <i data-lucide="bell" class="w-4 h-4"></i>
             <span>الإشعارات</span>
             {% if notifications_unread_count > 0 %}
-            <span class="px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold font-num">{{ notifications_unread_count }}</span>
+            <span class="px-1.5 py-0.2 rounded bg-slate-900 text-white text-[10px] font-bold font-num">{{ notifications_unread_count }}</span>
             {% endif %}
         </button>
     </div>
@@ -119,7 +119,7 @@
         {% if orders %}
         <div class="space-y-4">
             {% for order in orders %}
-            <div class="bg-white rounded-2xl p-5 border border-rose-100/90 shadow-2xs space-y-4">
+            <div class="bg-white rounded-xl p-5 border border-slate-200 space-y-4">
                 
                 <!-- Order Header -->
                 <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
@@ -221,9 +221,9 @@
             {% endfor %}
         </div>
         {% else %}
-        <div class="bg-white rounded-2xl p-10 border border-rose-100/90 text-center space-y-3">
+        <div class="bg-white rounded-xl p-10 border border-slate-200 text-center space-y-3">
             <p class="text-sm font-bold text-slate-700">لا توجد طلبات سابقة مسجلة في حسابكم</p>
-            <a href="{% url 'store:product_list' %}" class="inline-block px-4 py-2 bg-slate-900 text-white text-xs font-semibold rounded-xl hover:bg-brand-600 transition">
+            <a href="{% url 'store:product_list' %}" class="inline-block px-4 py-2 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition">
                 تصفح المنتجات
             </a>
         </div>
@@ -232,7 +232,7 @@
 
     <!-- TAB 2: PROFILE & ADDRESS -->
     <div id="tab-content-profile" class="tab-pane hidden">
-        <div class="bg-white rounded-2xl p-6 border border-rose-100/90 shadow-2xs space-y-5">
+        <div class="bg-white rounded-xl p-6 border border-slate-200 space-y-5">
             <div>
                 <h2 class="text-sm font-bold text-slate-900">بيانات التوصيل والعنوان</h2>
                 <p class="text-xs text-slate-400 mt-0.5">تُعتمد هذه البيانات تلقائياً عند إتمام أي طلب جديد</p>
@@ -249,7 +249,7 @@
                             name="first_name" 
                             required 
                             value="{{ request.user.first_name }}"
-                            class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3 text-xs font-medium text-slate-900 transition"
+                            class="w-full h-10 bg-white border border-slate-200 focus:border-slate-900 focus:outline-none rounded-lg px-3 text-xs font-medium text-slate-900 transition"
                         >
                     </div>
 
@@ -259,7 +259,7 @@
                             type="text" 
                             name="last_name" 
                             value="{{ request.user.last_name }}"
-                            class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3 text-xs font-medium text-slate-900 transition"
+                            class="w-full h-10 bg-white border border-slate-200 focus:border-slate-900 focus:outline-none rounded-lg px-3 text-xs font-medium text-slate-900 transition"
                         >
                     </div>
                 </div>
@@ -271,7 +271,7 @@
                             type="email" 
                             value="{{ request.user.email }}" 
                             disabled 
-                            class="w-full h-10 bg-slate-100 border border-slate-200 text-slate-500 rounded-xl px-3 text-xs font-medium cursor-not-allowed"
+                            class="w-full h-10 bg-slate-100 border border-slate-200 text-slate-500 rounded-lg px-3 text-xs font-medium cursor-not-allowed"
                         >
                     </div>
 
@@ -282,7 +282,7 @@
                             name="phone" 
                             value="{{ profile.phone|default:'' }}"
                             placeholder="770000000"
-                            class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3 text-xs font-medium text-slate-900 transition text-right font-num"
+                            class="w-full h-10 bg-white border border-slate-200 focus:border-slate-900 focus:outline-none rounded-lg px-3 text-xs font-medium text-slate-900 transition text-right font-num"
                             dir="ltr"
                         >
                     </div>
@@ -293,7 +293,7 @@
                         <label class="block text-xs font-bold text-slate-700 mb-1">المدينة / المحافظة</label>
                         <select 
                             name="preferred_city" 
-                            class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3 text-xs font-medium text-slate-900 transition cursor-pointer">
+                            class="w-full h-10 bg-white border border-slate-200 focus:border-slate-900 focus:outline-none rounded-lg px-3 text-xs font-medium text-slate-900 transition cursor-pointer">
                             <option value="">اختر المدينة</option>
                             {% for zone in shipping_zones %}
                             <option value="{{ zone.city_name }}" {% if profile.preferred_city == zone.city_name %}selected{% endif %}>
@@ -310,7 +310,7 @@
                             name="shipping_address" 
                             value="{{ profile.shipping_address|default:'' }}"
                             placeholder="اسم الشارع والحي"
-                            class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3 text-xs font-medium text-slate-900 transition"
+                            class="w-full h-10 bg-white border border-slate-200 focus:border-slate-900 focus:outline-none rounded-lg px-3 text-xs font-medium text-slate-900 transition"
                         >
                     </div>
                 </div>
@@ -318,7 +318,7 @@
                 <div class="pt-2 flex justify-end">
                     <button 
                         type="submit" 
-                        class="px-5 py-2.5 bg-slate-900 hover:bg-brand-600 text-white font-bold text-xs rounded-xl transition cursor-pointer">
+                        class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition cursor-pointer">
                         حفظ التغييرات
                     </button>
                 </div>
@@ -328,7 +328,7 @@
 
     <!-- TAB 3: SECURITY -->
     <div id="tab-content-security" class="tab-pane hidden">
-        <div class="bg-white rounded-2xl p-6 border border-rose-100/90 shadow-2xs space-y-5 max-w-xl">
+        <div class="bg-white rounded-xl p-6 border border-slate-200 space-y-5 max-w-xl">
             <div>
                 <h2 class="text-sm font-bold text-slate-900">تغيير كلمة المرور</h2>
                 <p class="text-xs text-slate-400 mt-0.5">يجب أن تتكون كلمة المرور من 6 خانات على الأقل</p>
@@ -349,7 +349,7 @@
                         type="password" 
                         name="current_password" 
                         required 
-                        class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3 text-xs font-medium text-slate-900 transition"
+                        class="w-full h-10 bg-white border border-slate-200 focus:border-slate-900 focus:outline-none rounded-lg px-3 text-xs font-medium text-slate-900 transition"
                     >
                 </div>
 
@@ -359,7 +359,7 @@
                         type="password" 
                         name="new_password" 
                         required 
-                        class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3 text-xs font-medium text-slate-900 transition"
+                        class="w-full h-10 bg-white border border-slate-200 focus:border-slate-900 focus:outline-none rounded-lg px-3 text-xs font-medium text-slate-900 transition"
                     >
                 </div>
 
@@ -369,14 +369,14 @@
                         type="password" 
                         name="confirm_password" 
                         required 
-                        class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3 text-xs font-medium text-slate-900 transition"
+                        class="w-full h-10 bg-white border border-slate-200 focus:border-slate-900 focus:outline-none rounded-lg px-3 text-xs font-medium text-slate-900 transition"
                     >
                 </div>
 
                 <div class="pt-1">
                     <button 
                         type="submit" 
-                        class="px-5 py-2 bg-slate-900 hover:bg-brand-600 text-white font-bold text-xs rounded-xl transition cursor-pointer">
+                        class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition cursor-pointer">
                         تحديث كلمة المرور
                     </button>
                 </div>
@@ -387,19 +387,19 @@
 
     <!-- TAB 4: NOTIFICATIONS -->
     <div id="tab-content-notifications" class="tab-pane hidden space-y-4">
-        <div class="bg-white rounded-2xl p-5 border border-rose-100/90 shadow-2xs space-y-4">
+        <div class="bg-white rounded-xl p-5 border border-slate-200 space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
                 <div>
                     <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2">
-                        <i data-lucide="bell" class="w-4 h-4 text-brand-600"></i>
+                        <i data-lucide="bell" class="w-4 h-4 text-slate-700"></i>
                         <span>مركز الإشعارات والتنبيهات الخاصة بحسابك</span>
                     </h3>
-                    <p class="text-xs text-slate-500 mt-0.5">تتبع دوري لجميع التحديثات وحالات طلباتك وعروض المتجر</p>
+                    <p class="text-xs text-slate-500 mt-0.5">تتبع دوري لجميع التحديثات وحالات طلباتك</p>
                 </div>
                 {% if notifications_unread_count > 0 %}
                 <form method="POST" action="{% url 'store:mark_all_notifications_read' %}">
                     {% csrf_token %}
-                    <button type="submit" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-2xs">
+                    <button type="submit" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5">
                         <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
                         <span>تحديد الكل كمقروء ({{ notifications_unread_count }})</span>
                     </button>
@@ -408,32 +408,32 @@
             </div>
 
             {% if notifications %}
-            <div class="divide-y divide-rose-50/80">
+            <div class="divide-y divide-slate-100">
                 {% for n in notifications %}
-                <div class="py-3.5 px-2.5 rounded-xl transition flex items-start gap-3.5 {% if not n.is_read %}bg-rose-50/40 border border-rose-100/70{% else %}hover:bg-slate-50/60{% endif %}">
+                <div class="py-3.5 px-2.5 rounded-lg transition flex items-start gap-3.5 {% if not n.is_read %}bg-slate-50 border border-slate-200{% else %}hover:bg-slate-50/60{% endif %}">
                     <div class="shrink-0 mt-1">
                         {% if n.notification_type == 'payment_verified' %}
-                        <span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
                             <i data-lucide="check-circle" class="w-4 h-4"></i>
                         </span>
                         {% elif n.notification_type == 'out_for_delivery' %}
-                        <span class="w-8 h-8 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center">
+                        <span class="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center">
                             <i data-lucide="truck" class="w-4 h-4"></i>
                         </span>
                         {% elif n.notification_type == 'delivered' %}
-                        <span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                        <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
                             <i data-lucide="package-check" class="w-4 h-4"></i>
                         </span>
                         {% elif n.notification_type == 'cancelled' %}
-                        <span class="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                        <span class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
                             <i data-lucide="x-circle" class="w-4 h-4"></i>
                         </span>
                         {% elif n.notification_type == 'order_created' %}
-                        <span class="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+                        <span class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
                             <i data-lucide="shopping-bag" class="w-4 h-4"></i>
                         </span>
                         {% else %}
-                        <span class="w-8 h-8 rounded-xl bg-rose-100 text-brand-600 flex items-center justify-center">
+                        <span class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
                             <i data-lucide="bell" class="w-4 h-4"></i>
                         </span>
                         {% endif %}
@@ -444,10 +444,10 @@
                             <div class="flex items-center gap-2">
                                 <h4 class="font-bold text-slate-900 text-xs sm:text-sm">{{ n.title }}</h4>
                                 {% if not n.is_read %}
-                                <span class="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[9px] font-extrabold">جديد</span>
+                                <span class="px-2 py-0.5 rounded bg-slate-900 text-white text-[9px] font-bold">جديد</span>
                                 {% endif %}
                                 {% if n.order %}
-                                <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold font-num">طلب #{{ n.order.order_number }}</span>
+                                <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-bold font-num">طلب #{{ n.order.order_number }}</span>
                                 {% endif %}
                             </div>
                             <span class="text-[11px] text-slate-400 font-num">{{ n.created_at|date:"Y-m-d H:i" }}</span>
@@ -456,7 +456,7 @@
                         
                         <div class="flex items-center gap-3">
                             {% if n.link %}
-                            <a href="{{ n.link }}" class="text-xs font-bold text-brand-600 hover:text-brand-800 transition inline-flex items-center gap-1">
+                            <a href="{{ n.link }}" class="text-xs font-bold text-slate-900 hover:underline transition inline-flex items-center gap-1">
                                 <span>عرض تفاصيل الطلب</span>
                                 <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
                             </a>
@@ -476,7 +476,7 @@
             </div>
             {% else %}
             <div class="py-12 text-center">
-                <div class="w-12 h-12 rounded-full bg-rose-50 text-rose-300 flex items-center justify-center mx-auto mb-2">
+                <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
                     <i data-lucide="bell-off" class="w-6 h-6"></i>
                 </div>
                 <p class="font-bold text-slate-700 text-sm">سجل الإشعارات فارغ</p>
@@ -501,8 +501,10 @@
 
         const activeBtn = document.getElementById('tab-btn-' + tabId);
         if (activeBtn) {
-            activeBtn.className = 'tab-button pb-3 border-b-2 border-brand-600 text-brand-600 cursor-pointer transition flex items-center gap-1.5';
+            activeBtn.className = 'tab-button pb-3 border-b-2 border-slate-900 text-slate-900 cursor-pointer transition flex items-center gap-1.5';
         }
+        if (window.lucide) lucide.createIcons();
+    }
         if (window.lucide) lucide.createIcons();
     }
 

@@ -1,4 +1,4 @@
-<div id="checkout-totals" class="space-y-2.5 pt-3 border-t border-rose-100 text-xs">
+<div id="checkout-totals" class="space-y-2.5 pt-3 border-t border-slate-200 text-xs">
     <div class="flex items-center justify-between text-slate-600">
         <span>المجموع الفرعي للمنتجات:</span>
         <span class="font-bold text-slate-900 font-num">{{ subtotal_yer|floatformat:0 }} ر.ي</span>
@@ -12,31 +12,31 @@
     </div>
 
     {% if gift_wrapping_fee and gift_wrapping_fee > 0 %}
-    <div class="flex items-center justify-between text-slate-700 bg-rose-50/70 p-2 rounded-xl border border-rose-200/70">
-        <span class="flex items-center gap-1.5 font-bold text-brand-800">
-            <i data-lucide="gift" class="w-3.5 h-3.5 text-brand-600"></i>
+    <div class="flex items-center justify-between text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+        <span class="flex items-center gap-1.5 font-bold text-slate-800">
+            <i data-lucide="gift" class="w-3.5 h-3.5 text-slate-700"></i>
             <span>تغليف هدايا:</span>
         </span>
-        <span class="font-black text-brand-900 font-num">+{{ gift_wrapping_fee|floatformat:0 }} ر.ي</span>
+        <span class="font-bold text-slate-900 font-num">+{{ gift_wrapping_fee|floatformat:0 }} ر.ي</span>
     </div>
     {% endif %}
 
     <!-- Final Calculated Total (YER & SAR) -->
-    <div class="pt-2.5 border-t border-rose-200">
+    <div class="pt-2.5 border-t border-slate-200">
         <div class="flex items-baseline justify-between">
             <span class="font-bold text-slate-900 text-xs sm:text-sm">المجموع الإجمالي:</span>
             <div class="text-left">
-                <span class="text-lg sm:text-xl font-black text-slate-950 font-num">{{ total_yer|floatformat:0 }}</span>
+                <span class="text-lg sm:text-xl font-bold text-slate-950 font-num">{{ total_yer|floatformat:0 }}</span>
                 <span class="text-xs font-bold text-slate-600 mr-0.5">ر.ي</span>
             </div>
         </div>
         
-        <div class="mt-2 flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50/40 border border-emerald-200/80 text-emerald-950">
-            <span class="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
-                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <div class="mt-2.5 flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900">
+            <span class="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                <span class="w-2 h-2 rounded-full bg-slate-500"></span>
                 <span>الإجمالي بالريال السعودي:</span>
             </span>
-            <span class="text-sm sm:text-base font-black font-num text-emerald-900">{{ total_sar }} ر.س</span>
+            <span class="text-sm sm:text-base font-bold font-num text-slate-950">{{ total_sar }} ر.س</span>
         </div>
     </div>
 </div>

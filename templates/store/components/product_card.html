@@ -1,12 +1,12 @@
-<div class="group bg-white rounded-2xl border border-rose-100/90 hover:border-brand-400 p-2.5 sm:p-3 flex flex-col justify-between transition-all duration-300 hover:shadow-luxury hover:-translate-y-0.5 relative cursor-pointer h-full">
+<div class="group bg-white rounded-2xl border border-slate-200 hover:border-slate-400 p-3 sm:p-3.5 flex flex-col justify-between transition-all duration-200 hover:shadow-xs relative cursor-pointer h-full">
     
-    <!-- Clean Minimalist Badges (Only out of stock or discount) -->
+    <!-- Badges (Out of stock / Discount) -->
     {% if product.stock_quantity <= 0 %}
     <span class="absolute top-2.5 right-2.5 z-10 px-2 py-0.5 rounded-full bg-slate-900 text-white text-[9px] font-bold shadow-xs">
         نفد
     </span>
     {% elif product.discount_percentage > 0 %}
-    <span class="absolute top-2.5 right-2.5 z-10 px-2 py-0.5 rounded-full bg-brand-600 text-white text-[9px] font-black shadow-xs">
+    <span class="absolute top-2.5 right-2.5 z-10 px-2 py-0.5 rounded-full bg-brand-600 text-white text-[9px] font-bold shadow-xs">
         -{{ product.discount_percentage }}%
     </span>
     {% endif %}
@@ -22,26 +22,26 @@
     >
         <div>
             <!-- Product Photo -->
-            <div class="aspect-square w-full rounded-xl overflow-hidden bg-rose-50/30 mb-2 relative">
+            <div class="aspect-square w-full rounded-xl overflow-hidden bg-slate-50 mb-2.5 relative">
                 <img 
                     src="{{ product.primary_image_url }}" 
                     alt="{{ product.name_ar }}" 
                     loading="lazy"
-                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 >
             </div>
 
-            <!-- Title in Arabic (Clean & Direct) -->
-            <h3 class="font-bold text-slate-900 text-xs sm:text-[13px] group-hover:text-brand-600 transition-colors line-clamp-2 leading-snug text-right min-h-[2.1rem]">
+            <!-- Title in Arabic -->
+            <h3 class="font-bold text-slate-900 text-xs sm:text-[13px] group-hover:text-slate-950 transition-colors line-clamp-2 leading-snug text-right min-h-[2.2rem]">
                 {{ product.name_ar }}
             </h3>
         </div>
 
         <!-- Single-Row Price Hierarchy (SAR + approx YER) -->
-        <div class="mt-2 pt-2 border-t border-rose-50 flex items-baseline justify-between gap-1">
+        <div class="mt-2 pt-2 border-t border-slate-100 flex items-baseline justify-between gap-1">
             <div class="flex items-baseline gap-1">
                 {% if product.has_grades %}
-                <span class="text-[10px] text-slate-500 font-medium">يبدأ من:</span>
+                <span class="text-[10px] text-slate-400 font-medium">يبدأ من:</span>
                 <span class="font-bold text-slate-950 text-sm sm:text-base font-num">
                     {{ product.price_master_sar|default:product.price_sar }}
                 </span>
@@ -50,10 +50,10 @@
                     {{ product.price_sar }}
                 </span>
                 {% endif %}
-                <span class="text-[10px] font-bold text-brand-700">ر.س</span>
+                <span class="text-[10px] font-bold text-slate-700">ر.س</span>
             </div>
             
-            <span class="text-[10px] font-bold text-slate-600 font-num">
+            <span class="text-[10px] font-medium text-slate-500 font-num">
                 {% if product.has_grades and product.price_master_yer %}
                     {{ product.price_master_yer|floatformat:0 }} ر.ي
                 {% else %}
@@ -64,12 +64,12 @@
     </div>
 
     <!-- Direct Add to Cart Button (Full-width, Ergonomic Touch Target >= 40px) -->
-    <div class="mt-2.5" onclick="event.stopPropagation()">
+    <div class="mt-3" onclick="event.stopPropagation()">
         {% if product.stock_quantity <= 0 %}
         <button 
             type="button" 
             disabled 
-            class="w-full h-10 rounded-xl bg-slate-100 text-slate-400 text-xs font-semibold flex items-center justify-center cursor-not-allowed"
+            class="w-full h-10 rounded-xl bg-slate-100 text-slate-400 text-xs font-medium flex items-center justify-center cursor-not-allowed"
         >
             نفد من المخزون
         </button>
@@ -84,10 +84,10 @@
                 type="submit" 
                 hx-disabled-elt="this"
                 aria-label="إضافة {{ product.name_ar }} إلى السلة"
-                class="w-full h-10 rounded-xl bg-slate-900 hover:bg-brand-600 text-white text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 shadow-2xs hover:shadow-luxury cursor-pointer active:scale-95 disabled:opacity-50"
+                class="w-full h-10 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-98 disabled:opacity-50"
                 onclick="showToast('تمت إضافة {{ product.name_ar }} للسلة');"
             >
-                <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+                <i data-lucide="shopping-bag" class="w-3.5 h-3.5"></i>
                 <span>أضف للسلة</span>
             </button>
         </form>

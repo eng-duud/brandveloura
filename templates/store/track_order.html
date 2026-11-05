@@ -3,28 +3,28 @@
 {% block title %}تتبع حالة الطلب | {{ store_settings.store_name }}{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 sm:px-6 py-14">
+<div class="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
     <!-- Header -->
-    <div class="text-center max-w-lg mx-auto mb-10 space-y-2">
-        <div class="w-14 h-14 rounded-3xl bg-rose-50 text-brand-600 flex items-center justify-center mx-auto mb-3 shadow-xs border border-rose-100">
-            <i data-lucide="truck" class="w-7 h-7"></i>
+    <div class="text-center max-w-lg mx-auto mb-8 space-y-2">
+        <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center mx-auto mb-3 border border-slate-200">
+            <i data-lucide="truck" class="w-6 h-6"></i>
         </div>
-        <h1 class="text-2xl sm:text-4xl font-serif font-bold text-slate-900">تتبع الطلب</h1>
-        <p class="text-xs sm:text-sm text-slate-500 font-light">أدخل رقم الطلب أو رقم الهاتف للاطلاع على حالة الشحن ومراحل المعالجة.</p>
+        <h1 class="text-xl sm:text-2xl font-bold text-slate-900">تتبع الطلب</h1>
+        <p class="text-xs text-slate-500">أدخل رقم الطلب أو رقم الهاتف للاطلاع على حالة الشحن ومراحل المعالجة.</p>
     </div>
 
     <!-- Search Box -->
-    <div class="bg-white rounded-3xl p-5 sm:p-6 border border-rose-100 shadow-luxury max-w-xl mx-auto mb-12">
-        <form action="{% url 'store:track_order' %}" method="GET" class="flex gap-2.5">
+    <div class="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 max-w-xl mx-auto mb-10">
+        <form action="{% url 'store:track_order' %}" method="GET" class="flex gap-2">
             <input 
                 type="text" 
                 name="q" 
                 value="{{ query|default:'' }}"
                 required
                 placeholder="رقم الطلب أو رقم الهاتف..." 
-                class="flex-1 bg-rose-50/40 border border-rose-200/90 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 rounded-2xl py-3 px-4 text-xs font-medium text-slate-800 transition"
+                class="flex-1 h-10 bg-slate-50 border border-slate-200 focus:border-slate-900 focus:bg-white focus:outline-none rounded-lg px-3.5 text-xs text-slate-900 transition"
             >
-            <button type="submit" class="px-7 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-md transition flex items-center gap-2 shrink-0 cursor-pointer min-h-[44px]">
+            <button type="submit" class="px-6 h-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition flex items-center gap-2 shrink-0 cursor-pointer">
                 <i data-lucide="search" class="w-4 h-4"></i>
                 <span>بحث</span>
             </button>
@@ -36,75 +36,75 @@
         {% if orders %}
             <div class="space-y-6">
                 {% for order in orders %}
-                <div class="bg-white rounded-3xl border border-rose-100 p-6 sm:p-8 shadow-luxury space-y-6">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-rose-100">
+                <div class="bg-white rounded-xl border border-slate-200 p-5 sm:p-7 space-y-5">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200">
                         <div>
                             <span class="text-xs text-slate-400 font-medium">رقم الطلب:</span>
                             <span class="font-mono font-bold text-slate-950 text-base mr-1 font-num">#{{ order.order_number }}</span>
-                            <span class="text-xs text-slate-500 mr-3 font-light">بتاريخ {{ order.created_at|date:"Y/m/d - h:i A" }}</span>
+                            <span class="text-xs text-slate-500 mr-3">بتاريخ {{ order.created_at|date:"Y/m/d - h:i A" }}</span>
                         </div>
                         <div class="text-left">
-                            <span class="font-black text-slate-950 text-sm sm:text-base font-num">{{ order.total_yer|floatformat:0 }} ر.ي</span>
-                            <span class="text-xs text-brand-700 font-bold mr-1.5 font-num">({{ order.total_sar }} ر.س)</span>
+                            <span class="font-bold text-slate-950 text-sm sm:text-base font-num">{{ order.total_yer|floatformat:0 }} ر.ي</span>
+                            <span class="text-xs text-slate-600 mr-1.5 font-num">({{ order.total_sar }} ر.س)</span>
                         </div>
                     </div>
 
                     {% if order.is_gift %}
-                    <div class="p-3 rounded-2xl bg-gradient-to-r from-pink-50 to-rose-50 border border-rose-200 text-xs text-brand-900 flex items-center justify-between">
+                    <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-900 flex items-center justify-between">
                         <span class="flex items-center gap-1.5 font-bold">
-                            <i data-lucide="gift" class="w-4 h-4 text-brand-600"></i>
+                            <i data-lucide="gift" class="w-4 h-4 text-slate-700"></i>
                             <span>طلب إهداء للمستلم: {{ order.recipient_name }}</span>
                         </span>
                         {% if order.is_luxury_gift_wrapping %}
-                        <span class="px-2 py-0.5 rounded-full bg-rose-200/80 text-brand-900 text-[10px] font-black">تغليف هدايا</span>
+                        <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-800 text-[10px] font-bold">تغليف هدايا</span>
                         {% endif %}
                     </div>
                     {% endif %}
 
                     <!-- Progress Step Timeline -->
-                    <div class="py-4">
+                    <div class="py-3">
                         <div class="grid grid-cols-4 gap-2 text-center relative">
                             
                             <!-- Step 1: Pending -->
-                            <div class="space-y-2">
-                                <div class="w-9 h-9 rounded-2xl {% if order.status in 'pending_verification payment_verified processing out_for_delivery delivered' %}bg-brand-600 text-white shadow-xs{% else %}bg-slate-100 text-slate-400{% endif %} flex items-center justify-center mx-auto text-xs font-bold transition">
+                            <div class="space-y-1.5">
+                                <div class="w-8 h-8 rounded-lg {% if order.status in 'pending_verification payment_verified processing out_for_delivery delivered' %}bg-slate-900 text-white{% else %}bg-slate-100 text-slate-400{% endif %} flex items-center justify-center mx-auto text-xs font-bold transition">
                                     1
                                 </div>
-                                <span class="text-[11px] font-bold text-slate-800 block">استلام الطلب</span>
-                                <span class="text-[9px] text-slate-400 block font-light">بانتظار التأكيد</span>
+                                <span class="text-xs font-bold text-slate-800 block">استلام الطلب</span>
+                                <span class="text-[10px] text-slate-400 block">بانتظار التأكيد</span>
                             </div>
 
                             <!-- Step 2: Verified -->
-                            <div class="space-y-2">
-                                <div class="w-9 h-9 rounded-2xl {% if order.status in 'payment_verified processing out_for_delivery delivered' %}bg-emerald-600 text-white shadow-xs{% else %}bg-slate-100 text-slate-400{% endif %} flex items-center justify-center mx-auto text-xs font-bold transition">
+                            <div class="space-y-1.5">
+                                <div class="w-8 h-8 rounded-lg {% if order.status in 'payment_verified processing out_for_delivery delivered' %}bg-slate-900 text-white{% else %}bg-slate-100 text-slate-400{% endif %} flex items-center justify-center mx-auto text-xs font-bold transition">
                                     2
                                 </div>
-                                <span class="text-[11px] font-bold text-slate-800 block">تم التحقق</span>
-                                <span class="text-[9px] text-slate-400 block font-light">تم تأكيد الدفع</span>
+                                <span class="text-xs font-bold text-slate-800 block">تم التحقق</span>
+                                <span class="text-[10px] text-slate-400 block">تأكيد الدفع</span>
                             </div>
 
                             <!-- Step 3: Processing -->
-                            <div class="space-y-2">
-                                <div class="w-9 h-9 rounded-2xl {% if order.status in 'processing out_for_delivery delivered' %}bg-blue-600 text-white shadow-xs{% else %}bg-slate-100 text-slate-400{% endif %} flex items-center justify-center mx-auto text-xs font-bold transition">
+                            <div class="space-y-1.5">
+                                <div class="w-8 h-8 rounded-lg {% if order.status in 'processing out_for_delivery delivered' %}bg-slate-900 text-white{% else %}bg-slate-100 text-slate-400{% endif %} flex items-center justify-center mx-auto text-xs font-bold transition">
                                     3
                                 </div>
-                                <span class="text-[11px] font-bold text-slate-800 block">قيد التجهيز</span>
-                                <span class="text-[9px] text-slate-400 block font-light">تجهيز الطلب</span>
+                                <span class="text-xs font-bold text-slate-800 block">قيد التجهيز</span>
+                                <span class="text-[10px] text-slate-400 block">تجهيز الطلب</span>
                             </div>
 
                             <!-- Step 4: Out for Delivery / Delivered -->
-                            <div class="space-y-2">
-                                <div class="w-9 h-9 rounded-2xl {% if order.status in 'out_for_delivery delivered' %}bg-purple-600 text-white shadow-xs{% else %}bg-slate-100 text-slate-400{% endif %} flex items-center justify-center mx-auto text-xs font-bold transition">
+                            <div class="space-y-1.5">
+                                <div class="w-8 h-8 rounded-lg {% if order.status in 'out_for_delivery delivered' %}bg-emerald-600 text-white{% else %}bg-slate-100 text-slate-400{% endif %} flex items-center justify-center mx-auto text-xs font-bold transition">
                                     4
                                 </div>
-                                <span class="text-[11px] font-bold text-slate-800 block">قيد التوصيل</span>
-                                <span class="text-[9px] text-slate-400 block font-light">جاري الشحن</span>
+                                <span class="text-xs font-bold text-slate-800 block">التوصيل</span>
+                                <span class="text-[10px] text-slate-400 block">جاري الشحن</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Items Summary in this order -->
-                    <div class="bg-rose-50/40 p-4 rounded-2xl border border-rose-100 text-xs space-y-2">
+                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs space-y-2">
                         <h4 class="font-bold text-slate-800">محتويات الشحنة:</h4>
                         {% for item in order.items.all %}
                         <div class="flex items-center justify-between text-slate-700">
@@ -113,11 +113,11 @@
                                 <span>{{ item.product_name }}</span>
                                 {% if item.variant_info %}
                                     {% if 'ماستر' in item.variant_info %}
-                                    <span class="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 text-[10px] font-black border border-emerald-200">
+                                    <span class="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200">
                                         {{ item.variant_info }}
                                     </span>
                                     {% elif 'أصلي' in item.variant_info %}
-                                    <span class="px-1.5 py-0.2 rounded bg-brand-50 text-brand-800 text-[10px] font-black border border-brand-200">
+                                    <span class="px-1.5 py-0.2 rounded bg-slate-200 text-slate-800 text-[10px] font-bold border border-slate-300">
                                         {{ item.variant_info }}
                                     </span>
                                     {% else %}
@@ -125,7 +125,7 @@
                                     {% endif %}
                                 {% endif %}
                             </div>
-                            <span class="font-black text-slate-900 font-num">{{ item.total_price_yer|floatformat:0 }} ر.ي</span>
+                            <span class="font-bold text-slate-900 font-num">{{ item.total_price_yer|floatformat:0 }} ر.ي</span>
                         </div>
                         {% endfor %}
                     </div>
@@ -133,10 +133,10 @@
                 {% endfor %}
             </div>
         {% else %}
-            <div class="bg-white rounded-3xl p-12 text-center border border-rose-100 space-y-3 shadow-sm">
-                <i data-lucide="alert-circle" class="w-12 h-12 text-amber-500 mx-auto"></i>
+            <div class="bg-white rounded-xl p-10 text-center border border-slate-200 space-y-3">
+                <i data-lucide="alert-circle" class="w-10 h-10 text-slate-400 mx-auto"></i>
                 <h3 class="font-bold text-slate-900 text-base">لم يتم العثور على طلبات برقم: "{{ query }}"</h3>
-                <p class="text-xs text-slate-500 max-w-sm mx-auto font-light leading-relaxed">يرجى التأكد من كتابة رقم الطلب بشكل صحيح أو إدخال رقم الهاتف الذي تم استخدامه عند الشراء.</p>
+                <p class="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">يرجى التأكد من كتابة رقم الطلب بشكل صحيح أو إدخال رقم الهاتف المسجل عند الشراء.</p>
             </div>
         {% endif %}
     {% endif %}

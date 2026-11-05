@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{% block title %}{{ store_settings.store_name }}{% endblock %}</title>
     <meta name="description" content="{% block meta_description %}{{ store_settings.store_name }} — متجر العطور والساعات ومستحضرات التجميل{% endblock %}">
-    <meta name="keywords" content="{% block meta_keywords %}عطور أصلية, عطور ماستر كواليتي, ساعات فاخرة, مستحضرات تجميل, عناية بالبشرة, Brand Veloura, بوتيك فيلورا, عطور اليمن, شراء عطور اونلاين{% endblock %}">
+    <meta name="keywords" content="{% block meta_keywords %}عطور أصلية, عطور ماستر, ساعات, مستحضرات تجميل, عناية بالبشرة, Brand Veloura, متجر فيلورا, عطور اليمن{% endblock %}">
     <meta name="robots" content="{% block robots %}index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1{% endblock %}">
     
     <!-- Canonical Link -->
@@ -15,8 +15,8 @@
     <!-- Open Graph / Social Sharing (WhatsApp, Facebook, Telegram) -->
     <meta property="og:type" content="{% block og_type %}website{% endblock %}">
     <meta property="og:site_name" content="{{ store_settings.store_name }}">
-    <meta property="og:title" content="{% block og_title %}{{ store_settings.store_name }} | بوتيك الفخامة الأول{% endblock %}">
-    <meta property="og:description" content="{% block og_description %}{{ store_settings.store_tagline|default:'بوتيك الفخامة الأول للعطور والساعات ومستحضرات التجميل الأصلية' }}{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}{{ store_settings.store_name }} | متجر العطور والساعات ومستحضرات التجميل{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ store_settings.store_tagline|default:'متجر العطور والساعات ومستحضرات التجميل' }}{% endblock %}">
     <meta property="og:url" content="{{ request.build_absolute_uri }}">
     <meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/logo.jpg' %}{% endblock %}">
     <meta property="og:locale" content="ar_YE">
@@ -24,7 +24,7 @@
     <!-- Twitter Cards -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{% block twitter_title %}{{ store_settings.store_name }}{% endblock %}">
-    <meta name="twitter:description" content="{% block twitter_description %}{{ store_settings.store_tagline|default:'بوتيك الفخامة الأول للعطور والساعات ومستحضرات التجميل' }}{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}{{ store_settings.store_tagline|default:'متجر العطور والساعات ومستحضرات التجميل' }}{% endblock %}">
     <meta name="twitter:image" content="{% block twitter_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/logo.jpg' %}{% endblock %}">
 
     <!-- Global Schema.org Structured Data (JSON-LD) -->
@@ -39,7 +39,7 @@
           "url": "{{ request.scheme }}://{{ request.get_host }}/",
           "logo": "{{ request.scheme }}://{{ request.get_host }}{% static 'images/logo.jpg' %}",
           "image": "{{ request.scheme }}://{{ request.get_host }}{% static 'images/logo.jpg' %}",
-          "description": "{{ store_settings.store_tagline|default:'بوتيك الفخامة الأول للعطور العالمية الأصلية والماستر والساعات الراقية ومستحضرات التجميل'|escapejs }}",
+          "description": "{{ store_settings.store_tagline|default:'متجر العطور الأصلية والماستر والساعات ومستحضرات التجميل'|escapejs }}",
           "telephone": "{{ store_settings.contact_phone|default:'+967770000000' }}",
           "priceRange": "$$$",
           "currenciesAccepted": "SAR, YER",
@@ -72,10 +72,10 @@
     <meta name="apple-mobile-web-app-title" content="{{ store_settings.store_name }}">
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 
-    <!-- Google Fonts: Pacifico (Official Logo Font) + Readex Pro (Modern Luxury Arabic) + Almarai + Playfair Display + Plus Jakarta Sans -->
+    <!-- Google Fonts: Pacifico (Brand Mark) + IBM Plex Sans Arabic (Official Luxury Arabic Standard) + Plus Jakarta Sans (Clean Num) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Pacifico&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Readex+Pro:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Pacifico&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Tailwind CSS (CDN with Custom Design Tokens) -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -84,11 +84,9 @@
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['"Readex Pro"', 'Almarai', 'sans-serif'],
-                        readex: ['"Readex Pro"', 'sans-serif'],
-                        almarai: ['Almarai', 'sans-serif'],
-                        serif: ['"Playfair Display"', 'serif'],
-                        num: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        sans: ['"IBM Plex Sans Arabic"', 'system-ui', 'sans-serif'],
+                        ibm: ['"IBM Plex Sans Arabic"', 'sans-serif'],
+                        num: ['"Plus Jakarta Sans"', '"IBM Plex Sans Arabic"', 'sans-serif'],
                         brandlogo: ['"Pacifico"', 'cursive'],
                     },
                     colors: {
@@ -105,23 +103,16 @@
                             900: '#881333',
                             950: '#4c0519',
                         },
-                        pearl: '#FAF7F5',
-                        champagne: {
-                            100: '#FDF8F0',
-                            200: '#F9EED9',
-                            300: '#F3DFC0',
-                            500: '#D4AF37',
-                            700: '#997B1A',
-                        },
+                        pearl: '#FAFAFA',
                         slate: {
                             850: '#151f33',
                             950: '#0a0f1d',
                         }
                     },
                     boxShadow: {
-                        'luxury': '0 8px 24px -6px rgba(225, 29, 83, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.02)',
-                        'luxury-lg': '0 16px 32px -10px rgba(225, 29, 83, 0.12), 0 4px 8px -2px rgba(0, 0, 0, 0.03)',
-                        'glass': '0 8px 32px 0 rgba(190, 18, 63, 0.05)',
+                        'luxury': '0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03)',
+                        'luxury-lg': '0 12px 30px -4px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04)',
+                        'glass': '0 8px 32px 0 rgba(15, 23, 42, 0.04)',
                     }
                 }
             }
@@ -136,26 +127,26 @@
 
     <style>
         body {
-            font-family: 'Readex Pro', 'Almarai', sans-serif;
-            background-color: #FAF6F7;
-            color: #1E293B;
+            font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+            background-color: #FAFAFA;
+            color: #0F172A;
             -webkit-font-smoothing: antialiased;
-            letter-spacing: -0.015em;
+            letter-spacing: -0.01em;
         }
         /* Custom scrollbar */
         ::-webkit-scrollbar {
-            width: 5px;
-            height: 5px;
+            width: 6px;
+            height: 6px;
         }
         ::-webkit-scrollbar-track {
-            background: #FFF1F4;
+            background: #F1F5F9;
         }
         ::-webkit-scrollbar-thumb {
-            background: #FDA4BA;
+            background: #CBD5E1;
             border-radius: 9999px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #E11D53;
+            background: #94A3B8;
         }
         /* Glass effect */
         .glass-panel {
@@ -254,9 +245,9 @@
     {% endif %}
 
     <!-- Luxury Header (Streamlined & Ergonomic) -->
-    <header class="bg-white/95 backdrop-blur-md border-b border-rose-100/80 sticky top-0 z-40 transition-all shadow-[0_4px_20px_-4px_rgba(225,29,83,0.03)]">
+    <header class="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-40 transition-all shadow-xs">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16 md:h-19 gap-3">
+            <div class="flex items-center justify-between h-16 md:h-18 gap-3">
                 
                 <!-- 3-Dots Mobile Menu + Logo & Brand Identity -->
                 <div class="flex items-center gap-2.5 sm:gap-3">
@@ -264,7 +255,7 @@
                     <button 
                         type="button" 
                         onclick="openMobileSidebar()" 
-                        class="md:hidden w-11 h-11 rounded-2xl bg-rose-50/80 hover:bg-rose-100 text-slate-800 hover:text-brand-600 border border-rose-200/80 flex items-center justify-center transition cursor-pointer shrink-0 shadow-2xs active:scale-95"
+                        class="md:hidden w-11 h-11 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 flex items-center justify-center transition cursor-pointer shrink-0 shadow-2xs active:scale-95"
                         aria-label="القائمة الجانبية والأقسام"
                         title="القائمة"
                     >
@@ -272,10 +263,9 @@
                     </button>
 
                     <a href="{% url 'store:home' %}" class="flex items-center gap-2.5 group cursor-pointer">
-                        <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-10 h-10 md:w-11 md:h-11 rounded-2xl object-cover shadow-luxury group-hover:scale-105 transition-all duration-300 border border-rose-200/80 shrink-0">
+                        <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-10 h-10 md:w-11 md:h-11 rounded-2xl object-cover shadow-xs group-hover:scale-105 transition-all duration-300 border border-slate-200/80 shrink-0">
                         <div>
                             <span class="font-brand-logo text-xl md:text-2xl text-slate-900 tracking-wide block leading-tight">Brand Veloura</span>
-                            <span class="text-[9px] md:text-[10px] text-brand-600 font-semibold tracking-widest block uppercase -mt-1 font-sans">Boutique</span>
                         </div>
                     </a>
                 </div>
@@ -288,9 +278,9 @@
                             name="q" 
                             placeholder="ابحث عن عطر، ماركة، ساعة..." 
                             value="{{ search_query|default:'' }}"
-                            class="w-full bg-rose-50/40 border border-rose-200/80 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-3 focus:ring-brand-500/10 rounded-full py-2 px-4 pr-10 text-xs font-medium text-slate-800 placeholder-slate-400 transition-all shadow-inner h-10.5"
+                            class="w-full bg-slate-100/70 border border-slate-200/90 focus:border-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/5 rounded-full py-2 px-4 pr-10 text-xs font-medium text-slate-800 placeholder-slate-400 transition-all h-10"
                         >
-                        <button type="submit" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-600 transition cursor-pointer p-1" aria-label="بحث">
+                        <button type="submit" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 transition cursor-pointer p-1" aria-label="بحث">
                             <i data-lucide="search" class="w-4 h-4"></i>
                         </button>
                     </form>
@@ -300,15 +290,15 @@
                 <div class="flex items-center gap-2">
                     
                     <!-- Track Order Link (Desktop) -->
-                    <a href="{% url 'store:track_order' %}" class="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-700 hover:text-brand-600 hover:bg-rose-50/60 text-xs font-semibold transition cursor-pointer min-h-[40px]" title="تتبع طلبي">
-                        <i data-lucide="truck" class="w-4 h-4 text-brand-500"></i>
+                    <a href="{% url 'store:track_order' %}" class="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 text-xs font-medium transition cursor-pointer min-h-[40px]" title="تتبع طلبي">
+                        <i data-lucide="truck" class="w-4 h-4 text-slate-500"></i>
                         <span>تتبع الطلب</span>
                     </a>
 
                     <!-- Cart Button with HTMX Dynamic Badge -->
-                    <a href="{% url 'store:cart_view' %}" class="relative p-2.5 md:px-3.5 md:py-2 rounded-2xl bg-gradient-to-tr from-rose-50 to-white hover:from-brand-50 hover:to-rose-50 border border-rose-200/80 text-slate-800 hover:text-brand-600 transition-all shadow-2xs flex items-center gap-1.5 group cursor-pointer min-h-[44px]">
+                    <a href="{% url 'store:cart_view' %}" class="relative p-2.5 md:px-3.5 md:py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 transition-all shadow-2xs flex items-center gap-1.5 group cursor-pointer min-h-[44px]">
                         <div class="relative">
-                            <i data-lucide="shopping-bag" class="w-4 h-4 text-brand-600 group-hover:scale-110 transition-transform"></i>
+                            <i data-lucide="shopping-bag" class="w-4 h-4 text-slate-800 group-hover:scale-110 transition-transform"></i>
                             <div id="cart-badge-container" class="absolute -top-2 -right-2">
                                 {% include 'store/partials/cart_badge.html' with cart_count=cart_count %}
                             </div>
@@ -369,36 +359,36 @@
                         </button>
 
                         <!-- Dropdown Menu -->
-                        <div id="user-dropdown-menu" class="hidden absolute left-0 mt-2 w-48 bg-white rounded-2xl shadow-luxury-lg border border-rose-100 py-1.5 z-50 text-xs font-medium">
-                            <div class="px-3.5 py-2 border-b border-rose-50">
+                        <div id="user-dropdown-menu" class="hidden absolute left-0 mt-2 w-48 bg-white rounded-2xl shadow-luxury-lg border border-slate-200 py-1.5 z-50 text-xs font-medium">
+                            <div class="px-3.5 py-2 border-b border-slate-100">
                                 <p class="font-bold text-slate-900 truncate">{{ user.get_full_name|default:user.username }}</p>
                                 <p class="text-[10px] text-slate-400 truncate">{{ user.email|default:user.username }}</p>
                             </div>
-                            <a href="{% url 'store:account_profile' %}" class="flex items-center gap-2 px-3.5 py-2 hover:bg-rose-50 text-slate-700 hover:text-brand-600 transition">
-                                <i data-lucide="user" class="w-3.5 h-3.5 text-brand-500"></i>
+                            <a href="{% url 'store:account_profile' %}" class="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition">
+                                <i data-lucide="user" class="w-3.5 h-3.5 text-slate-500"></i>
                                 <span>حسابي وسجل طلباتي</span>
                             </a>
-                            <a href="{% url 'store:account_profile' %}?tab=notifications" class="flex items-center justify-between px-3.5 py-2 hover:bg-rose-50 text-slate-700 hover:text-brand-600 transition">
+                            <a href="{% url 'store:account_profile' %}?tab=notifications" class="flex items-center justify-between px-3.5 py-2 hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition">
                                 <div class="flex items-center gap-2">
-                                    <i data-lucide="bell" class="w-3.5 h-3.5 text-brand-500"></i>
+                                    <i data-lucide="bell" class="w-3.5 h-3.5 text-slate-500"></i>
                                     <span>مركز الإشعارات</span>
                                 </div>
                                 {% if unread_notifications_count > 0 %}
                                 <span class="px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[9px] font-bold font-num">{{ unread_notifications_count }}</span>
                                 {% endif %}
                             </a>
-                            <a href="{% url 'store:track_order' %}" class="flex items-center gap-2 px-3.5 py-2 hover:bg-rose-50 text-slate-700 hover:text-brand-600 transition">
-                                <i data-lucide="truck" class="w-3.5 h-3.5 text-brand-500"></i>
+                            <a href="{% url 'store:track_order' %}" class="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition">
+                                <i data-lucide="truck" class="w-3.5 h-3.5 text-slate-500"></i>
                                 <span>تتبع الشحنات</span>
                             </a>
                             {% if user.is_staff %}
                             <a href="{% url 'admin:index' %}" class="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-900 hover:text-white text-slate-700 transition">
-                                <i data-lucide="sliders" class="w-3.5 h-3.5 text-brand-500"></i>
+                                <i data-lucide="sliders" class="w-3.5 h-3.5 text-slate-400"></i>
                                 <span>لوحة الإدارة</span>
                             </a>
                             {% endif %}
-                            <div class="border-t border-rose-50 my-1"></div>
-                            <a href="{% url 'store:logout' %}" class="flex items-center gap-2 px-3.5 py-2 hover:bg-rose-100 text-rose-700 font-bold transition">
+                            <div class="border-t border-slate-100 my-1"></div>
+                            <a href="{% url 'store:logout' %}" class="flex items-center gap-2 px-3.5 py-2 hover:bg-rose-50 text-rose-700 font-bold transition">
                                 <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
                                 <span>تسجيل الخروج</span>
                             </a>
@@ -406,7 +396,7 @@
                     </div>
                     {% else %}
                     <!-- Guest Login Link -->
-                    <a href="{% url 'store:login' %}" class="px-3 py-1.5 rounded-2xl bg-gradient-to-r from-brand-600 to-rose-600 hover:from-brand-700 hover:to-rose-700 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-luxury hover:scale-102 cursor-pointer h-9">
+                    <a href="{% url 'store:login' %}" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer min-h-[40px]">
                         <i data-lucide="user" class="w-3.5 h-3.5"></i>
                         <span class="hidden sm:inline">تسجيل الدخول</span>
                     </a>
@@ -563,9 +553,9 @@
                         </li>
                         {% endif %}
                         <li>
-                            <a href="https://wa.me/{{ store_settings.contact_whatsapp }}" target="_blank" class="hover:text-brand-600 transition flex items-center gap-1.5">
-                                <i data-lucide="gift" class="w-3 h-3 text-brand-400"></i>
-                                <span>خدمة الإهداء والتغليف الملكي</span>
+                            <a href="https://wa.me/{{ store_settings.contact_whatsapp }}" target="_blank" class="hover:text-slate-900 transition flex items-center gap-1.5">
+                                <i data-lucide="gift" class="w-3 h-3 text-slate-400"></i>
+                                <span>خدمة الإهداء والتغليف</span>
                             </a>
                         </li>
                     </ul>
@@ -573,19 +563,19 @@
 
                 <!-- 4. الدفع والتوصيل (Payment & Delivery) -->
                 <div class="space-y-3">
-                    <h3 class="text-xs font-bold text-slate-900 tracking-wider flex items-center gap-1.5 pb-1 border-b border-rose-100/60">
-                        <span class="w-1.5 h-3.5 bg-brand-600 rounded-full inline-block"></span>
+                    <h3 class="text-xs font-bold text-slate-900 tracking-wider flex items-center gap-1.5 pb-1 border-b border-slate-200">
+                        <span class="w-1.5 h-3.5 bg-slate-900 rounded-full inline-block"></span>
                         <span>طرق الدفع والتوصيل</span>
                     </h3>
                     <div class="space-y-2.5 text-[11px] text-slate-600">
-                        <div class="p-2.5 rounded-xl bg-rose-50/50 border border-rose-100/70 space-y-1">
+                        <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
                             <span class="font-bold text-slate-800 block text-[11px]">التحويلات المعتمدة:</span>
                             <p class="text-slate-500 text-[10px] leading-relaxed">
                                 بنك الكريمي، بنك التضامن، المحافظ الإلكترونية، ومصرف الراجحي للمغتربين بالريال السعودي.
                             </p>
                         </div>
                         <div class="flex items-center gap-2 text-[11px] font-semibold text-slate-700">
-                            <i data-lucide="phone-call" class="w-3.5 h-3.5 text-brand-600 shrink-0"></i>
+                            <i data-lucide="phone-call" class="w-3.5 h-3.5 text-slate-700 shrink-0"></i>
                             <span dir="ltr">{{ store_settings.contact_phone }}</span>
                         </div>
                     </div>
@@ -594,7 +584,7 @@
             </div>
 
             <!-- Bottom Copyright & Quality Badges -->
-            <div class="pt-6 border-t border-rose-100/70 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500">
+            <div class="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500">
                 <p>© 2026 <span class="font-bold text-slate-800">{{ store_settings.store_name }}</span>. كافة الحقوق محفوظة.</p>
                 <div class="flex items-center gap-3 text-slate-400 font-medium text-[10px]">
                     <span>منتجات أصلية 100%</span>
@@ -614,16 +604,16 @@
         <div id="mobile-sidebar-backdrop" onclick="closeMobileSidebar()" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs opacity-0 transition-opacity duration-300"></div>
         
         <!-- Sidebar Panel -->
-        <div id="mobile-sidebar-panel" class="fixed top-0 bottom-0 right-0 w-[290px] max-w-[85vw] bg-white shadow-2xl z-10 flex flex-col justify-between translate-x-full transition-transform duration-300 ease-in-out border-l border-rose-100">
+        <div id="mobile-sidebar-panel" class="fixed top-0 bottom-0 right-0 w-[290px] max-w-[85vw] bg-white shadow-2xl z-10 flex flex-col justify-between translate-x-full transition-transform duration-300 ease-in-out border-l border-slate-200">
             <!-- Header of Sidebar -->
-            <div class="p-4 border-b border-rose-100 flex items-center justify-between bg-gradient-to-r from-rose-50/60 via-white to-pink-50/40">
+            <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
                 <div class="flex items-center gap-2.5">
-                    <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-9 h-9 rounded-xl object-cover shadow-xs border border-rose-200 shrink-0">
+                    <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-9 h-9 rounded-xl object-cover shadow-xs border border-slate-200 shrink-0">
                     <div>
                         <span class="font-brand-logo text-base text-slate-900 tracking-wide block leading-tight">Brand Veloura</span>
                     </div>
                 </div>
-                <button type="button" onclick="closeMobileSidebar()" class="w-8 h-8 rounded-full bg-rose-50 hover:bg-rose-100 text-slate-500 hover:text-brand-600 flex items-center justify-center transition cursor-pointer" aria-label="إغلاق">
+                <button type="button" onclick="closeMobileSidebar()" class="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-900 border border-slate-200 flex items-center justify-center transition cursor-pointer" aria-label="إغلاق">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
@@ -636,9 +626,9 @@
                         type="text" 
                         name="q" 
                         placeholder="ابحث عن منتج..." 
-                        class="w-full bg-rose-50/50 border border-rose-200/80 focus:border-brand-500 focus:bg-white focus:outline-none rounded-xl py-2 px-3.5 pr-9 text-xs text-slate-800 placeholder-slate-400 transition shadow-inner h-9"
+                        class="w-full bg-slate-100/70 border border-slate-200 focus:border-slate-900 focus:bg-white focus:outline-none rounded-xl py-2 px-3.5 pr-9 text-xs text-slate-800 placeholder-slate-400 transition h-9"
                     >
-                    <button type="submit" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-600 p-0.5" aria-label="بحث">
+                    <button type="submit" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 p-0.5" aria-label="بحث">
                         <i data-lucide="search" class="w-3.5 h-3.5"></i>
                     </button>
                 </form>
@@ -646,69 +636,69 @@
                 <!-- Navigation Section: Main Store Sections -->
                 <div>
                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 px-1">أقسام المتجر</span>
-                    <nav class="space-y-1 text-xs font-bold">
-                        <a href="{% url 'store:home' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if request.path == '/' %}bg-brand-50 text-brand-700{% else %}text-slate-700 hover:bg-rose-50/60 hover:text-brand-600{% endif %}">
-                            <i data-lucide="home" class="w-4 h-4 text-brand-500"></i>
+                    <nav class="space-y-1 text-xs font-semibold">
+                        <a href="{% url 'store:home' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if request.path == '/' %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-slate-900{% endif %}">
+                            <i data-lucide="home" class="w-4 h-4 {% if request.path == '/' %}text-white{% else %}text-slate-400{% endif %}"></i>
                             <span>الرئيسية</span>
                         </a>
-                        <a href="{% url 'store:perfumes_catalog' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'perfumes' in request.path %}bg-brand-50 text-brand-700{% else %}text-slate-700 hover:bg-rose-50/60 hover:text-brand-600{% endif %}">
-                            <i data-lucide="sparkle" class="w-4 h-4 text-brand-500"></i>
+                        <a href="{% url 'store:perfumes_catalog' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'perfumes' in request.path %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-slate-900{% endif %}">
+                            <i data-lucide="sparkle" class="w-4 h-4 {% if 'perfumes' in request.path %}text-white{% else %}text-slate-400{% endif %}"></i>
                             <span>العطور</span>
                         </a>
-                        <a href="{% url 'store:watches_catalog' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'watches' in request.path %}bg-brand-50 text-brand-700{% else %}text-slate-700 hover:bg-rose-50/60 hover:text-brand-600{% endif %}">
-                            <i data-lucide="watch" class="w-4 h-4 text-brand-500"></i>
+                        <a href="{% url 'store:watches_catalog' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'watches' in request.path %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-slate-900{% endif %}">
+                            <i data-lucide="watch" class="w-4 h-4 {% if 'watches' in request.path %}text-white{% else %}text-slate-400{% endif %}"></i>
                             <span>الساعات</span>
                         </a>
-                        <a href="{% url 'store:cosmetics_catalog' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'cosmetics' in request.path %}bg-brand-50 text-brand-700{% else %}text-slate-700 hover:bg-rose-50/60 hover:text-brand-600{% endif %}">
-                            <i data-lucide="heart" class="w-4 h-4 text-brand-500"></i>
+                        <a href="{% url 'store:cosmetics_catalog' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'cosmetics' in request.path %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-slate-900{% endif %}">
+                            <i data-lucide="heart" class="w-4 h-4 {% if 'cosmetics' in request.path %}text-white{% else %}text-slate-400{% endif %}"></i>
                             <span>مستحضرات التجميل</span>
                         </a>
-                        <a href="{% url 'store:gift_builder' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'gifting' in request.path %}bg-brand-50 text-brand-700{% else %}text-slate-700 hover:bg-rose-50/60 hover:text-brand-600{% endif %}">
-                            <i data-lucide="gift" class="w-4 h-4 text-brand-500"></i>
+                        <a href="{% url 'store:gift_builder' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'gifting' in request.path %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-slate-900{% endif %}">
+                            <i data-lucide="gift" class="w-4 h-4 {% if 'gifting' in request.path %}text-white{% else %}text-slate-400{% endif %}"></i>
                             <span>خدمة الإهداء</span>
                         </a>
-                        <a href="{% url 'store:product_list' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition text-slate-700 hover:bg-rose-50/60 hover:text-brand-600">
-                            <i data-lucide="layout-grid" class="w-4 h-4 text-brand-500"></i>
+                        <a href="{% url 'store:product_list' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition text-slate-700 hover:bg-slate-100 hover:text-slate-900">
+                            <i data-lucide="layout-grid" class="w-4 h-4 text-slate-400"></i>
                             <span>كافة المنتجات</span>
                         </a>
                     </nav>
                 </div>
 
                 <!-- Division -->
-                <div class="border-t border-rose-100"></div>
+                <div class="border-t border-slate-100"></div>
 
                 <!-- Services & Customer Account -->
                 <div>
                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 px-1">الخدمات والحساب</span>
                     <nav class="space-y-1 text-xs font-semibold">
-                        <a href="{% url 'store:cart_view' %}" onclick="closeMobileSidebar()" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-700 hover:bg-rose-50/60 hover:text-brand-600 transition">
+                        <a href="{% url 'store:cart_view' %}" onclick="closeMobileSidebar()" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition">
                             <span class="flex items-center gap-2.5">
-                                <i data-lucide="shopping-bag" class="w-4 h-4 text-brand-500"></i>
+                                <i data-lucide="shopping-bag" class="w-4 h-4 text-slate-400"></i>
                                 <span>سلة المشتريات</span>
                             </span>
-                            <span class="px-2 py-0.5 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold font-num">{{ cart_count }}</span>
+                            <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold font-num">{{ cart_count }}</span>
                         </a>
-                        <a href="{% url 'store:track_order' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-rose-50/60 hover:text-brand-600 transition">
-                            <i data-lucide="truck" class="w-4 h-4 text-brand-500"></i>
+                        <a href="{% url 'store:track_order' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition">
+                            <i data-lucide="truck" class="w-4 h-4 text-slate-400"></i>
                             <span>تتبع الشحنة والطلب</span>
                         </a>
                         {% if user.is_authenticated %}
-                        <a href="{% url 'store:account_profile' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-rose-50/60 hover:text-brand-600 transition">
-                            <i data-lucide="user" class="w-4 h-4 text-brand-500"></i>
+                        <a href="{% url 'store:account_profile' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition">
+                            <i data-lucide="user" class="w-4 h-4 text-slate-400"></i>
                             <span>حسابي وسجل طلباتي</span>
                         </a>
-                        <a href="{% url 'store:account_profile' %}?tab=notifications" onclick="closeMobileSidebar()" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-700 hover:bg-rose-50/60 hover:text-brand-600 transition">
+                        <a href="{% url 'store:account_profile' %}?tab=notifications" onclick="closeMobileSidebar()" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition">
                             <div class="flex items-center gap-2.5">
-                                <i data-lucide="bell" class="w-4 h-4 text-brand-500"></i>
+                                <i data-lucide="bell" class="w-4 h-4 text-slate-400"></i>
                                 <span>مركز الإشعارات</span>
                             </div>
                             {% if unread_notifications_count > 0 %}
-                            <span class="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold font-num">{{ unread_notifications_count }}</span>
+                            <span class="px-2 py-0.5 rounded-full bg-slate-900 text-white text-[10px] font-bold font-num">{{ unread_notifications_count }}</span>
                             {% endif %}
                         </a>
                         {% if user.is_staff %}
-                        <a href="{% url 'admin:index' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-900 text-white hover:bg-brand-700 transition">
-                            <i data-lucide="sliders" class="w-4 h-4 text-rose-300"></i>
+                        <a href="{% url 'admin:index' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition">
+                            <i data-lucide="sliders" class="w-4 h-4 text-slate-400"></i>
                             <span>لوحة تحكم الإدارة</span>
                         </a>
                         {% endif %}
@@ -717,7 +707,7 @@
                             <span>تسجيل الخروج</span>
                         </a>
                         {% else %}
-                        <a href="{% url 'store:login' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-brand-600 text-white font-bold transition shadow-2xs">
+                        <a href="{% url 'store:login' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-900 text-white font-medium transition shadow-xs">
                             <i data-lucide="log-in" class="w-4 h-4"></i>
                             <span>تسجيل الدخول / إنشاء حساب</span>
                         </a>
@@ -727,17 +717,17 @@
             </div>
 
             <!-- Footer of Sidebar -->
-            <div class="p-3.5 border-t border-rose-100 bg-rose-50/40 space-y-2">
-                <a href="https://wa.me/{{ store_settings.contact_whatsapp }}" target="_blank" class="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-2xs cursor-pointer">
+            <div class="p-3.5 border-t border-slate-200 bg-slate-50 space-y-2">
+                <a href="https://wa.me/{{ store_settings.contact_whatsapp }}" target="_blank" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs flex items-center justify-center gap-2 transition shadow-xs cursor-pointer">
                     <i data-lucide="message-circle" class="w-4 h-4"></i>
-                    <span>مراسلة واتساب خدمة العملاء</span>
+                    <span>تواصل عبر واتساب</span>
                 </a>
                 <p class="text-[10px] text-center text-slate-400">© 2026 {{ store_settings.store_name }}</p>
             </div>
         </div>
     </div>
 
-    <!-- Floating Gifting CTA: أرسل هدية لأحبابك في اليمن 🎁 -->
+    <!-- Floating Gifting CTA -->
     {% include 'store/components/floating_gift_cta.html' %}
 
     <!-- Quick View Modal (واجهة تفاصيل المنتج المنبثقة) -->
@@ -746,7 +736,7 @@
         <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity" onclick="closeQuickViewModal()"></div>
         
         <!-- Modal Content Container (Comfortable, Proportional, Ergonomic) -->
-        <div class="relative bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-rose-200/90 z-10 transform transition-all p-4 sm:p-6">
+        <div class="relative bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 z-10 transform transition-all p-4 sm:p-6">
             <div id="quick-view-content">
                 <!-- HTMX will swap product details here -->
                 <div class="py-16 text-center text-slate-400 space-y-3">
