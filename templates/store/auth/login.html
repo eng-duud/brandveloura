@@ -47,9 +47,8 @@
                          data-width="360">
                     </div>
                 </div>
-                {% endif %}
-
-                <!-- Fallback / Custom Styled Google Button -->
+                {% else %}
+                <!-- Single Google Button (shown when client_id is not yet active) -->
                 <button 
                     type="button" 
                     id="custom-google-btn"
@@ -63,6 +62,7 @@
                     </svg>
                     <span>المتابعة باستخدام Google</span>
                 </button>
+                {% endif %}
             </div>
 
             <!-- Divider -->

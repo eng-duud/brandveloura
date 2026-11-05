@@ -66,6 +66,29 @@ class StoreSettings(models.Model):
     @classmethod
     def get_settings(cls):
         settings_obj, created = cls.objects.get_or_create(id=1)
+        
+        # Sync environment variables if present
+        env_phone = os.getenv('STORE_PHONE', '').strip()
+        env_wa = os.getenv('STORE_WHATSAPP', '').strip()
+        env_insta = os.getenv('STORE_INSTAGRAM', '').strip()
+        
+        updated = False
+        if env_phone and (created or settings_obj.contact_phone != env_phone):
+            settings_obj.contact_phone = env_phone
+            updated = True
+        if env_wa and (created or settings_obj.contact_whatsapp != env_wa):
+            settings_obj.contact_whatsapp = env_wa
+            updated = True
+        if env_insta and (created or settings_obj.contact_instagram != env_insta):
+            settings_obj.contact_instagram = env_insta
+            updated = True
+            
+        if updated:
+            try:
+                settings_obj.save()
+            except Exception:
+                pass
+                
         return settings_obj
 
     @property

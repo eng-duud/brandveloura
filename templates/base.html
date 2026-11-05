@@ -305,13 +305,6 @@
                         </div>
                         <span class="hidden md:inline text-xs font-bold text-slate-800">السلة</span>
                     </a>
-                            <i data-lucide="shopping-bag" class="w-4 h-4 text-slate-800 group-hover:scale-110 transition-transform"></i>
-                            <div id="cart-badge-container" class="absolute -top-2 -right-2">
-                                {% include 'store/partials/cart_badge.html' with cart_count=cart_count %}
-                            </div>
-                        </div>
-                        <span class="hidden md:inline text-xs font-bold text-slate-800">السلة</span>
-                    </a>
 
                     <!-- Notification Bell Dropdown Button -->
                     {% if user.is_authenticated %}

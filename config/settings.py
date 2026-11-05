@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from urllib.parse import urlparse
 # Build paths inside the project
@@ -15,7 +16,16 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'brand-veloura-luxury-secret-key-202
 
 DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = [host.strip() for host in os.getenv('DJANGO_ALLOWED_HOSTS', '*').split(',') if host.strip()]
+# Clean ALLOWED_HOSTS (strip schemes like https:// if mistakenly passed)
+ALLOWED_HOSTS = []
+raw_hosts = os.getenv('DJANGO_ALLOWED_HOSTS', '*').split(',')
+for host in raw_hosts:
+    cleaned = host.strip()
+    if cleaned:
+        cleaned = cleaned.replace('https://', '').replace('http://', '').rstrip('/')
+        if cleaned and cleaned not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(cleaned)
+
 railway_domain = os.getenv('RAILWAY_PUBLIC_DOMAIN', '').strip()
 if railway_domain and railway_domain not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(railway_domain)
@@ -48,8 +58,8 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
 
-# Production Security Enhancements (Enabled when DEBUG=False)
-if not DEBUG:
+# Production Security Enhancements (Enabled when DEBUG=False and not running tests)
+if not DEBUG and 'test' not in sys.argv:
     SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True') == 'True'
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
@@ -109,7 +119,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database Configuration (PostgreSQL / SQLite flexible fallback for Railway)
 DATABASE_URL = os.getenv('DATABASE_URL')
-if DATABASE_URL:
+if 'test' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
+elif DATABASE_URL and 'username:password' not in DATABASE_URL:
     try:
         import dj_database_url
         DATABASES = {

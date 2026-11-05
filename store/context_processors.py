@@ -1,3 +1,4 @@
+import os
 from decimal import Decimal
 from .models import StoreSettings, Category
 
@@ -25,6 +26,17 @@ def store_context(request):
         unread_notifications_count = Notification.objects.filter(recipient=request.user, is_read=False).count()
         if request.user.is_staff:
             admin_unread_notifications_count = Notification.objects.filter(for_admin=True, is_read=False).count()
+
+    # ضمان انعكاس متغيرات البيئة فورياً في المتجر (WhatsApp, Phone, Instagram)
+    env_phone = os.getenv('STORE_PHONE', '').strip()
+    env_wa = os.getenv('STORE_WHATSAPP', '').strip()
+    env_insta = os.getenv('STORE_INSTAGRAM', '').strip()
+    if env_phone:
+        settings.contact_phone = env_phone
+    if env_wa:
+        settings.contact_whatsapp = env_wa
+    if env_insta:
+        settings.contact_instagram = env_insta
 
     return {
         'store_settings': settings,
