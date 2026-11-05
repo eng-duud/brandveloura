@@ -1,13 +1,13 @@
 <!-- UI-PATTERN: Gift Bundles Showcase Strip (شريط باقات الهدايا) -->
 {% if gift_bundles %}
-<section class="py-7 bg-white border-t border-rose-100">
+<section class="py-7 bg-white/40 border-t border-pink-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <!-- Header with Clear Navigation -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div class="space-y-0.5">
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-brand-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">
+                    <span class="text-xs font-bold text-brand-700 bg-white px-2 py-0.5 rounded-md border border-pink-200 shadow-2xs">
                         خدمة الإهداء
                     </span>
                     <span class="text-xs text-slate-500">
@@ -24,24 +24,24 @@
 
             <!-- Scroll Controls & Custom Build Link -->
             <div class="flex items-center gap-2 self-start sm:self-auto">
-                <a href="{% url 'store:gift_builder' %}" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                <a href="{% url 'store:gift_builder' %}" class="px-3 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs">
                     <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
                     <span>تجهيز باقة مخصصة</span>
                 </a>
                 <div class="flex items-center gap-1">
                     <button 
-                        type="button"
+                        type="button" 
                         onclick="scrollContainer('bundles-scroll', 260)" 
-                        class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center transition cursor-pointer"
+                        class="w-7 h-7 rounded-lg bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer"
                         title="السابق"
                         aria-label="السابق"
                     >
                         <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
                     </button>
                     <button 
-                        type="button"
+                        type="button" 
                         onclick="scrollContainer('bundles-scroll', -260)" 
-                        class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center transition cursor-pointer"
+                        class="w-7 h-7 rounded-lg bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer"
                         title="التالي"
                         aria-label="التالي"
                     >
@@ -58,16 +58,16 @@
         >
             {% for bundle in gift_bundles %}
             <div class="w-[250px] sm:w-[275px] md:w-[290px] shrink-0 snap-start flex flex-col">
-                <div class="bg-white rounded-2xl border border-rose-100 hover:border-slate-300 p-3.5 flex flex-col justify-between transition-all duration-200 h-full">
+                <div class="bg-white rounded-2xl border border-pink-200 hover:border-brand-400 p-3.5 flex flex-col justify-between transition-all duration-200 h-full hover:shadow-md">
                     
                     <div>
                         <!-- Bundle Thumbnail Photo -->
-                        <div class="aspect-4/3 w-full rounded-xl overflow-hidden bg-slate-50 mb-3 relative">
+                        <div class="aspect-4/3 w-full rounded-xl overflow-hidden bg-pink-50/30 mb-3 relative border border-pink-100">
                             {% if bundle.primary_image_url %}
                             <img 
                                 src="{{ bundle.primary_image_url }}" 
                                 alt="{{ bundle.name_ar }}" 
-                                loading="lazy"
+                                loading="lazy" 
                                 class="w-full h-full object-cover"
                             >
                             {% else %}
@@ -75,14 +75,14 @@
                                 <i data-lucide="package" class="w-8 h-8"></i>
                             </div>
                             {% endif %}
-                            <span class="absolute top-2 right-2 px-2 py-0.5 rounded bg-slate-900/80 text-white text-[10px] font-bold">
+                            <span class="absolute top-2 right-2 px-2 py-0.5 rounded bg-brand-500 text-white text-[10px] font-bold shadow-xs">
                                 باقة جاهزة
                             </span>
                         </div>
 
                         <!-- Bundle Title & Details -->
                         <div class="space-y-1">
-                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                            <span class="text-[10px] font-bold text-brand-700 uppercase tracking-wider block">
                                 {{ bundle.brand_name|default:"Brand Veloura" }}
                             </span>
                             <h3 class="font-bold text-slate-900 text-xs sm:text-sm line-clamp-1">
@@ -97,7 +97,7 @@
                     </div>
 
                     <!-- Price & Action -->
-                    <div class="pt-3 mt-3 border-t border-slate-100 space-y-2">
+                    <div class="pt-3 mt-3 border-t border-pink-100 space-y-2">
                         <div class="flex items-baseline justify-between gap-1">
                             <div>
                                 <span class="text-[10px] text-slate-400 block">السعر:</span>
@@ -116,8 +116,8 @@
 
                         <!-- One-Click Order as Gift Button -->
                         <a 
-                            href="{% url 'store:gift_builder' %}?bundle_id={{ bundle.id }}"
-                            class="w-full py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                            href="{% url 'store:gift_builder' %}?bundle_id={{ bundle.id }}" 
+                            class="w-full py-2 px-3 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs"
                         >
                             <i data-lucide="gift" class="w-3.5 h-3.5"></i>
                             <span>طلب هذه الباقة</span>

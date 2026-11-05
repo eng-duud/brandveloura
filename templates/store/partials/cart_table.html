@@ -3,20 +3,20 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         <!-- Cart Items List (8 Cols) -->
-        <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden divide-y divide-slate-100">
+        <div class="lg:col-span-8 bg-white rounded-2xl border border-pink-200 shadow-2xs overflow-hidden divide-y divide-pink-100">
             {% for item in cart_items %}
-            <div class="p-3.5 sm:p-4 flex items-center justify-between gap-3 sm:gap-4 transition hover:bg-slate-50/50">
+            <div class="p-3.5 sm:p-4 flex items-center justify-between gap-3 sm:gap-4 transition hover:bg-pink-50/30">
                 
                 <!-- Product Thumbnail & Main Details -->
                 <div class="flex items-center gap-3 sm:gap-3.5 min-w-0 flex-1">
                     <img 
                         src="{{ item.image_url }}" 
                         alt="{{ item.name }}" 
-                        class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-contain bg-slate-50 border border-slate-200 shrink-0 p-1"
+                        class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-contain bg-pink-50/40 border border-pink-100 shrink-0 p-1"
                     >
                     <div class="min-w-0 flex-1 space-y-0.5">
                         {% if item.brand %}
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-sans">{{ item.brand }}</span>
+                        <span class="text-[10px] font-bold text-brand-600 uppercase tracking-wider block font-sans">{{ item.brand }}</span>
                         {% endif %}
                         <h4 class="font-bold text-slate-900 text-xs sm:text-sm leading-snug break-words">{{ item.name }}</h4>
                         
@@ -24,11 +24,11 @@
                         {% if item.variant_info %}
                         <div class="pt-0.5">
                             {% if 'ماستر' in item.variant_info %}
-                            <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-slate-100 text-slate-800 text-[10px] font-medium border border-slate-200">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-pink-50 text-brand-700 text-[10px] font-bold border border-pink-200">
                                 {{ item.variant_info }}
                             </span>
                             {% elif 'أصلي' in item.variant_info %}
-                            <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-slate-900 text-white text-[10px] font-medium">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-500 text-white text-[10px] font-bold">
                                 {{ item.variant_info }}
                             </span>
                             {% else %}
@@ -48,12 +48,12 @@
                 <!-- Quantity Stepper & Line Total (Right) -->
                 <div class="flex items-center gap-2 sm:gap-4 shrink-0">
                     <!-- Stepper -->
-                    <div class="flex items-center border border-slate-200 rounded-xl bg-white p-0.5">
+                    <div class="flex items-center border border-pink-200 rounded-xl bg-white p-0.5 shadow-2xs">
                         <button 
                             hx-post="{% url 'store:cart_update' %}" 
                             hx-target="#cart-container"
                             hx-vals='{"item_key": "{{ item.key }}", "action": "decrease"}'
-                            class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer transition"
+                            class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-pink-50 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer transition"
                             aria-label="تقليل الكمية"
                         >-</button>
                         <span class="w-7 sm:w-8 text-center text-xs font-bold font-num text-slate-900">{{ item.quantity }}</span>
@@ -61,7 +61,7 @@
                             hx-post="{% url 'store:cart_update' %}" 
                             hx-target="#cart-container"
                             hx-vals='{"item_key": "{{ item.key }}", "action": "increase"}'
-                            class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer transition"
+                            class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-pink-50 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer transition"
                             aria-label="زيادة الكمية"
                         >+</button>
                     </div>
@@ -77,7 +77,7 @@
                         hx-post="{% url 'store:cart_remove' %}" 
                         hx-target="#cart-container"
                         hx-vals='{"item_key": "{{ item.key }}"}'
-                        class="p-2 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
+                        class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
                         title="حذف من السلة"
                         aria-label="حذف العنصر"
                     >
@@ -88,8 +88,8 @@
             {% endfor %}
 
             <!-- Return to shopping link -->
-            <div class="p-3 bg-slate-50 flex items-center justify-between text-xs">
-                <a href="{% url 'store:product_list' %}" class="text-slate-700 hover:text-slate-900 font-bold inline-flex items-center gap-1.5 transition">
+            <div class="p-3 bg-pink-50/40 flex items-center justify-between text-xs border-t border-pink-100">
+                <a href="{% url 'store:product_list' %}" class="text-slate-800 hover:text-brand-600 font-bold inline-flex items-center gap-1.5 transition">
                     <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                     <span>إضافة منتجات أخرى</span>
                 </a>
@@ -98,8 +98,8 @@
 
         <!-- Order Summary Card -->
         <div class="lg:col-span-4 sticky top-24 space-y-3">
-            <div class="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 space-y-3.5">
-                <h3 class="font-bold text-slate-900 text-sm pb-2 border-b border-slate-100 flex items-center justify-between">
+            <div class="bg-white rounded-2xl p-4 sm:p-5 border border-pink-200 shadow-2xs space-y-3.5">
+                <h3 class="font-bold text-slate-900 text-sm pb-2 border-b border-pink-100 flex items-center justify-between">
                     <span>ملخص الطلب</span>
                     <span class="text-xs text-slate-500 font-normal">({{ cart_items|length }} عنصر)</span>
                 </h3>
@@ -113,17 +113,17 @@
 
                     <div class="flex items-center justify-between text-slate-600">
                         <span>المعادل بالسعودي:</span>
-                        <span class="font-bold text-emerald-700 font-num">{{ subtotal_sar }} ر.س</span>
+                        <span class="font-bold text-brand-600 font-num">{{ subtotal_sar }} ر.س</span>
                     </div>
 
-                    <div class="flex items-center justify-between text-slate-500 text-[11px] pt-1 border-t border-slate-100">
+                    <div class="flex items-center justify-between text-slate-500 text-[11px] pt-1 border-t border-pink-100">
                         <span>الشحن:</span>
                         <span class="text-slate-600">يُحسب في الخطوة التالية</span>
                     </div>
                 </div>
 
                 <!-- Final Estimate Box -->
-                <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1">
+                <div class="p-3 rounded-xl bg-pink-50/40 border border-pink-200 space-y-1">
                     <div class="flex items-baseline justify-between">
                         <span class="font-bold text-slate-900 text-xs">المجموع:</span>
                         <div class="text-left">
@@ -136,7 +136,7 @@
                 <!-- Primary Checkout CTA -->
                 <a 
                     href="{% url 'store:checkout' %}" 
-                    class="w-full py-2.5 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer text-center"
+                    class="w-full h-11 px-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer text-center shadow-xs"
                 >
                     <span>إتمام الطلب</span>
                     <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
@@ -147,18 +147,17 @@
     </div>
     {% else %}
     <!-- Clean Minimalist Empty State -->
-    <div class="bg-white rounded-xl p-8 sm:p-12 text-center border border-slate-200 space-y-3 max-w-sm mx-auto">
-        <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center mx-auto">
+    <div class="bg-white rounded-2xl p-8 sm:p-12 text-center border border-pink-200 shadow-2xs space-y-3 max-w-sm mx-auto">
+        <div class="w-12 h-12 rounded-2xl bg-pink-50 text-brand-600 border border-pink-100 flex items-center justify-center mx-auto">
             <i data-lucide="shopping-bag" class="w-6 h-6"></i>
         </div>
         <div class="space-y-1">
             <h3 class="font-bold text-slate-900 text-base">سلة المشتريات فارغة</h3>
-            <p class="text-xs text-slate-500">لم تقم بإضافة أي منتجات للسلة.</p>
+            <p class="text-xs text-slate-500">لم تقم بإضافة أي منتجات للسلة بعد.</p>
         </div>
         <div class="pt-2">
-            <a href="{% url 'store:product_list' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer">
+            <a href="{% url 'store:product_list' %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition cursor-pointer shadow-xs">
                 <span>تصفح المنتجات</span>
-                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
             </a>
         </div>
     </div>

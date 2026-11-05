@@ -13,11 +13,11 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
     
     <!-- Breadcrumb & Page Title -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-pink-200">
         <div>
             <nav class="flex items-center gap-1.5 text-[11px] text-slate-400 mb-1">
-                <a href="{% url 'store:home' %}" class="hover:text-slate-900 transition">الرئيسية</a>
-                <i data-lucide="chevron-left" class="w-3 h-3 text-slate-300"></i>
+                <a href="{% url 'store:home' %}" class="hover:text-brand-600 transition">الرئيسية</a>
+                <i data-lucide="chevron-left" class="w-3 h-3 text-pink-300"></i>
                 <span class="text-slate-900 font-bold">
                     {% if current_category %}{{ current_category.name_ar }}{% else %}كافة المنتجات{% endif %}
                 </span>
@@ -33,14 +33,14 @@
         </div>
 
         <!-- Global Currency Notice -->
-        <div class="inline-flex items-center gap-2 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg self-start md:self-auto">
-            <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+        <div class="inline-flex items-center gap-2 text-xs font-medium text-slate-700 bg-pink-50/50 border border-pink-200 px-3 py-1.5 rounded-xl self-start md:self-auto shadow-2xs">
+            <span class="w-2 h-2 rounded-full bg-brand-500"></span>
             <span>الأسعار بالريال السعودي والمعادل بالريال اليمني</span>
         </div>
     </div>
 
     <!-- SINGLE HORIZONTAL FILTER BAR -->
-    <div class="bg-white rounded-xl p-2 sm:p-2.5 border border-slate-200">
+    <div class="bg-white rounded-2xl p-2.5 sm:p-3 border border-pink-200 shadow-2xs">
         <form 
             id="filter-controls-form" 
             hx-get="{% url 'store:product_list' %}" 
@@ -57,14 +57,14 @@
                     value="{{ search_query }}"
                     placeholder="ابحث بالاسم أو الماركة..." 
                     hx-trigger="keyup changed delay:300ms, search"
-                    class="w-full h-9.5 bg-slate-50 border border-slate-200 focus:border-slate-900 focus:bg-white focus:outline-none rounded-lg py-2 pr-9 pl-3 text-xs text-slate-900 transition placeholder-slate-400"
+                    class="w-full h-10 bg-pink-50/40 border border-pink-200 focus:border-brand-500 focus:bg-white focus:outline-none rounded-xl py-2 pr-9 pl-3 text-xs text-slate-900 transition placeholder-slate-400 shadow-2xs"
                 >
             </div>
 
             <!-- 2. Category Selector Dropdown -->
             <div class="relative shrink-0 min-w-[130px] sm:min-w-[150px]">
-                <div class="flex items-center gap-1.5 w-full h-9.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 focus-within:border-slate-900 focus-within:bg-white transition">
-                    <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-slate-600 shrink-0"></i>
+                <div class="flex items-center gap-1.5 w-full h-10 bg-pink-50/40 border border-pink-200 rounded-xl px-2.5 focus-within:border-brand-500 focus-within:bg-white transition shadow-2xs">
+                    <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-brand-600 shrink-0"></i>
                     <select 
                         name="category" 
                         hx-trigger="change"
@@ -82,8 +82,8 @@
 
             <!-- 3. Brand Selector Dropdown -->
             <div class="relative shrink-0 min-w-[130px] sm:min-w-[150px]">
-                <div class="flex items-center gap-1.5 w-full h-9.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 focus-within:border-slate-900 focus-within:bg-white transition">
-                    <i data-lucide="award" class="w-3.5 h-3.5 text-slate-600 shrink-0"></i>
+                <div class="flex items-center gap-1.5 w-full h-10 bg-pink-50/40 border border-pink-200 rounded-xl px-2.5 focus-within:border-brand-500 focus-within:bg-white transition shadow-2xs">
+                    <i data-lucide="award" class="w-3.5 h-3.5 text-brand-600 shrink-0"></i>
                     <select 
                         name="brand" 
                         hx-trigger="change"
@@ -99,8 +99,8 @@
 
             <!-- 4. Sorting Dropdown -->
             <div class="relative shrink-0 min-w-[125px] sm:min-w-[140px]">
-                <div class="flex items-center gap-1.5 w-full h-9.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 focus-within:border-slate-900 focus-within:bg-white transition">
-                    <i data-lucide="arrow-down-up" class="w-3.5 h-3.5 text-slate-600 shrink-0"></i>
+                <div class="flex items-center gap-1.5 w-full h-10 bg-pink-50/40 border border-pink-200 rounded-xl px-2.5 focus-within:border-brand-500 focus-within:bg-white transition shadow-2xs">
+                    <i data-lucide="arrow-down-up" class="w-3.5 h-3.5 text-brand-600 shrink-0"></i>
                     <select 
                         name="sort" 
                         hx-trigger="change"
@@ -121,7 +121,7 @@
                 hx-get="{% url 'store:product_list' %}"
                 hx-target="#product-grid"
                 hx-push-url="true"
-                class="shrink-0 h-9.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-700 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
+                class="shrink-0 h-10 px-3.5 rounded-xl bg-pink-50 hover:bg-brand-500 hover:text-white text-slate-800 border border-pink-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
                 title="إعادة ضبط الفلاتر"
             >
                 <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>

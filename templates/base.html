@@ -91,19 +91,19 @@
                     },
                     colors: {
                         brand: {
-                            50: '#fff1f4',
-                            100: '#ffe4ea',
-                            200: '#fecdd8',
-                            300: '#fda4ba',
-                            400: '#fb7195',
-                            500: '#f43f70',
-                            600: '#e11d53',
-                            700: '#be123f',
-                            800: '#9f1237',
-                            900: '#881333',
-                            950: '#4c0519',
+                            50: '#fff0f7',
+                            100: '#fde4f2',
+                            200: '#fec2f5',
+                            300: '#fba7e8',
+                            400: '#f672d4',
+                            500: '#e83ab8',
+                            600: '#d11a9e',
+                            700: '#b10f81',
+                            800: '#920f6a',
+                            900: '#791258',
+                            950: '#4a0434',
                         },
-                        pearl: '#FAFAFA',
+                        pearl: '#FFF0F7',
                         slate: {
                             850: '#151f33',
                             950: '#0a0f1d',
@@ -128,7 +128,7 @@
     <style>
         body {
             font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif;
-            background-color: #FAFAFA;
+            background-color: #FFF0F7;
             color: #0F172A;
             -webkit-font-smoothing: antialiased;
             letter-spacing: -0.01em;
@@ -245,7 +245,7 @@
     {% endif %}
 
     <!-- Luxury Header (Streamlined & Ergonomic) -->
-    <header class="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-40 transition-all shadow-xs">
+    <header class="bg-[#FFF0F7]/95 backdrop-blur-md border-b border-pink-200 sticky top-0 z-40 transition-all shadow-xs">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16 md:h-18 gap-3">
                 
@@ -255,7 +255,7 @@
                     <button 
                         type="button" 
                         onclick="openMobileSidebar()" 
-                        class="md:hidden w-11 h-11 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 flex items-center justify-center transition cursor-pointer shrink-0 shadow-2xs active:scale-95"
+                        class="md:hidden w-11 h-11 rounded-2xl bg-white hover:bg-pink-50 text-slate-800 border border-pink-200 flex items-center justify-center transition cursor-pointer shrink-0 shadow-2xs active:scale-95"
                         aria-label="القائمة الجانبية والأقسام"
                         title="القائمة"
                     >
@@ -263,7 +263,7 @@
                     </button>
 
                     <a href="{% url 'store:home' %}" class="flex items-center gap-2.5 group cursor-pointer">
-                        <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-10 h-10 md:w-11 md:h-11 rounded-2xl object-cover shadow-xs group-hover:scale-105 transition-all duration-300 border border-slate-200/80 shrink-0">
+                        <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-10 h-10 md:w-11 md:h-11 rounded-2xl object-cover shadow-xs group-hover:scale-105 transition-all duration-300 border border-pink-200 shrink-0">
                         <div>
                             <span class="font-brand-logo text-xl md:text-2xl text-slate-900 tracking-wide block leading-tight">Brand Veloura</span>
                         </div>
@@ -278,9 +278,9 @@
                             name="q" 
                             placeholder="ابحث عن عطر، ماركة، ساعة..." 
                             value="{{ search_query|default:'' }}"
-                            class="w-full bg-slate-100/70 border border-slate-200/90 focus:border-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/5 rounded-full py-2 px-4 pr-10 text-xs font-medium text-slate-800 placeholder-slate-400 transition-all h-10"
+                            class="w-full bg-white border border-pink-200 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/10 rounded-full py-2 px-4 pr-10 text-xs font-medium text-slate-800 placeholder-slate-400 transition-all h-10 shadow-2xs"
                         >
-                        <button type="submit" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 transition cursor-pointer p-1" aria-label="بحث">
+                        <button type="submit" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-600 transition cursor-pointer p-1" aria-label="بحث">
                             <i data-lucide="search" class="w-4 h-4"></i>
                         </button>
                     </form>
@@ -290,14 +290,21 @@
                 <div class="flex items-center gap-2">
                     
                     <!-- Track Order Link (Desktop) -->
-                    <a href="{% url 'store:track_order' %}" class="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 text-xs font-medium transition cursor-pointer min-h-[40px]" title="تتبع طلبي">
+                    <a href="{% url 'store:track_order' %}" class="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-white text-xs font-medium transition cursor-pointer min-h-[40px]" title="تتبع طلبي">
                         <i data-lucide="truck" class="w-4 h-4 text-slate-500"></i>
                         <span>تتبع الطلب</span>
                     </a>
 
                     <!-- Cart Button with HTMX Dynamic Badge -->
-                    <a href="{% url 'store:cart_view' %}" class="relative p-2.5 md:px-3.5 md:py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 transition-all shadow-2xs flex items-center gap-1.5 group cursor-pointer min-h-[44px]">
+                    <a href="{% url 'store:cart_view' %}" class="relative p-2.5 md:px-3.5 md:py-2 rounded-xl bg-white hover:bg-pink-50 border border-pink-200 text-slate-800 transition-all shadow-2xs flex items-center gap-1.5 group cursor-pointer min-h-[44px]">
                         <div class="relative">
+                            <i data-lucide="shopping-bag" class="w-4 h-4 text-slate-800 group-hover:scale-110 transition-transform"></i>
+                            <div id="cart-badge-container" class="absolute -top-2 -right-2">
+                                {% include 'store/partials/cart_badge.html' with cart_count=cart_count %}
+                            </div>
+                        </div>
+                        <span class="hidden md:inline text-xs font-bold text-slate-800">السلة</span>
+                    </a>
                             <i data-lucide="shopping-bag" class="w-4 h-4 text-slate-800 group-hover:scale-110 transition-transform"></i>
                             <div id="cart-badge-container" class="absolute -top-2 -right-2">
                                 {% include 'store/partials/cart_badge.html' with cart_count=cart_count %}
@@ -396,7 +403,7 @@
                     </div>
                     {% else %}
                     <!-- Guest Login Link -->
-                    <a href="{% url 'store:login' %}" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer min-h-[40px]">
+                    <a href="{% url 'store:login' %}" class="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer min-h-[40px]">
                         <i data-lucide="user" class="w-3.5 h-3.5"></i>
                         <span class="hidden sm:inline">تسجيل الدخول</span>
                     </a>
@@ -405,23 +412,23 @@
             </div>
 
             <!-- Category Navigation Links (Desktop) -->
-            <nav class="hidden md:flex items-center justify-center gap-10 py-3 border-t border-slate-100 text-xs font-bold tracking-wide">
-                <a href="{% url 'store:home' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if request.path == '/' %}text-slate-900 border-b-2 border-slate-900 pb-1{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+            <nav class="hidden md:flex items-center justify-center gap-10 py-3 border-t border-pink-200/80 text-xs font-bold tracking-wide">
+                <a href="{% url 'store:home' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if request.path == '/' %}text-brand-600 border-b-2 border-brand-500 pb-1{% else %}text-slate-700 hover:text-brand-600{% endif %}">
                     <span>الرئيسية</span>
                 </a>
-                <a href="{% url 'store:perfumes_catalog' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'perfumes' in request.path %}text-slate-900 border-b-2 border-slate-900 pb-1{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                <a href="{% url 'store:perfumes_catalog' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'perfumes' in request.path %}text-brand-600 border-b-2 border-brand-500 pb-1{% else %}text-slate-700 hover:text-brand-600{% endif %}">
                     <span>العطور</span>
                 </a>
-                <a href="{% url 'store:watches_catalog' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'watches' in request.path %}text-slate-900 border-b-2 border-slate-900 pb-1{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                <a href="{% url 'store:watches_catalog' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'watches' in request.path %}text-brand-600 border-b-2 border-brand-500 pb-1{% else %}text-slate-700 hover:text-brand-600{% endif %}">
                     <span>الساعات</span>
                 </a>
-                <a href="{% url 'store:cosmetics_catalog' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'cosmetics' in request.path %}text-slate-900 border-b-2 border-slate-900 pb-1{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                <a href="{% url 'store:cosmetics_catalog' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'cosmetics' in request.path %}text-brand-600 border-b-2 border-brand-500 pb-1{% else %}text-slate-700 hover:text-brand-600{% endif %}">
                     <span>مستحضرات التجميل</span>
                 </a>
-                <a href="{% url 'store:gift_builder' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'gifting' in request.path %}text-slate-900 border-b-2 border-slate-900 pb-1{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                <a href="{% url 'store:gift_builder' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'gifting' in request.path %}text-brand-600 border-b-2 border-brand-500 pb-1{% else %}text-slate-700 hover:text-brand-600{% endif %}">
                     <span>خدمة الإهداء</span>
                 </a>
-                <a href="{% url 'store:product_list' %}" class="text-slate-700 bg-slate-100 hover:bg-slate-900 hover:text-white transition py-1 px-3.5 rounded-full cursor-pointer">
+                <a href="{% url 'store:product_list' %}" class="text-slate-800 bg-white border border-pink-200 hover:bg-brand-500 hover:text-white hover:border-brand-500 transition py-1 px-3.5 rounded-full cursor-pointer shadow-2xs">
                     كافة المنتجات
                 </a>
             </nav>
@@ -451,7 +458,7 @@
     </main>
 
     <!-- Luxury Structured Footer (شبكة 2*2 للجوال و 4 أعمدة للابتوب) -->
-    <footer class="bg-white border-t border-rose-100/90 mt-16 pt-12 pb-10 text-slate-600 text-xs">
+    <footer class="bg-[#FFF0F7] border-t border-pink-200 mt-16 pt-12 pb-10 text-slate-700 text-xs">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
             
             <!-- 2x2 Grid on Mobile, 4 Columns on Laptop/Desktop -->

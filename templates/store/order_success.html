@@ -4,10 +4,10 @@
 
 {% block content %}
 <div class="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
-    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden text-center p-6 sm:p-10 space-y-6">
+    <div class="bg-white rounded-3xl border border-pink-200 shadow-2xs overflow-hidden text-center p-6 sm:p-10 space-y-6">
         
         <!-- Success Icon -->
-        <div class="w-16 h-16 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
+        <div class="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200 shadow-2xs">
             <i data-lucide="check" class="w-8 h-8"></i>
         </div>
 
@@ -15,7 +15,7 @@
             <span class="text-xs font-bold text-slate-600 block">تم استلام وتسجيل طلبك بنجاح</span>
             <h1 class="text-xl sm:text-2xl font-bold text-slate-900">شكراً لك، {{ order.customer_name }}</h1>
             <p class="text-xs sm:text-sm text-slate-500 max-w-md mx-auto pt-1">
-                رقم الطلب المرجعي: <span class="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 font-num">#{{ order.order_number }}</span>
+                رقم الطلب المرجعي: <span class="font-mono font-bold text-slate-900 bg-pink-50 px-2.5 py-0.5 rounded-lg border border-pink-200 font-num">#{{ order.order_number }}</span>
             </p>
         </div>
 
@@ -24,7 +24,7 @@
             <a 
                 href="{{ whatsapp_url }}" 
                 target="_blank" 
-                class="inline-flex items-center gap-2.5 px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs sm:text-sm transition cursor-pointer"
+                class="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm transition cursor-pointer shadow-xs"
             >
                 <i data-lucide="message-circle" class="w-4 h-4"></i>
                 <span>إرسال إشعار الدفع عبر واتساب</span>
@@ -35,12 +35,12 @@
         </div>
 
         <!-- Order Summary Card -->
-        <div class="bg-slate-50 rounded-xl p-5 border border-slate-200 text-right space-y-3 text-xs">
-            <h3 class="font-bold text-slate-900 text-sm pb-2.5 border-b border-slate-200">ملخص الفاتورة والتوصيل</h3>
+        <div class="bg-pink-50/40 rounded-2xl p-5 border border-pink-200 text-right space-y-3 text-xs shadow-2xs">
+            <h3 class="font-bold text-slate-900 text-sm pb-2.5 border-b border-pink-100">ملخص الفاتورة والتوصيل</h3>
             
             <div class="flex items-center justify-between">
                 <span class="text-slate-500 font-medium">حالة الطلب:</span>
-                <span class="px-2.5 py-0.5 rounded bg-slate-200 text-slate-800 font-bold text-xs">
+                <span class="px-2.5 py-0.5 rounded-full bg-pink-100 text-slate-800 font-bold text-xs">
                     {{ order.get_status_display }}
                 </span>
             </div>
@@ -64,20 +64,20 @@
 
             <!-- Gift Order Details Card (if applicable) -->
             {% if order.is_gift %}
-            <div class="p-3 rounded-lg bg-white border border-slate-200 space-y-1.5">
+            <div class="p-3 rounded-xl bg-white border border-pink-200 space-y-1.5 shadow-2xs">
                 <div class="flex items-center justify-between text-xs font-bold text-slate-900">
                     <span class="flex items-center gap-1.5">
-                        <i data-lucide="gift" class="w-4 h-4 text-slate-700"></i>
+                        <i data-lucide="gift" class="w-4 h-4 text-brand-600"></i>
                         <span>طلب إهداء للمستلم: {{ order.recipient_name }}</span>
                     </span>
                     {% if order.is_luxury_gift_wrapping %}
-                    <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-800 text-[10px] font-bold">تغليف هدايا</span>
+                    <span class="px-2 py-0.5 rounded-full bg-pink-50 text-brand-700 text-[10px] font-bold border border-pink-200">تغليف هدايا</span>
                     {% endif %}
                 </div>
                 <div class="text-[11px] text-slate-600">
                     <div>هاتف المستلم: <span class="font-bold text-slate-900 font-num" dir="ltr">{{ order.recipient_phone }}</span></div>
                     {% if order.gift_card_message %}
-                    <div class="mt-1.5 p-2 rounded bg-slate-50 border border-slate-200 text-[11px] text-slate-700">
+                    <div class="mt-1.5 p-2 rounded-lg bg-pink-50/30 border border-pink-100 text-[11px] text-slate-700">
                         كارت الإهداء (من: {{ order.gift_card_sender|default:order.customer_name }} إلى: {{ order.gift_card_recipient|default:order.recipient_name }}):
                         <div class="font-medium text-slate-900 mt-0.5">"{{ order.gift_card_message }}"</div>
                     </div>
@@ -87,7 +87,7 @@
             {% endif %}
 
             <!-- Ordered Items List -->
-            <div class="py-2.5 border-t border-b border-slate-200 space-y-2">
+            <div class="py-2.5 border-t border-b border-pink-100 space-y-2">
                 <span class="text-slate-500 font-bold block mb-1">المنتجات المطلوبة:</span>
                 {% for item in order.items.all %}
                 <div class="flex items-center justify-between text-xs">
@@ -95,11 +95,11 @@
                         <span class="font-bold text-slate-900">{{ item.product_name }}</span>
                         {% if item.variant_info %}
                             {% if 'ماستر' in item.variant_info %}
-                            <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200 mr-1.5">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-pink-50 text-brand-700 text-[10px] font-bold border border-pink-200 mr-1.5">
                                 {{ item.variant_info }}
                             </span>
                             {% elif 'أصلي' in item.variant_info %}
-                            <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-slate-100 text-slate-800 text-[10px] font-bold border border-slate-200 mr-1.5">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-500 text-white text-[10px] font-bold mr-1.5">
                                 {{ item.variant_info }}
                             </span>
                             {% else %}
@@ -117,18 +117,18 @@
                 <span class="font-bold text-slate-900 text-sm">المجموع الإجمالي:</span>
                 <div class="text-left">
                     <span class="font-bold text-slate-950 text-base font-num">{{ order.total_yer|floatformat:0 }} ر.ي</span>
-                    <span class="text-xs font-medium text-slate-600 block font-num">({{ order.total_sar }} ريال سعودي)</span>
+                    <span class="text-xs font-medium text-brand-600 block font-num">({{ order.total_sar }} ريال سعودي)</span>
                 </div>
             </div>
         </div>
 
         <!-- Links -->
         <div class="pt-3 flex flex-wrap items-center justify-center gap-5">
-            <a href="{% url 'store:track_order' %}?q={{ order.order_number }}" class="text-xs font-medium text-slate-900 hover:underline flex items-center gap-1.5 transition">
+            <a href="{% url 'store:track_order' %}?q={{ order.order_number }}" class="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1.5 transition">
                 <i data-lucide="truck" class="w-4 h-4"></i>
                 <span>تتبع الطلب</span>
             </a>
-            <span class="text-slate-300">•</span>
+            <span class="text-pink-300">•</span>
             <a href="{% url 'store:home' %}" class="text-xs font-medium text-slate-600 hover:text-slate-900 transition">
                 العودة للرئيسية
             </a>
