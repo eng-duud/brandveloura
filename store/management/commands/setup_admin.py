@@ -40,3 +40,4 @@ class Command(BaseCommand):
         else:
             User.objects.create_superuser(username=username, email=email, password=password)
             self.stdout.write(self.style.SUCCESS(f'[OK] تم إنشاء حساب مدير جديد بنجاح: {username}'))
+
