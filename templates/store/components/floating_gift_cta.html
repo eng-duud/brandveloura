@@ -1,0 +1,22 @@
+<!-- UI-PATTERN: Floating Gift CTA Component (زر الإهداء المباشر) -->
+<aside 
+    class="fixed bottom-5 left-4 sm:left-6 z-40 group pointer-events-auto"
+    aria-label="خدمة الإهداء"
+>
+    <a 
+        href="{% url 'store:gift_builder' %}" 
+        class="flex items-center gap-2.5 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 shadow-lg hover:shadow-xl transition duration-200"
+        title="خدمة الإهداء"
+    >
+        <span class="w-7 h-7 rounded-full bg-brand-600 text-white flex items-center justify-center shrink-0">
+            <i data-lucide="gift" class="w-3.5 h-3.5"></i>
+        </span>
+
+        <div class="text-right">
+            <span class="text-[10px] text-slate-300 block leading-tight">خدمة الإهداء</span>
+            <span class="text-xs font-bold text-white block">إرسال كهدية</span>
+        </div>
+
+        <i data-lucide="chevron-left" class="w-3.5 h-3.5 text-slate-400"></i>
+    </a>
+</aside>

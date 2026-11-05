@@ -169,6 +169,7 @@ class Category(models.Model):
         ('watches', 'ساعات راقية (Watches)'),
         ('cosmetics', 'مستحضرات تجميل (Cosmetics)'),
         ('care', 'عناية بالبشرة والجسم (Skincare & Care)'),
+        ('bundles', 'باقات الهدايا والمناسبات (Gift Bundles)'),
         ('general', 'عام (General)'),
     ]
 
@@ -355,12 +356,12 @@ class ProductImage(models.Model):
 class Order(models.Model):
     """سجل الطلبات وإشعارات التحويل اليدوي"""
     STATUS_CHOICES = [
-        ('pending_verification', 'بانتظار التحقق من الإشعار'),
-        ('payment_verified', 'تم التحقق من الدفع'),
-        ('processing', 'قيد التجهيز والتغليف'),
-        ('out_for_delivery', 'جاري التوصيل مع المندوب'),
-        ('delivered', 'تم التسليم بنجاح'),
-        ('cancelled', 'طلب ملغي'),
+        ('pending_verification', 'بانتظار التحقق من التحويل'),
+        ('payment_verified', 'تم تأكيد الدفع'),
+        ('processing', 'قيد التجهيز'),
+        ('out_for_delivery', 'قيد التوصيل'),
+        ('delivered', 'تم التسليم'),
+        ('cancelled', 'ملغي'),
     ]
 
     order_number = models.CharField(max_length=50, unique=True, verbose_name='رقم الطلب')
@@ -409,6 +410,8 @@ class Order(models.Model):
     gift_card_message = models.TextField(blank=True, verbose_name='نص كارت الإهداء')
     is_luxury_gift_wrapping = models.BooleanField(default=False, verbose_name='تغليف هدايا ملكي فاخر')
     gift_wrapping_fee_yer = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name='رسوم التغليف (يمني)')
+    preferred_delivery_date = models.DateField(null=True, blank=True, verbose_name='تاريخ التسليم المفضل (المناسبة)')
+    hide_invoice_prices = models.BooleanField(default=True, verbose_name='حجب أسعار الفاتورة عن المستلم')
     
     # إدارة المخزون وحالات الإلغاء
     stock_deducted = models.BooleanField(default=True, verbose_name='تم خصم كميات الطلب من المخزون؟')

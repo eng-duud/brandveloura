@@ -62,11 +62,17 @@ def home_view(request):
             'count': Product.objects.filter(brand_name__iexact=b_name, is_active=True).count(),
         })
 
+    # باقات الهدايا والمناسبات الفاخرة
+    gift_bundles = Product.objects.filter(
+        category__category_type='bundles', is_active=True
+    ).order_by('-created_at')[:8]
+
     context = {
         'banners': banners,
         'categories': categories,
         'featured_products': featured_products,
         'perfume_brands': perfume_brands_data,
+        'gift_bundles': gift_bundles,
     }
     return render(request, 'store/home.html', context)
 
@@ -594,6 +600,176 @@ def get_shipping_fee(request):
     })
 
 
+def gift_builder_view(request):
+    """ركن وصانع الهدية الملكي: معالج خطوات تفاعلي سريع ومدمج في شاشة واحدة عبر HTMX"""
+    settings = StoreSettings.get_settings()
+    yer_per_sar = settings.yer_per_sar or Decimal('530.00')
+    wrapping_fee = settings.gift_wrapping_fee_yer or Decimal('2500.00')
+
+    bundle_id = request.GET.get('bundle_id')
+    selected_bundle = None
+    if bundle_id:
+        selected_bundle = Product.objects.filter(id=bundle_id, is_active=True).first()
+
+    perfumes = Product.objects.filter(
+        category__category_type='perfumes', is_active=True, stock_quantity__gt=0
+    ).order_by('-is_featured', '-is_best_seller')[:30]
+
+    accessories = Product.objects.filter(
+        category__category_type__in=['watches', 'cosmetics', 'care'], is_active=True, stock_quantity__gt=0
+    ).order_by('-is_featured')[:30]
+
+    gift_bundles = Product.objects.filter(
+        category__category_type='bundles', is_active=True
+    ).order_by('-created_at')[:10]
+
+    if request.method == 'POST':
+        perfume_id = request.POST.get('perfume_id')
+        perfume_grade = request.POST.get('perfume_grade', 'original')
+        accessory_id = request.POST.get('accessory_id')
+        post_bundle_id = request.POST.get('bundle_id')
+        
+        recipient_name = request.POST.get('recipient_name', '').strip()
+        recipient_phone = request.POST.get('recipient_phone', '').strip()
+        gift_card_sender = request.POST.get('gift_card_sender', '').strip()
+        gift_card_message = request.POST.get('gift_card_message', '').strip()
+        preferred_delivery_date = request.POST.get('preferred_delivery_date', '').strip() or None
+        is_luxury_gift_wrapping = request.POST.get('is_luxury_gift_wrapping') in ['true', '1', 'on']
+
+        cart = request.session.get('cart', {})
+
+        if post_bundle_id:
+            bundle_obj = get_object_or_404(Product, id=post_bundle_id, is_active=True)
+            b_key = f"bundle_{bundle_obj.id}"
+            cart[b_key] = {
+                'product_id': bundle_obj.id,
+                'name': bundle_obj.name_ar,
+                'brand': bundle_obj.brand_name or 'Brand Veloura',
+                'price_yer': float(bundle_obj.price_yer),
+                'image_url': bundle_obj.primary_image_url,
+                'quantity': 1,
+                'variant_info': 'باقة جاهزة',
+                'grade': '',
+            }
+        else:
+            if perfume_id:
+                perfume_obj = get_object_or_404(Product, id=perfume_id, is_active=True)
+                p_price = float(perfume_obj.price_master_yer if perfume_grade == 'master' and perfume_obj.price_master_yer else (perfume_obj.price_original_yer or perfume_obj.price_yer))
+                grade_name = 'ماستر' if perfume_grade == 'master' else 'أصلي'
+                p_key = f"{perfume_obj.id}_{perfume_grade}_gift"
+                cart[p_key] = {
+                    'product_id': perfume_obj.id,
+                    'name': perfume_obj.name_ar,
+                    'brand': perfume_obj.brand_name,
+                    'price_yer': p_price,
+                    'image_url': perfume_obj.primary_image_url,
+                    'quantity': 1,
+                    'variant_info': f"باقة إهداء ({grade_name})",
+                    'grade': perfume_grade,
+                }
+            if accessory_id:
+                acc_obj = get_object_or_404(Product, id=accessory_id, is_active=True)
+                a_key = f"{acc_obj.id}_acc_gift"
+                cart[a_key] = {
+                    'product_id': acc_obj.id,
+                    'name': acc_obj.name_ar,
+                    'brand': acc_obj.brand_name,
+                    'price_yer': float(acc_obj.price_yer),
+                    'image_url': acc_obj.primary_image_url,
+                    'quantity': 1,
+                    'variant_info': 'ملحق إضافي',
+                    'grade': '',
+                }
+
+        request.session['cart'] = cart
+        request.session['gift_data'] = {
+            'is_gift': True,
+            'recipient_name': recipient_name,
+            'recipient_phone': recipient_phone,
+            'gift_card_sender': gift_card_sender,
+            'gift_card_recipient': recipient_name,
+            'gift_card_message': gift_card_message,
+            'is_luxury_gift_wrapping': is_luxury_gift_wrapping,
+            'preferred_delivery_date': preferred_delivery_date,
+            'hide_invoice_prices': True,
+        }
+        request.session.modified = True
+        return redirect('store:checkout')
+
+    context = {
+        'perfumes': perfumes,
+        'accessories': accessories,
+        'gift_bundles': gift_bundles,
+        'selected_bundle': selected_bundle,
+        'wrapping_fee': wrapping_fee,
+        'yer_per_sar': yer_per_sar,
+    }
+    return render(request, 'store/gift_builder.html', context)
+
+
+def gift_calculate_live(request):
+    """حساب أسعار صندوق الهدية وتحديث المعاينة المباشرة عبر HTMX"""
+    settings = StoreSettings.get_settings()
+    yer_per_sar = settings.yer_per_sar or Decimal('530.00')
+    wrapping_fee = settings.gift_wrapping_fee_yer or Decimal('2500.00')
+
+    perfume_id = request.POST.get('perfume_id')
+    perfume_grade = request.POST.get('perfume_grade', 'original')
+    accessory_id = request.POST.get('accessory_id')
+    bundle_id = request.POST.get('bundle_id')
+    is_wrapping = request.POST.get('is_luxury_gift_wrapping') in ['true', '1', 'on']
+
+    total_yer = Decimal('0.00')
+    items_breakdown = []
+
+    if bundle_id:
+        bundle_obj = Product.objects.filter(id=bundle_id, is_active=True).first()
+        if bundle_obj:
+            total_yer += bundle_obj.price_yer
+            items_breakdown.append({
+                'title': bundle_obj.name_ar,
+                'type': 'باقة جاهزة',
+                'price_yer': bundle_obj.price_yer
+            })
+    else:
+        if perfume_id:
+            p_obj = Product.objects.filter(id=perfume_id, is_active=True).first()
+            if p_obj:
+                p_price = p_obj.price_master_yer if perfume_grade == 'master' and p_obj.price_master_yer else (p_obj.price_original_yer or p_obj.price_yer)
+                total_yer += p_price
+                items_breakdown.append({
+                    'title': p_obj.name_ar,
+                    'type': f"عطر أساسي ({'ماستر' if perfume_grade == 'master' else 'أصلي'})",
+                    'price_yer': p_price
+                })
+        if accessory_id:
+            a_obj = Product.objects.filter(id=accessory_id, is_active=True).first()
+            if a_obj:
+                total_yer += a_obj.price_yer
+                items_breakdown.append({
+                    'title': a_obj.name_ar,
+                    'type': 'ملحق إضافي',
+                    'price_yer': a_obj.price_yer
+                })
+
+    if is_wrapping:
+        total_yer += wrapping_fee
+        items_breakdown.append({
+            'title': 'تغليف هدايا وبطاقة',
+            'type': 'خدمة التغليف',
+            'price_yer': wrapping_fee
+        })
+
+    total_sar = round(total_yer / yer_per_sar, 1)
+
+    return render(request, 'store/partials/gift_builder_summary.html', {
+        'total_yer': total_yer,
+        'total_sar': total_sar,
+        'items_breakdown': items_breakdown,
+        'yer_per_sar': yer_per_sar,
+    })
+
+
 def checkout_view(request):
     """صفحة إتمام الطلب، تدفق الهدايا والمغتربين، اختيار المدينة، ورفع السند"""
     cart = request.session.get('cart', {})
@@ -649,6 +825,8 @@ def checkout_view(request):
         gift_card_recipient = request.POST.get('gift_card_recipient', '').strip()
         gift_card_message = request.POST.get('gift_card_message', '').strip()
         is_luxury_gift_wrapping = request.POST.get('is_luxury_gift_wrapping') in ['true', '1', 'on']
+        preferred_delivery_date = request.POST.get('preferred_delivery_date', '').strip() or None
+        hide_invoice_prices = request.POST.get('hide_invoice_prices') in ['true', '1', 'on']
         
         gift_wrapping_fee_yer = settings.gift_wrapping_fee_yer if is_luxury_gift_wrapping else Decimal('0.00')
         
@@ -700,6 +878,8 @@ def checkout_view(request):
             gift_card_message=gift_card_message,
             is_luxury_gift_wrapping=is_luxury_gift_wrapping,
             gift_wrapping_fee_yer=gift_wrapping_fee_yer,
+            preferred_delivery_date=preferred_delivery_date,
+            hide_invoice_prices=hide_invoice_prices,
             payment_currency_selected=payment_currency_selected,
             amount_due_in_payment_currency=amount_due,
             stock_deducted=True,
@@ -766,13 +946,15 @@ def checkout_view(request):
                 user_profile.preferred_city = city_name
             user_profile.save()
                 
-        # تفريغ السلة بعد إتمام الطلب
+        # تفريغ السلة وبيانات الهدية بعد إتمام الطلب
         request.session['cart'] = {}
+        request.session.pop('gift_data', None)
         request.session.modified = True
         
         return redirect('store:order_success', order_number=order.order_number)
 
     user_profile = getattr(request.user, 'store_profile', None) if request.user.is_authenticated else None
+    gift_data = request.session.get('gift_data', {})
 
     context = {
         'items': items,
@@ -785,6 +967,7 @@ def checkout_view(request):
         'default_zone': default_zone,
         'store_settings': settings,
         'user_profile': user_profile,
+        'gift_data': gift_data,
     }
     return render(request, 'store/checkout.html', context)
 
@@ -804,35 +987,32 @@ def order_success_view(request, order_number):
     # تفاصيل الهدية إن وجدت
     gift_msg_part = ""
     if order.is_gift:
-        wrap_text = "تغليف هدايا" if order.is_luxury_gift_wrapping else "بدون تغليف إضافي"
+        wrap_text = "تغليف هدايا" if order.is_luxury_gift_wrapping else "بدون تغليف"
+        date_text = f"\n- تاريخ التسليم المطلوب: {order.preferred_delivery_date.strftime('%Y-%m-%d')}" if order.preferred_delivery_date else ""
+        hide_price_text = "\n- حجب الأسعار في الفاتورة: نعم" if order.hide_invoice_prices else ""
         gift_msg_part = (
-            f"\n🎁 *طلب إهداء خاص:*\n"
-            f"- المستلم: {order.recipient_name or 'صاحب الهدية'} (هاتف: {order.recipient_phone})\n"
-            f"- التغليف: {wrap_text}\n"
-            f"- بطاقة الإهداء: من ({order.gift_card_sender or order.customer_name}) إلى ({order.gift_card_recipient or order.recipient_name})\n"
-            f"- رسالة الإهداء: \"{order.gift_card_message or 'مع أطيب التمنيات'}\"\n"
+            f"\n*بيانات الإهداء:*\n"
+            f"- المستلم: {order.recipient_name or 'المستلم'} (هاتف: {order.recipient_phone})\n"
+            f"- التغليف: {wrap_text}"
+            f"{date_text}"
+            f"{hide_price_text}\n"
+            f"- من: {order.gift_card_sender or order.customer_name} | إلى: {order.gift_card_recipient or order.recipient_name}\n"
+            f"- نص البطاقة: \"{order.gift_card_message or ''}\"\n"
         )
 
     # تجهيز رسالة واتساب منسقة بنقرة واحدة
     whatsapp_msg = (
-        f"مرحباً {settings.store_name}، لقد قمت بطلب جديد برقم #{order.order_number}:\n\n"
-        f"👤 صاحب الطلب (المشتري): {order.customer_name}\n"
-        f"📍 المدينة: {order.shipping_city}\n"
-        f"📦 المنتجات المطلوبة:\n{items_text}\n"
+        f"مرحباً {settings.store_name}، تم إرسال طلب جديد برقم #{order.order_number}:\n\n"
+        f"الاسم: {order.customer_name}\n"
+        f"المدينة: {order.shipping_city}\n"
+        f"المنتجات:\n{items_text}\n"
         f"{gift_msg_part}\n"
-        f"💰 الإجمالي المستحق: {order.total_yer:,.0f} ر.ي ({order.total_sar} ر.س)\n"
-        f"💳 العملة وطريقة التحويل: {order.payment_method_name} ({order.payment_currency_selected})\n"
-        f"🧾 رقم العملية/الحوالة: {order.payment_reference_no or 'مرفق صورة الإشعار'}\n\n"
-        f"أرجو تأكيد استلام الطلب وتجهيز الشحن، شكراً لكم!"
+        f"المبلغ الإجمالي: {order.total_yer:,.0f} ر.ي ({order.total_sar} ر.س)\n"
+        f"طريقة الدفع: {order.payment_method_name} ({order.payment_currency_selected})\n"
+        f"رقم الحوالة: {order.payment_reference_no or 'مرفق إشعار التحويل'}\n"
     )
     import urllib.parse
     whatsapp_url = f"https://wa.me/{settings.contact_whatsapp}?text={urllib.parse.quote(whatsapp_msg)}"
-    
-    context = {
-        'order': order,
-        'whatsapp_url': whatsapp_url,
-    }
-    return render(request, 'store/order_success.html', context)
     
     context = {
         'order': order,
@@ -1443,4 +1623,114 @@ def mark_all_notifications_read_view(request):
         
     messages.success(request, 'تم تحديد كافة التنبيهات كمقروءة بنجاح.')
     return redirect('store:account_profile')
+
+
+# ==============================================================================
+# SEO & GEO Infrastructure Views (robots.txt, sitemap.xml, llms.txt)
+# ==============================================================================
+
+def robots_txt(request):
+    """ملف robots.txt الموجه لمحركات البحث وعناكب الذكاء الاصطناعي"""
+    base_url = request.build_absolute_uri('/')[:-1]
+    content = f"""User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /cart/
+Disallow: /checkout/
+Disallow: /account/
+Disallow: /login/
+Disallow: /register/
+
+# AI Crawlers & Search Engines (Allow indexing product catalog)
+User-agent: Googlebot
+Allow: /
+User-agent: Bingbot
+Allow: /
+User-agent: GPTBot
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+
+Sitemap: {base_url}/sitemap.xml
+"""
+    return HttpResponse(content.strip(), content_type="text/plain; charset=utf-8")
+
+
+def sitemap_xml(request):
+    """توليد خريطة الموقع XML الديناميكية المتوافقة مع معايير محركات البحث العالمية"""
+    base_url = request.build_absolute_uri('/')[:-1]
+    
+    # Static & Catalog URL definitions (loc, priority, changefreq)
+    urls = [
+        {'loc': f"{base_url}/", 'priority': '1.0', 'changefreq': 'daily'},
+        {'loc': f"{base_url}/products/", 'priority': '0.9', 'changefreq': 'daily'},
+        {'loc': f"{base_url}/perfumes/", 'priority': '0.9', 'changefreq': 'daily'},
+        {'loc': f"{base_url}/watches/", 'priority': '0.9', 'changefreq': 'daily'},
+        {'loc': f"{base_url}/cosmetics/", 'priority': '0.9', 'changefreq': 'daily'},
+        {'loc': f"{base_url}/track-order/", 'priority': '0.5', 'changefreq': 'monthly'},
+    ]
+    
+    # Categories
+    categories = Category.objects.filter(is_active=True)
+    for cat in categories:
+        urls.append({
+            'loc': f"{base_url}/products/?category={cat.slug}",
+            'priority': '0.8',
+            'changefreq': 'weekly',
+        })
+        
+    # Products
+    products = Product.objects.filter(is_active=True).order_by('-updated_at')
+    for prod in products:
+        lastmod = prod.updated_at.strftime('%Y-%m-%d') if prod.updated_at else ''
+        urls.append({
+            'loc': f"{base_url}/products/{prod.slug}/",
+            'priority': '0.8',
+            'changefreq': 'weekly',
+            'lastmod': lastmod,
+        })
+        
+    xml_lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ]
+    for u in urls:
+        xml_lines.append('  <url>')
+        xml_lines.append(f"    <loc>{u['loc']}</loc>")
+        if 'lastmod' in u and u['lastmod']:
+            xml_lines.append(f"    <lastmod>{u['lastmod']}</lastmod>")
+        xml_lines.append(f"    <changefreq>{u['changefreq']}</changefreq>")
+        xml_lines.append(f"    <priority>{u['priority']}</priority>")
+        xml_lines.append('  </url>')
+    xml_lines.append('</urlset>')
+    
+    return HttpResponse('\n'.join(xml_lines), content_type="application/xml; charset=utf-8")
+
+
+def llms_txt(request):
+    """ملف llms.txt المعياري لتسهيل فهم محركات الذكاء الاصطناعي (GEO / AI Overviews) لكتالوج المتجر"""
+    settings = StoreSettings.get_settings()
+    base_url = request.build_absolute_uri('/')[:-1]
+    
+    content = f"""# {settings.store_name} — Luxury Boutique Knowledge File (llms.txt)
+
+> {settings.store_tagline or 'بوتيك الفخامة الأول للعطور العالمية، الساعات الراقية، ومستحضرات التجميل الأصلية والماستر كواليتي.'}
+
+## Overview
+- **Brand Name**: {settings.store_name}
+- **Website**: {base_url}/
+- **Main Catalog**: {base_url}/products/
+- **Categories**:
+  - Perfumes ({base_url}/perfumes/): عطور النخبة العالمية (أصلية 100% وإصدارات ماستر كواليتي طبق الأصل).
+  - Luxury Watches ({base_url}/watches/): ساعات راقية رجالية ونسائية بحركات أوتوماتيكية ومحركات كوارتز.
+  - Cosmetics & Care ({base_url}/cosmetics/): مستحضرات تجميل فاخرة وسيرومات العناية الفائقة بالبشرة.
+- **Accepted Currencies**: الريال السعودي (SAR) والريال اليمني (YER).
+- **Payment Methods**: تحويل مصرفي مباشر (الكريمي، التضامن، المحافظ الإلكترونية، ومصرف الراجحي للمغتربين بالسعودي) والدفع عند الاستلام.
+- **Delivery Coverage**: توصيل سريع معتمد لكافة المحافظات والمدن اليمنية.
+- **Customer Support**: WhatsApp: {settings.contact_whatsapp or 'متوفر'} | Phone: {settings.contact_phone or 'متوفر'}
+"""
+    return HttpResponse(content.strip(), content_type="text/plain; charset=utf-8")
+
 

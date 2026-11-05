@@ -2,21 +2,22 @@
 
 {% block title %}ساعات اليد للرجال والنساء | {{ store_settings.store_name }}{% endblock %}
 
+{% block meta_description %}اكتشف تشكيلة الساعات الراقية للرجال والنساء بمحركات أوتوماتيكية ومحركات كوارتز فائقة الدقة بتصاميم كلاسيكية وعصرية من Brand Veloura.{% endblock %}
+{% block canonical %}{{ request.scheme }}://{{ request.get_host }}{% url 'store:watches_catalog' %}{% endblock %}
+{% block og_title %}ساعات فاخرة رجالية ونسائية | {{ store_settings.store_name }}{% endblock %}
+{% block og_description %}ساعات راقية بتصاميم استثنائية وأعلى معايير الدقة والأناقة.{% endblock %}
+
 {% block content %}
 
 <!-- Watches Hero Header -->
 <section class="bg-gradient-to-b from-slate-100/60 via-rose-50/20 to-white py-6 sm:py-8 border-b border-rose-200/70">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="max-w-2xl">
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 text-white text-[10px] font-bold shadow-2xs mb-2">
-                <i data-lucide="watch" class="w-3 h-3 text-rose-300"></i>
-                <span>تشكيلة الساعات 2026</span>
-            </span>
-            <h1 class="text-2xl sm:text-3xl font-serif font-bold text-slate-900 leading-tight">
-                ساعات اليد السويسرية واليابانية
+        <div>
+            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
+                الساعات
             </h1>
-            <p class="text-xs text-slate-500 mt-1.5 leading-relaxed font-light">
-                إصدارات مختارة بعناية من الفولاذ المقاوم للصدأ والزجاج الياقوتي المضاد للخدش مع مقاومة الماء وضمان الجودة.
+            <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                ساعات رجالية ونسائية مع تفاصيل المواصفات ومقاومة الماء.
             </p>
         </div>
     </div>

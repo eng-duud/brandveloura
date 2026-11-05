@@ -2,6 +2,84 @@
 
 {% block title %}{{ product.name_ar }} | {{ product.brand_name }} — {{ store_settings.store_name }}{% endblock %}
 
+{% block meta_description %}{{ product.name_ar }} من {{ product.brand_name }}. {{ product.description|striptags|truncatewords:25 }}{% endblock %}
+{% block og_type %}product{% endblock %}
+{% block og_title %}{{ product.name_ar }} | {{ product.brand_name }} — {{ store_settings.store_name }}{% endblock %}
+{% block og_description %}{{ product.description|striptags|truncatewords:25 }}{% endblock %}
+{% block og_image %}{{ product.primary_image_url }}{% endblock %}
+{% block canonical %}{{ request.scheme }}://{{ request.get_host }}{% url 'store:product_detail' slug=product.slug %}{% endblock %}
+
+{% block extra_head %}
+<!-- Product Schema.org JSON-LD -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "{{ product.name_ar|escapejs }}",
+  {% if product.name_en %}"alternateName": "{{ product.name_en|escapejs }}",{% endif %}
+  "image": [
+    "{{ product.primary_image_url }}"
+  ],
+  "description": "{{ product.description|striptags|escapejs|default:product.name_ar }}",
+  "sku": "VEL-{{ product.id }}",
+  "brand": {
+    "@type": "Brand",
+    "name": "{{ product.brand_name|default:'Brand Veloura'|escapejs }}"
+  },
+  "offers": {
+    "@type": "Offer",
+    "url": "{{ request.scheme }}://{{ request.get_host }}{% url 'store:product_detail' slug=product.slug %}",
+    "priceCurrency": "SAR",
+    "price": "{{ product.price_sar }}",
+    "priceValidUntil": "2027-12-31",
+    "itemCondition": "https://schema.org/NewCondition",
+    "availability": "{% if product.stock_quantity > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}",
+    "seller": {
+      "@type": "Organization",
+      "name": "{{ store_settings.store_name|default:'Brand Veloura'|escapejs }}"
+    }
+  }
+}
+</script>
+
+<!-- BreadcrumbList Schema.org JSON-LD -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "الرئيسية",
+      "item": "{{ request.scheme }}://{{ request.get_host }}/"
+    }
+    {% if product.category %}
+    ,{
+      "@type": "ListItem",
+      "position": 2,
+      "name": "{{ product.category.name_ar|escapejs }}",
+      "item": "{{ request.scheme }}://{{ request.get_host }}/products/?category={{ product.category.slug }}"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "{{ product.name_ar|escapejs }}",
+      "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'store:product_detail' slug=product.slug %}"
+    }
+    {% else %}
+    ,{
+      "@type": "ListItem",
+      "position": 2,
+      "name": "{{ product.name_ar|escapejs }}",
+      "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'store:product_detail' slug=product.slug %}"
+    }
+    {% endif %}
+  ]
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <!-- Breadcrumbs Navigation -->
 <div class="bg-rose-50/40 py-2.5 sm:py-3 border-b border-rose-100/70">
@@ -150,56 +228,46 @@
 
             <!-- Perfume Quality Grade Selector (Only if product.has_grades) -->
             {% if product.has_grades %}
-            <div class="p-4 rounded-2xl bg-gradient-to-br from-rose-50/60 to-white border border-rose-200/80 shadow-2xs space-y-2.5">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-brand-600"></i>
-                        <span>اختر درجة العطر المطلوبة:</span>
-                    </span>
-                    <span class="text-[10px] font-bold text-brand-700 bg-rose-100/70 px-2 py-0.5 rounded-full">نفس الزجاجة والرائحة</span>
-                </div>
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                <span class="text-xs font-bold text-slate-800 block">النوع:</span>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5" id="grade-selector-container">
-                    <!-- Grade 1: الأصلي 100% -->
+                <div class="grid grid-cols-2 gap-2" id="grade-selector-container">
+                    <!-- Grade 1: أصلي -->
                     {% if product.price_original_yer %}
                     <div 
                         id="grade-card-original" 
                         onclick="setProductGrade('original', {{ product.price_original_yer }}, {{ product.price_original_sar }})"
-                        class="grade-card p-3 rounded-xl border-2 border-brand-600 bg-white shadow-2xs cursor-pointer transition-all duration-150 relative"
+                        class="grade-card p-2.5 rounded-lg border-2 border-slate-900 bg-white cursor-pointer transition relative"
                     >
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
-                                <span id="radio-dot-original" class="w-2.5 h-2.5 rounded-full bg-brand-600"></span>
-                                <span>الأصلي (وكالة 100%)</span>
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                                <span id="radio-dot-original" class="w-2 h-2 rounded-full bg-slate-900"></span>
+                                <span>أصلي</span>
                             </span>
-                            <span class="px-1.5 py-0.2 rounded bg-brand-50 text-brand-700 text-[9px] font-bold border border-brand-200/60">ضمان وكيل</span>
                         </div>
-                        <div class="flex items-baseline gap-1 mt-0.5">
-                            <span class="text-sm font-black text-slate-950 font-num">{{ product.price_original_yer|floatformat:0 }}</span>
-                            <span class="text-[10px] font-bold text-slate-500">ر.ي</span>
-                            <span class="text-[10px] text-brand-700 font-bold mr-1.5 font-num">({{ product.price_original_sar }} ر.س)</span>
+                        <div class="flex items-baseline gap-1 mt-1">
+                            <span class="text-sm font-bold text-slate-900 font-num">{{ product.price_original_yer|floatformat:0 }}</span>
+                            <span class="text-[10px] text-slate-500">ر.ي</span>
                         </div>
                     </div>
                     {% endif %}
 
-                    <!-- Grade 2: ماستر طبق الأصل -->
+                    <!-- Grade 2: ماستر -->
                     {% if product.price_master_yer %}
                     <div 
                         id="grade-card-master" 
                         onclick="setProductGrade('master', {{ product.price_master_yer }}, {{ product.price_master_sar }})"
-                        class="grade-card p-3 rounded-xl border-2 border-rose-200/80 bg-white/70 shadow-2xs cursor-pointer transition-all duration-150 hover:border-brand-400 relative"
+                        class="grade-card p-2.5 rounded-lg border-2 border-slate-200 bg-white cursor-pointer transition hover:border-slate-400 relative"
                     >
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
-                                <span id="radio-dot-master" class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
-                                <span>ماستر (طبق الأصل)</span>
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                                <span id="radio-dot-master" class="w-2 h-2 rounded-full bg-slate-300"></span>
+                                <span>ماستر</span>
                             </span>
-                            <span class="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 text-[9px] font-bold border border-emerald-200/60">خيار اقتصادي</span>
                         </div>
-                        <div class="flex items-baseline gap-1 mt-0.5">
-                            <span class="text-sm font-black text-slate-950 font-num">{{ product.price_master_yer|floatformat:0 }}</span>
-                            <span class="text-[10px] font-bold text-slate-500">ر.ي</span>
-                            <span class="text-[10px] text-brand-700 font-bold mr-1.5 font-num">({{ product.price_master_sar }} ر.س)</span>
+                        <div class="flex items-baseline gap-1 mt-1">
+                            <span class="text-sm font-bold text-slate-900 font-num">{{ product.price_master_yer|floatformat:0 }}</span>
+                            <span class="text-[10px] text-slate-500">ر.ي</span>
                         </div>
                     </div>
                     {% endif %}
@@ -241,58 +309,56 @@
                     {% endif %}
                 </div>
 
-                <!-- WhatsApp Direct Order & Consultation Link -->
+                <!-- WhatsApp Direct Order Link -->
                 <a 
                     id="whatsapp-inquiry-btn"
-                    href="https://wa.me/{{ store_settings.contact_whatsapp }}?text=مرحباً، أود الاستفسار عن {{ product.name_ar }}{% if product.has_grades %} (النسخة الأصلية){% endif %}" 
+                    href="https://wa.me/{{ store_settings.contact_whatsapp }}?text=مرحباً، أود الطلب: {{ product.name_ar }}" 
                     target="_blank"
-                    class="w-full py-2.5 px-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                    class="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer"
                 >
                     <i data-lucide="message-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
-                    <span>طلب مباشر أو استشارة عبر واتساب</span>
+                    <span>طلب عبر واتساب</span>
                 </a>
             </form>
 
-            <!-- =============================================================== -->
-            <!-- 3. Compact Progressive Disclosure Accordion / Tabs              -->
-            <!-- =============================================================== -->
+            <!-- Compact Product Information -->
             <div class="pt-2 space-y-2 text-xs">
                 
-                <!-- Section A: Product Description & Notes -->
-                <details class="group rounded-2xl bg-white border border-rose-100/90 shadow-2xs overflow-hidden" open>
-                    <summary class="flex items-center justify-between p-3.5 font-bold text-slate-900 cursor-pointer select-none hover:text-brand-600 transition">
+                <!-- Section A: Description -->
+                <details class="group rounded-xl bg-white border border-slate-200 overflow-hidden" open>
+                    <summary class="flex items-center justify-between p-3 font-bold text-slate-900 cursor-pointer select-none">
                         <span class="flex items-center gap-2">
-                            <i data-lucide="file-text" class="w-4 h-4 text-brand-600"></i>
-                            <span>تفاصيل ووصف المنتج</span>
+                            <i data-lucide="file-text" class="w-4 h-4 text-slate-600"></i>
+                            <span>الوصف والمواصفات</span>
                         </span>
-                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform duration-200"></i>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform"></i>
                     </summary>
-                    <div class="px-4 pb-4 pt-1 border-t border-rose-50 text-slate-600 leading-relaxed font-light space-y-3">
+                    <div class="px-3.5 pb-3.5 pt-1 border-t border-slate-100 text-slate-600 leading-relaxed space-y-2.5">
                         {% if product.description %}
                         <p class="whitespace-pre-line">{{ product.description }}</p>
                         {% else %}
-                        <p>عطر فاخر أصلي من أرقى التشكيلات العالمية بتركيز وثبات يدوم طويلاً.</p>
+                        <p>عطر أصلي مطابق للمواصفات المعلنة.</p>
                         {% endif %}
 
                         <!-- Specifications Grid if present -->
                         {% if product.specifications %}
-                        <div class="pt-2 grid grid-cols-2 gap-2 text-[11px]">
+                        <div class="pt-1.5 grid grid-cols-2 gap-2 text-[11px]">
                             {% if product.specifications.concentration %}
-                            <div class="p-2.5 rounded-xl bg-rose-50/50 border border-rose-100">
-                                <span class="text-slate-400 block text-[10px] font-medium">التركيز</span>
+                            <div class="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                                <span class="text-slate-400 block text-[10px]">التركيز</span>
                                 <span class="font-bold text-slate-800">{{ product.specifications.concentration }}</span>
                             </div>
                             {% endif %}
                             {% if product.specifications.volume_ml %}
-                            <div class="p-2.5 rounded-xl bg-rose-50/50 border border-rose-100">
-                                <span class="text-slate-400 block text-[10px] font-medium">الحجم</span>
+                            <div class="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                                <span class="text-slate-400 block text-[10px]">الحجم</span>
                                 <span class="font-bold text-slate-800 font-num">{{ product.specifications.volume_ml }} مل</span>
                             </div>
                             {% endif %}
                             {% if product.specifications.top_notes %}
-                            <div class="col-span-2 p-2.5 rounded-xl bg-rose-50/50 border border-rose-100">
-                                <span class="text-slate-400 block text-[10px] font-medium">الهرم العطري</span>
-                                <span class="font-medium text-slate-700">{{ product.specifications.top_notes|join:"، " }}</span>
+                            <div class="col-span-2 p-2 rounded-lg bg-slate-50 border border-slate-100">
+                                <span class="text-slate-400 block text-[10px]">المكونات العطرية</span>
+                                <span class="text-slate-700">{{ product.specifications.top_notes|join:"، " }}</span>
                             </div>
                             {% endif %}
                         </div>
@@ -301,33 +367,32 @@
                 </details>
 
                 <!-- Section B: Delivery & Shipping Policy -->
-                <details class="group rounded-2xl bg-white border border-rose-100/90 shadow-2xs overflow-hidden">
-                    <summary class="flex items-center justify-between p-3.5 font-bold text-slate-900 cursor-pointer select-none hover:text-brand-600 transition">
+                <details class="group rounded-xl bg-white border border-slate-200 overflow-hidden">
+                    <summary class="flex items-center justify-between p-3 font-bold text-slate-900 cursor-pointer select-none">
                         <span class="flex items-center gap-2">
-                            <i data-lucide="truck" class="w-4 h-4 text-brand-600"></i>
-                            <span>التوصيل والشحن لكافة المحافظات</span>
+                            <i data-lucide="truck" class="w-4 h-4 text-slate-600"></i>
+                            <span>الشحن والتوصيل</span>
                         </span>
-                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform duration-200"></i>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform"></i>
                     </summary>
-                    <div class="px-4 pb-4 pt-1 border-t border-rose-50 text-slate-600 leading-relaxed font-light text-[11px] space-y-1.5">
-                        <p>• <strong>صنعاء:</strong> توصيل سريع لباب المنزل خلال 24 ساعة مع إمكانية الدفع عند الاستلام.</p>
-                        <p>• <strong>بقية المحافظات (عدن، تعز، إب، حضرموت، الحديدة):</strong> شحن مؤمن عبر مكاتب النقل المعتمدة خلال 24-48 ساعة.</p>
-                        <p>• تغليف محكم وفاخر يضمن وصول العطر بأمان تام.</p>
+                    <div class="px-3.5 pb-3.5 pt-1 border-t border-slate-100 text-slate-600 leading-relaxed text-[11px] space-y-1">
+                        <p>• التوصيل متوفر لكافة المحافظات اليمنية.</p>
+                        <p>• التوصيل في صنعاء خلال 24 ساعة، وبقية المحافظات خلال 24-48 ساعة.</p>
                     </div>
                 </details>
 
-                <!-- Section C: Authenticity & Guarantees -->
-                <details class="group rounded-2xl bg-white border border-rose-100/90 shadow-2xs overflow-hidden">
-                    <summary class="flex items-center justify-between p-3.5 font-bold text-slate-900 cursor-pointer select-none hover:text-brand-600 transition">
+                <!-- Section C: Guarantees -->
+                <details class="group rounded-xl bg-white border border-slate-200 overflow-hidden">
+                    <summary class="flex items-center justify-between p-3 font-bold text-slate-900 cursor-pointer select-none">
                         <span class="flex items-center gap-2">
-                            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
-                            <span>الضمان وسياسة الاستبدال</span>
+                            <i data-lucide="check-circle" class="w-4 h-4 text-slate-600"></i>
+                            <span>الضمان والاستبدال</span>
                         </span>
-                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform duration-200"></i>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform"></i>
                     </summary>
-                    <div class="px-4 pb-4 pt-1 border-t border-rose-50 text-slate-600 leading-relaxed font-light text-[11px] space-y-1.5">
-                        <p>• نضمن مطابقة كافة المنتجات للمواصفات المعلنة 100%.</p>
-                        <p>• يحق للعميل فحص الشحنة ومطابقتها فور استلامها من المندوب.</p>
+                    <div class="px-3.5 pb-3.5 pt-1 border-t border-slate-100 text-slate-600 leading-relaxed text-[11px] space-y-1">
+                        <p>• ضمان مطابقة المنتج للمواصفات المعلنة.</p>
+                        <p>• يحق للعميل فحص المنتج فور الاستلام.</p>
                     </div>
                 </details>
 
@@ -337,9 +402,9 @@
 
     <!-- Related Products Carousel -->
     {% if related_products %}
-    <div class="mt-12 sm:mt-16 pt-8 border-t border-rose-100/80">
-        <div class="flex items-center justify-between mb-5">
-            <h3 class="text-lg sm:text-2xl font-serif font-bold text-slate-900">منتجات مشابهة قد تناسب ذوقكم</h3>
+    <div class="mt-12 sm:mt-16 pt-8 border-t border-slate-200">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base sm:text-lg font-bold text-slate-900">منتجات مشابهة</h3>
             {% if product.category %}
             <a href="{% url 'store:product_list' %}?category={{ product.category.slug }}" class="text-xs font-bold text-brand-600 hover:underline">عرض المزيد ←</a>
             {% endif %}

@@ -4,6 +4,11 @@
     {% if current_category %}{{ current_category.name_ar }} | {% endif %}تشكيلة المنتجات — {{ store_settings.store_name }}
 {% endblock %}
 
+{% block meta_description %}{% if current_category %}تصفح تشكيلة {{ current_category.name_ar }} في {{ store_settings.store_name }}. عطور، ساعات، ومستحضرات تجميل أصلية مع توصيل سريع.{% else %}تصفح كافة منتجات Brand Veloura: عطور النخبة، الساعات الفاخرة، ومستحضرات التجميل الأصلية بأسعار معلنة بالريال السعودي واليمني.{% endif %}{% endblock %}
+{% block canonical %}{{ request.scheme }}://{{ request.get_host }}{% url 'store:product_list' %}{% if current_category %}?category={{ current_category.slug }}{% endif %}{% endblock %}
+{% block og_title %}{% if current_category %}{{ current_category.name_ar }} — {{ store_settings.store_name }}{% else %}كتالوج منتجات Brand Veloura{% endif %}{% endblock %}
+{% block og_description %}تسوق الفخامة مع أرقى العطور والساعات ومستحضرات العناية والتجميل.{% endblock %}
+
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
     

@@ -21,7 +21,7 @@ class Command(BaseCommand):
         settings.contact_phone = '+967 770 123 456'
         settings.contact_whatsapp = '967770123456'
         settings.contact_instagram = 'brandveloura.ye'
-        settings.announcement_text = '✨ تشكيلة 2026 الحصرية — عطور وساعات أصلية 100% مع شحن سريع لكافة محافظات اليمن والدفع بالريال اليمني والسعودي'
+        settings.announcement_text = 'توصيل لكافة المحافظات — الدفع بالريال اليمني والسعودي'
         settings.is_announcement_active = True
         settings.save()
         self.stdout.write(self.style.SUCCESS('[OK] Store settings and exchange rate updated (1 SAR = 530 YER)'))
@@ -190,6 +190,15 @@ class Command(BaseCommand):
                 'description': 'سيرومات وكريمات مغذية للبشرة تمنحك إشراقة ونضارة طبيعية.',
                 'image_url_fallback': 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=800&q=80',
                 'display_order': 4,
+            },
+            {
+                'name_ar': 'باقات الهدايا والمناسبات',
+                'name_en': 'Gift Bundles & Sets',
+                'slug': 'bundles',
+                'category_type': 'bundles',
+                'description': 'صناديق وباقات هدايا ملكية متكاملة للأعراس والتخرج والمناسبات الخاصة.',
+                'image_url_fallback': 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=800&q=80',
+                'display_order': 5,
             },
         ]
 
@@ -431,6 +440,45 @@ class Command(BaseCommand):
                     'volume_or_weight': '6 مل',
                 },
                 'image': 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=800&q=80',
+            },
+            # باقات الهدايا (Bundles)
+            {
+                'category': cat_objects['bundles'],
+                'name_ar': 'باقة إهداء رجالية (عطر سوفاج + ساعة كلاسيكية)',
+                'name_en': 'Men Gift Set (Sauvage + Classic Watch)',
+                'slug': 'men-gift-set-sauvage',
+                'brand_name': 'Brand Veloura',
+                'description': 'باقة إهداء منسقة تشمل عطر ديور سوفاج إكسير مع ساعة ستيل، مع التغليف وبطاقة إهداء.',
+                'price_yer': Decimal('115000.00'),
+                'compare_at_price_yer': Decimal('145000.00'),
+                'has_grades': False,
+                'stock_quantity': 10,
+                'is_featured': True,
+                'is_best_seller': True,
+                'specifications': {
+                    'box_content': 'عطر سوفاج 60 مل + ساعة ستانلس ستيل + بطاقة إهداء',
+                    'wrapping_style': 'صندوق هدايا مع شريط وبطاقة',
+                },
+                'image': 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=800&q=80',
+            },
+            {
+                'category': cat_objects['bundles'],
+                'name_ar': 'باقة إهداء نسائية (شانيل كوكو + مسك)',
+                'name_en': 'Women Gift Set (Chanel + Musk)',
+                'slug': 'women-gift-set-chanel',
+                'brand_name': 'Brand Veloura',
+                'description': 'باقة إهداء نسائية تشمل عطر كوكو مادموزيل من شانيل مع تولة مسك ومرطب ديور مع التغليف وبطاقة إهداء.',
+                'price_yer': Decimal('128000.00'),
+                'compare_at_price_yer': Decimal('160000.00'),
+                'has_grades': False,
+                'stock_quantity': 8,
+                'is_featured': True,
+                'is_best_seller': True,
+                'specifications': {
+                    'box_content': 'عطر كوكو شانيل 100 مل + تولة مسك + مرطب ديور',
+                    'wrapping_style': 'صندوق هدايا مع شريط وبطاقة',
+                },
+                'image': 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80',
             },
         ]
 

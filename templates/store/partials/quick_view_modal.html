@@ -5,7 +5,7 @@
     <div class="flex items-center justify-between pb-3 mb-3 border-b border-rose-100">
         <div class="flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
-            <span class="text-xs font-bold text-brand-700 tracking-wider">تفاصيل ومعاينة المنتج</span>
+            <span class="text-xs font-bold text-slate-800 tracking-wider">معاينة المنتج</span>
             {% if product.has_grades %}
             <span class="px-2 py-0.5 rounded-full bg-slate-900 text-white text-[9px] font-bold">أصلي & ماستر</span>
             {% endif %}
@@ -52,7 +52,7 @@
                 class="p-2.5 rounded-xl bg-rose-50/40 border border-rose-100 flex items-center justify-around text-center text-[10px] text-slate-600 font-semibold">
                 <div class="flex items-center gap-1.5">
                     <i data-lucide="shield-check" class="w-3.5 h-3.5 text-brand-600"></i>
-                    <span>أصالة معتمدة 100%</span>
+                    <span>منتجات أصلية</span>
                 </div>
                 <div class="text-rose-200">•</div>
                 <div class="flex items-center gap-1.5">
@@ -104,8 +104,7 @@
                         <span class="text-[10px] font-bold text-slate-500">ر.ي</span>
                     </div>
                 </div>
-                <div class="mt-1.5 text-[9px] text-slate-400 font-light flex items-center justify-between">
-                    <span>(سعر الصرف: 1 ر.س = {{ yer_per_sar }} ر.ي)</span>
+                <div class="mt-1.5 text-[9px] text-slate-400 font-light flex items-center justify-end">
                     {% if product.stock_quantity <= 0 %}
                     <span class="text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">نفد من المخزون</span>
                     {% else %}
@@ -120,9 +119,8 @@
                 <div class="flex items-center justify-between">
                     <span class="text-[11px] font-bold text-slate-800 flex items-center gap-1">
                         <i data-lucide="award" class="w-3.5 h-3.5 text-brand-600"></i>
-                        <span>اختر درجة العطر:</span>
+                        <span>اختر الدرجة:</span>
                     </span>
-                    <span class="text-[9px] text-brand-700 font-bold">تطابق الرائحة والشكل</span>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2">
@@ -132,7 +130,7 @@
                         onclick="setModalGrade('master', {{ product.price_master_yer }}, {{ product.price_master_sar }})"
                         class="p-2 rounded-xl border-2 border-brand-600 bg-white shadow-2xs cursor-pointer transition text-right">
                         <div class="flex items-center justify-between mb-0.5">
-                            <span class="text-xs font-bold text-slate-900">ماستر (طبق الأصل)</span>
+                            <span class="text-xs font-bold text-slate-900">ماستر</span>
                             <span class="w-2 h-2 rounded-full bg-brand-600" id="modal-dot-master"></span>
                         </div>
                         <div class="text-[11px] font-black text-brand-700 font-num">
@@ -143,13 +141,13 @@
                     </div>
                     {% endif %}
 
-                    <!-- Grade 2: أصلي 100% -->
+                    <!-- Grade 2: أصلي -->
                     {% if product.price_original_yer %}
                     <div id="modal-grade-original"
                         onclick="setModalGrade('original', {{ product.price_original_yer }}, {{ product.price_original_sar }})"
                         class="p-2 rounded-xl border-2 border-rose-200 bg-white/70 shadow-2xs cursor-pointer transition text-right hover:border-brand-400">
                         <div class="flex items-center justify-between mb-0.5">
-                            <span class="text-xs font-bold text-slate-900">أصلي 100%</span>
+                            <span class="text-xs font-bold text-slate-900">أصلي</span>
                             <span class="w-2 h-2 rounded-full bg-slate-300" id="modal-dot-original"></span>
                         </div>
                         <div class="text-[11px] font-black text-slate-900 font-num">
@@ -249,11 +247,11 @@
 
                 <!-- WhatsApp Direct Order -->
                 <a id="modal-whatsapp-btn"
-                    href="https://wa.me/{{ store_settings.contact_whatsapp }}?text=مرحباً، أود طلب {{ product.name_ar }}{% if product.has_grades %} (ماستر طبق الأصل){% endif %} بسعر {% if product.has_grades and product.price_master_sar %}{{ product.price_master_sar }}{% else %}{{ product.price_sar }}{% endif %} ر.س"
+                    href="https://wa.me/{{ store_settings.contact_whatsapp }}?text=مرحباً، أود طلب {{ product.name_ar }}{% if product.has_grades %} (ماستر){% endif %} بسعر {% if product.has_grades and product.price_master_sar %}{{ product.price_master_sar }}{% else %}{{ product.price_sar }}{% endif %} ر.س"
                     target="_blank"
                     class="w-full py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer h-9">
                     <i data-lucide="message-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
-                    <span>طلب مباشر عبر واتساب</span>
+                    <span>طلب عبر واتساب</span>
                 </a>
             </form>
 
@@ -292,7 +290,7 @@
             if (dotOriginal) dotOriginal.className = "w-2 h-2 rounded-full bg-slate-300";
 
             if (whatsappBtn) {
-                const msg = encodeURIComponent(`مرحباً، أود طلب ${prodName} (ماستر طبق الأصل) بسعر ${priceSar} ر.س (${Number(priceYer).toLocaleString()} ر.ي)`);
+                const msg = encodeURIComponent(`مرحباً، أود طلب ${prodName} (ماستر) بسعر ${priceSar} ر.س (${Number(priceYer).toLocaleString()} ر.ي)`);
                 whatsappBtn.href = `https://wa.me/${phone}?text=${msg}`;
             }
         } else {
@@ -306,7 +304,7 @@
             if (dotMaster) dotMaster.className = "w-2 h-2 rounded-full bg-slate-300";
 
             if (whatsappBtn) {
-                const msg = encodeURIComponent(`مرحباً، أود طلب ${prodName} (الأصلي 100%) بسعر ${priceSar} ر.س (${Number(priceYer).toLocaleString()} ر.ي)`);
+                const msg = encodeURIComponent(`مرحباً، أود طلب ${prodName} (أصلي) بسعر ${priceSar} ر.س (${Number(priceYer).toLocaleString()} ر.ي)`);
                 whatsappBtn.href = `https://wa.me/${phone}?text=${msg}`;
             }
         }

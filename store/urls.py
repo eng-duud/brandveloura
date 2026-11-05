@@ -10,6 +10,8 @@ urlpatterns = [
     path('perfumes/', views.perfumes_catalog_view, name='perfumes_catalog'),
     path('watches/', views.watches_catalog_view, name='watches_catalog'),
     path('cosmetics/', views.cosmetics_catalog_view, name='cosmetics_catalog'),
+    path('gifting/', views.gift_builder_view, name='gift_builder'),
+    path('gifting/calculate/', views.gift_calculate_live, name='gift_calculate'),
     path('products/<slug:slug>/', views.product_detail_view, name='product_detail'),
     path('products/<slug:slug>/modal/', views.product_quick_view, name='product_modal'),
     
@@ -46,5 +48,10 @@ urlpatterns = [
     # تطبيق الويب التقدمي (PWA)
     path('manifest.json', views.pwa_manifest, name='pwa_manifest'),
     path('sw.js', views.service_worker, name='service_worker'),
+
+    # مسارات الفهرسة والذكاء الاصطناعي (SEO / GEO / AI Overviews)
+    path('robots.txt', views.robots_txt, name='robots_txt'),
+    path('sitemap.xml', views.sitemap_xml, name='sitemap_xml'),
+    path('llms.txt', views.llms_txt, name='llms_txt'),
 ]
 

@@ -4,8 +4,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>{% block title %}{{ store_settings.store_name }} | بوتيك الفخامة الأول للعطور والساعات والتجميل{% endblock %}</title>
-    <meta name="description" content="{{ store_settings.store_tagline }}">
+    <title>{% block title %}{{ store_settings.store_name }}{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}{{ store_settings.store_name }} — متجر العطور والساعات ومستحضرات التجميل{% endblock %}">
+    <meta name="keywords" content="{% block meta_keywords %}عطور أصلية, عطور ماستر كواليتي, ساعات فاخرة, مستحضرات تجميل, عناية بالبشرة, Brand Veloura, بوتيك فيلورا, عطور اليمن, شراء عطور اونلاين{% endblock %}">
+    <meta name="robots" content="{% block robots %}index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1{% endblock %}">
+    
+    <!-- Canonical Link -->
+    <link rel="canonical" href="{% block canonical %}{{ request.build_absolute_uri }}{% endblock %}">
+
+    <!-- Open Graph / Social Sharing (WhatsApp, Facebook, Telegram) -->
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <meta property="og:site_name" content="{{ store_settings.store_name }}">
+    <meta property="og:title" content="{% block og_title %}{{ store_settings.store_name }} | بوتيك الفخامة الأول{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ store_settings.store_tagline|default:'بوتيك الفخامة الأول للعطور والساعات ومستحضرات التجميل الأصلية' }}{% endblock %}">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/logo.jpg' %}{% endblock %}">
+    <meta property="og:locale" content="ar_YE">
+
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}{{ store_settings.store_name }}{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}{{ store_settings.store_tagline|default:'بوتيك الفخامة الأول للعطور والساعات ومستحضرات التجميل' }}{% endblock %}">
+    <meta name="twitter:image" content="{% block twitter_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/logo.jpg' %}{% endblock %}">
+
+    <!-- Global Schema.org Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": ["Store", "Organization"],
+          "@id": "{{ request.scheme }}://{{ request.get_host }}/#store",
+          "name": "{{ store_settings.store_name|default:'Brand Veloura' }}",
+          "url": "{{ request.scheme }}://{{ request.get_host }}/",
+          "logo": "{{ request.scheme }}://{{ request.get_host }}{% static 'images/logo.jpg' %}",
+          "image": "{{ request.scheme }}://{{ request.get_host }}{% static 'images/logo.jpg' %}",
+          "description": "{{ store_settings.store_tagline|default:'بوتيك الفخامة الأول للعطور العالمية الأصلية والماستر والساعات الراقية ومستحضرات التجميل'|escapejs }}",
+          "telephone": "{{ store_settings.contact_phone|default:'+967770000000' }}",
+          "priceRange": "$$$",
+          "currenciesAccepted": "SAR, YER",
+          "paymentAccepted": "Bank Transfer, Cash on Delivery, Electronic Wallets",
+          "areaServed": "YE, SA"
+        },
+        {
+          "@type": "WebSite",
+          "@id": "{{ request.scheme }}://{{ request.get_host }}/#website",
+          "url": "{{ request.scheme }}://{{ request.get_host }}/",
+          "name": "{{ store_settings.store_name|default:'Brand Veloura' }}",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "{{ request.scheme }}://{{ request.get_host }}/products/?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
+    }
+    </script>
     
     <!-- PWA Settings -->
     <link rel="manifest" href="/manifest.json">
@@ -189,18 +246,10 @@
         </div>
     </div>
 
-    <!-- Top Announcement Bar (Sleek & Proportional) -->
+    <!-- Top Announcement Bar -->
     {% if store_settings.is_announcement_active and store_settings.announcement_text %}
-    <div class="bg-gradient-to-r from-rose-50 via-white to-rose-50 border-b border-rose-100/70 text-brand-900 py-1.5 px-4 text-center text-xs font-medium flex items-center justify-center gap-2.5 shadow-2xs">
-        <span class="inline-flex items-center gap-1.5 text-brand-700 font-bold">
-            <i data-lucide="sparkles" class="w-3 h-3 text-brand-500 animate-pulse"></i>
-            <span>{{ store_settings.announcement_text }}</span>
-        </span>
-        <span class="hidden sm:inline text-rose-300">•</span>
-        <span class="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 bg-white/90 px-2 py-0.5 rounded-full border border-rose-200/70 shadow-2xs">
-            <i data-lucide="calculator" class="w-3 h-3 text-brand-600"></i>
-            <span>1 ر.س = {{ yer_per_sar }} ر.ي</span>
-        </span>
+    <div class="bg-slate-900 text-white py-1.5 px-4 text-center text-xs font-medium flex items-center justify-center">
+        <span>{{ store_settings.announcement_text }}</span>
     </div>
     {% endif %}
 
@@ -366,24 +415,24 @@
             </div>
 
             <!-- Category Navigation Links (Desktop) -->
-            <nav class="hidden md:flex items-center justify-center gap-10 py-3 border-t border-rose-100/60 text-xs font-bold tracking-wide">
-                <a href="{% url 'store:home' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if request.path == '/' %}text-brand-600 border-b-2 border-brand-600 pb-1{% else %}text-slate-600 hover:text-brand-600{% endif %}">
+            <nav class="hidden md:flex items-center justify-center gap-10 py-3 border-t border-slate-100 text-xs font-bold tracking-wide">
+                <a href="{% url 'store:home' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if request.path == '/' %}text-slate-900 border-b-2 border-slate-900 pb-1{% else %}text-slate-600 hover:text-slate-900{% endif %}">
                     <span>الرئيسية</span>
                 </a>
-                <a href="{% url 'store:perfumes_catalog' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'perfumes' in request.path %}text-brand-600 border-b-2 border-brand-600 pb-1{% else %}text-slate-600 hover:text-brand-600{% endif %}">
-                    <i data-lucide="sparkle" class="w-3.5 h-3.5 text-brand-500"></i>
+                <a href="{% url 'store:perfumes_catalog' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'perfumes' in request.path %}text-slate-900 border-b-2 border-slate-900 pb-1{% else %}text-slate-600 hover:text-slate-900{% endif %}">
                     <span>العطور</span>
                 </a>
-                <a href="{% url 'store:watches_catalog' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'watches' in request.path %}text-brand-600 border-b-2 border-brand-600 pb-1{% else %}text-slate-600 hover:text-brand-600{% endif %}">
-                    <i data-lucide="watch" class="w-3.5 h-3.5 text-brand-500"></i>
+                <a href="{% url 'store:watches_catalog' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'watches' in request.path %}text-slate-900 border-b-2 border-slate-900 pb-1{% else %}text-slate-600 hover:text-slate-900{% endif %}">
                     <span>الساعات</span>
                 </a>
-                <a href="{% url 'store:cosmetics_catalog' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'cosmetics' in request.path %}text-brand-600 border-b-2 border-brand-600 pb-1{% else %}text-slate-600 hover:text-brand-600{% endif %}">
-                    <i data-lucide="heart" class="w-3.5 h-3.5 text-brand-500"></i>
+                <a href="{% url 'store:cosmetics_catalog' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'cosmetics' in request.path %}text-slate-900 border-b-2 border-slate-900 pb-1{% else %}text-slate-600 hover:text-slate-900{% endif %}">
                     <span>مستحضرات التجميل</span>
                 </a>
-                <a href="{% url 'store:product_list' %}" class="text-brand-700 bg-rose-100/70 hover:bg-brand-600 hover:text-white transition py-1 px-3.5 rounded-full cursor-pointer shadow-xs">
-                    تصفح كافة التشكيلات
+                <a href="{% url 'store:gift_builder' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'gifting' in request.path %}text-slate-900 border-b-2 border-slate-900 pb-1{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                    <span>خدمة الإهداء</span>
+                </a>
+                <a href="{% url 'store:product_list' %}" class="text-slate-700 bg-slate-100 hover:bg-slate-900 hover:text-white transition py-1 px-3.5 rounded-full cursor-pointer">
+                    كافة المنتجات
                 </a>
             </nav>
         </div>
@@ -424,11 +473,10 @@
                         <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-10 h-10 rounded-xl object-cover shadow-xs border border-rose-200 shrink-0">
                         <div>
                             <span class="font-brand-logo text-xl text-slate-900 tracking-wide block leading-tight">Brand Veloura</span>
-                            <span class="text-[9px] text-brand-600 font-semibold tracking-wider block uppercase font-sans">Boutique</span>
                         </div>
                     </div>
                     <p class="text-slate-500 text-[11px] leading-relaxed">
-                        بوتيك الفخامة الأول للعطور والساعات ومستلزمات التجميل الأصلية مع توصيل سريع لكافة المحافظات ودعم الدفع للمغتربين.
+                        متجر متخصص في العطور والساعات ومستحضرات التجميل مع الشحن لكافة المحافظات.
                     </p>
                     <div class="flex items-center gap-2 pt-1">
                         <a href="https://wa.me/{{ store_settings.contact_whatsapp }}" target="_blank" class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white flex items-center justify-center transition shadow-2xs cursor-pointer" title="واتساب" aria-label="واتساب">
@@ -453,27 +501,28 @@
                     </h3>
                     <ul class="space-y-2 text-[11px] font-medium text-slate-600">
                         <li>
-                            <a href="{% url 'store:perfumes_catalog' %}" class="hover:text-brand-600 transition flex items-center gap-1.5">
-                                <i data-lucide="sparkle" class="w-3 h-3 text-brand-400"></i>
-                                <span>عطور النخبة (أصلي / ماستر)</span>
+                            <a href="{% url 'store:perfumes_catalog' %}" class="hover:text-slate-900 transition flex items-center gap-1.5">
+                                <span>العطور</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{% url 'store:watches_catalog' %}" class="hover:text-brand-600 transition flex items-center gap-1.5">
-                                <i data-lucide="watch" class="w-3 h-3 text-brand-400"></i>
-                                <span>الساعات الراقية</span>
+                            <a href="{% url 'store:watches_catalog' %}" class="hover:text-slate-900 transition flex items-center gap-1.5">
+                                <span>الساعات</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{% url 'store:cosmetics_catalog' %}" class="hover:text-brand-600 transition flex items-center gap-1.5">
-                                <i data-lucide="heart" class="w-3 h-3 text-brand-400"></i>
-                                <span>مستحضرات التجميل والعناية</span>
+                            <a href="{% url 'store:cosmetics_catalog' %}" class="hover:text-slate-900 transition flex items-center gap-1.5">
+                                <span>مستحضرات التجميل</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{% url 'store:product_list' %}" class="hover:text-brand-600 transition flex items-center gap-1.5">
-                                <i data-lucide="grid" class="w-3 h-3 text-brand-400"></i>
-                                <span>كافة المنتجات المعروضة</span>
+                            <a href="{% url 'store:gift_builder' %}" class="hover:text-slate-900 transition flex items-center gap-1.5">
+                                <span>خدمة الإهداء</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'store:product_list' %}" class="hover:text-slate-900 transition flex items-center gap-1.5">
+                                <span>كافة المنتجات</span>
                             </a>
                         </li>
                     </ul>
@@ -572,7 +621,6 @@
                     <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-9 h-9 rounded-xl object-cover shadow-xs border border-rose-200 shrink-0">
                     <div>
                         <span class="font-brand-logo text-base text-slate-900 tracking-wide block leading-tight">Brand Veloura</span>
-                        <span class="text-[9px] text-brand-600 font-semibold tracking-widest block uppercase font-sans">Boutique</span>
                     </div>
                 </div>
                 <button type="button" onclick="closeMobileSidebar()" class="w-8 h-8 rounded-full bg-rose-50 hover:bg-rose-100 text-slate-500 hover:text-brand-600 flex items-center justify-center transition cursor-pointer" aria-label="إغلاق">
@@ -587,7 +635,7 @@
                     <input 
                         type="text" 
                         name="q" 
-                        placeholder="ابحث عن عطر، ماركة، ساعة..." 
+                        placeholder="ابحث عن منتج..." 
                         class="w-full bg-rose-50/50 border border-rose-200/80 focus:border-brand-500 focus:bg-white focus:outline-none rounded-xl py-2 px-3.5 pr-9 text-xs text-slate-800 placeholder-slate-400 transition shadow-inner h-9"
                     >
                     <button type="submit" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-600 p-0.5" aria-label="بحث">
@@ -605,7 +653,7 @@
                         </a>
                         <a href="{% url 'store:perfumes_catalog' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'perfumes' in request.path %}bg-brand-50 text-brand-700{% else %}text-slate-700 hover:bg-rose-50/60 hover:text-brand-600{% endif %}">
                             <i data-lucide="sparkle" class="w-4 h-4 text-brand-500"></i>
-                            <span>العطور (أصلي وماستر)</span>
+                            <span>العطور</span>
                         </a>
                         <a href="{% url 'store:watches_catalog' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'watches' in request.path %}bg-brand-50 text-brand-700{% else %}text-slate-700 hover:bg-rose-50/60 hover:text-brand-600{% endif %}">
                             <i data-lucide="watch" class="w-4 h-4 text-brand-500"></i>
@@ -615,9 +663,13 @@
                             <i data-lucide="heart" class="w-4 h-4 text-brand-500"></i>
                             <span>مستحضرات التجميل</span>
                         </a>
+                        <a href="{% url 'store:gift_builder' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'gifting' in request.path %}bg-brand-50 text-brand-700{% else %}text-slate-700 hover:bg-rose-50/60 hover:text-brand-600{% endif %}">
+                            <i data-lucide="gift" class="w-4 h-4 text-brand-500"></i>
+                            <span>خدمة الإهداء</span>
+                        </a>
                         <a href="{% url 'store:product_list' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition text-slate-700 hover:bg-rose-50/60 hover:text-brand-600">
                             <i data-lucide="layout-grid" class="w-4 h-4 text-brand-500"></i>
-                            <span>كافة التشكيلات والمنتجات</span>
+                            <span>كافة المنتجات</span>
                         </a>
                     </nav>
                 </div>
@@ -684,6 +736,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Floating Gifting CTA: أرسل هدية لأحبابك في اليمن 🎁 -->
+    {% include 'store/components/floating_gift_cta.html' %}
 
     <!-- Quick View Modal (واجهة تفاصيل المنتج المنبثقة) -->
     <div id="quick-view-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-3 sm:p-5 md:p-8" aria-modal="true" role="dialog">

@@ -14,6 +14,11 @@ urlpatterns = [
     # مسارات PWA على المستوى الجذري
     path('manifest.json', store_views.pwa_manifest, name='root_manifest'),
     path('sw.js', store_views.service_worker, name='root_sw'),
+    
+    # مسارات محركات البحث والذكاء الاصطناعي (SEO / GEO / AI Overviews)
+    path('robots.txt', store_views.robots_txt, name='robots_txt'),
+    path('sitemap.xml', store_views.sitemap_xml, name='sitemap_xml'),
+    path('llms.txt', store_views.llms_txt, name='llms_txt'),
 ]
 
 if settings.DEBUG:

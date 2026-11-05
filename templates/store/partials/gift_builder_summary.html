@@ -1,0 +1,68 @@
+<div id="gift-summary-card" class="space-y-4">
+    <!-- Selected Items Breakdown -->
+    <div>
+        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center justify-between">
+            <span>محتويات الباقة</span>
+            <span class="text-[11px] font-normal text-slate-500">{{ items_breakdown|length }} عناصر</span>
+        </h4>
+
+        {% if items_breakdown %}
+            <div class="space-y-1.5">
+                {% for item in items_breakdown %}
+                <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs">
+                    <div class="truncate">
+                        <p class="font-bold text-slate-900 truncate">{{ item.title }}</p>
+                        <p class="text-[10px] text-slate-500">{{ item.type }}</p>
+                    </div>
+                    <span class="font-bold text-slate-900 font-num shrink-0 text-left mr-2">
+                        {{ item.price_yer|floatformat:0 }} <span class="text-[10px] font-normal text-slate-500">ر.ي</span>
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="p-4 rounded-lg border border-dashed border-slate-200 text-center text-xs text-slate-500 bg-slate-50">
+                <p>حدد المنتجات لعرض التكلفة الإجمالية</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Calculated Live Totals -->
+    <div class="pt-3 border-t border-slate-100 space-y-2">
+        <div class="flex items-baseline justify-between">
+            <span class="font-bold text-slate-700 text-xs">المجموع:</span>
+            <div class="text-left">
+                <span class="text-xl font-black text-slate-900 font-num">{{ total_yer|floatformat:0 }}</span>
+                <span class="text-xs text-slate-600 mr-1">ر.ي</span>
+            </div>
+        </div>
+
+        <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 flex items-center justify-between">
+            <span class="text-xs font-medium text-slate-600">المعادل بالريال السعودي:</span>
+            <div class="text-left font-num">
+                <span class="text-sm font-bold text-emerald-800">{{ total_sar }}</span>
+                <span class="text-xs text-emerald-700 mr-0.5">ر.س</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Features -->
+    <div class="pt-2 border-t border-slate-100 grid grid-cols-2 gap-1.5 text-[11px] text-slate-600">
+        <div class="flex items-center gap-1.5 p-1 rounded bg-slate-50">
+            <i data-lucide="eye-off" class="w-3.5 h-3.5 text-slate-500 shrink-0"></i>
+            <span class="truncate">إخفاء السعر عن المستلم</span>
+        </div>
+        <div class="flex items-center gap-1.5 p-1 rounded bg-slate-50">
+            <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-500 shrink-0"></i>
+            <span class="truncate">تحديد موعد التسليم</span>
+        </div>
+        <div class="flex items-center gap-1.5 p-1 rounded bg-slate-50">
+            <i data-lucide="truck" class="w-3.5 h-3.5 text-slate-500 shrink-0"></i>
+            <span class="truncate">توصيل لكافة المحافظات</span>
+        </div>
+        <div class="flex items-center gap-1.5 p-1 rounded bg-slate-50">
+            <i data-lucide="package" class="w-3.5 h-3.5 text-slate-500 shrink-0"></i>
+            <span class="truncate">تغليف هدايا وبطاقة</span>
+        </div>
+    </div>
+</div>

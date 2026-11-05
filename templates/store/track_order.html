@@ -9,8 +9,8 @@
         <div class="w-14 h-14 rounded-3xl bg-rose-50 text-brand-600 flex items-center justify-center mx-auto mb-3 shadow-xs border border-rose-100">
             <i data-lucide="truck" class="w-7 h-7"></i>
         </div>
-        <h1 class="text-2xl sm:text-4xl font-serif font-bold text-slate-900">تتبع حالة شحنتك</h1>
-        <p class="text-xs sm:text-sm text-slate-500 font-light">أدخل رقم الطلب (مثال: BV-A1B2C3) أو رقم هاتفك لمعرفة مكان وحالة طلبك لحظياً.</p>
+        <h1 class="text-2xl sm:text-4xl font-serif font-bold text-slate-900">تتبع الطلب</h1>
+        <p class="text-xs sm:text-sm text-slate-500 font-light">أدخل رقم الطلب أو رقم الهاتف للاطلاع على حالة الشحن ومراحل المعالجة.</p>
     </div>
 
     <!-- Search Box -->
@@ -53,7 +53,7 @@
                     <div class="p-3 rounded-2xl bg-gradient-to-r from-pink-50 to-rose-50 border border-rose-200 text-xs text-brand-900 flex items-center justify-between">
                         <span class="flex items-center gap-1.5 font-bold">
                             <i data-lucide="gift" class="w-4 h-4 text-brand-600"></i>
-                            <span>شحنة إهداء خاصة للمستلم: {{ order.recipient_name }}</span>
+                            <span>طلب إهداء للمستلم: {{ order.recipient_name }}</span>
                         </span>
                         {% if order.is_luxury_gift_wrapping %}
                         <span class="px-2 py-0.5 rounded-full bg-rose-200/80 text-brand-900 text-[10px] font-black">تغليف هدايا</span>
@@ -71,7 +71,7 @@
                                     1
                                 </div>
                                 <span class="text-[11px] font-bold text-slate-800 block">استلام الطلب</span>
-                                <span class="text-[9px] text-slate-400 block font-light">فحص الإشعار</span>
+                                <span class="text-[9px] text-slate-400 block font-light">بانتظار التأكيد</span>
                             </div>
 
                             <!-- Step 2: Verified -->
@@ -80,7 +80,7 @@
                                     2
                                 </div>
                                 <span class="text-[11px] font-bold text-slate-800 block">تم التحقق</span>
-                                <span class="text-[9px] text-slate-400 block font-light">اعتماد الدفع</span>
+                                <span class="text-[9px] text-slate-400 block font-light">تم تأكيد الدفع</span>
                             </div>
 
                             <!-- Step 3: Processing -->
@@ -89,7 +89,7 @@
                                     3
                                 </div>
                                 <span class="text-[11px] font-bold text-slate-800 block">قيد التجهيز</span>
-                                <span class="text-[9px] text-slate-400 block font-light">تجهيز الشحنة</span>
+                                <span class="text-[9px] text-slate-400 block font-light">تجهيز الطلب</span>
                             </div>
 
                             <!-- Step 4: Out for Delivery / Delivered -->
@@ -97,8 +97,8 @@
                                 <div class="w-9 h-9 rounded-2xl {% if order.status in 'out_for_delivery delivered' %}bg-purple-600 text-white shadow-xs{% else %}bg-slate-100 text-slate-400{% endif %} flex items-center justify-center mx-auto text-xs font-bold transition">
                                     4
                                 </div>
-                                <span class="text-[11px] font-bold text-slate-800 block">مع المندوب</span>
-                                <span class="text-[9px] text-slate-400 block font-light">في الطريق إليك</span>
+                                <span class="text-[11px] font-bold text-slate-800 block">قيد التوصيل</span>
+                                <span class="text-[9px] text-slate-400 block font-light">جاري الشحن</span>
                             </div>
                         </div>
                     </div>

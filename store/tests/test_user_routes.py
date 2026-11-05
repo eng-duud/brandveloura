@@ -387,3 +387,111 @@ class UserRoutesAndOperationsTests(TestCase):
         res_sw = self.client.get(reverse('store:service_worker'))
         self.assertEqual(res_sw.status_code, 200)
         self.assertEqual(res_sw['Content-Type'], 'application/javascript')
+
+    # 7. اختبارات محركات البحث والذكاء الاصطناعي (SEO & GEO)
+    def test_seo_robots_sitemap_and_llms(self):
+        """فحص مسارات robots.txt و sitemap.xml و llms.txt"""
+        # Robots.txt
+        res_robots = self.client.get(reverse('store:robots_txt'))
+        self.assertEqual(res_robots.status_code, 200)
+        self.assertIn('text/plain', res_robots['Content-Type'])
+        self.assertIn('User-agent: *', res_robots.content.decode('utf-8'))
+        self.assertIn('Sitemap:', res_robots.content.decode('utf-8'))
+        self.assertIn('Googlebot', res_robots.content.decode('utf-8'))
+
+        # Sitemap.xml
+        res_sitemap = self.client.get(reverse('store:sitemap_xml'))
+        self.assertEqual(res_sitemap.status_code, 200)
+        self.assertIn('application/xml', res_sitemap['Content-Type'])
+        content = res_sitemap.content.decode('utf-8')
+        self.assertIn('<urlset', content)
+        self.assertIn(self.perfume.slug, content)
+        self.assertIn('perfumes', content)
+
+        # llms.txt
+        res_llms = self.client.get(reverse('store:llms_txt'))
+        self.assertEqual(res_llms.status_code, 200)
+        self.assertIn('text/plain', res_llms['Content-Type'])
+        llms_content = res_llms.content.decode('utf-8')
+        self.assertIn('Brand Veloura', llms_content)
+        self.assertIn('Perfumes', llms_content)
+
+    # 8. اختبارات ركن الهدايا والمناسبات الفاخرة (Gifting & Occasions)
+    def test_gifting_builder_page_render(self):
+        """فحص صفحة صانع الهدية الملكي وعرض العطور والخيارات"""
+        res = self.client.get(reverse('store:gift_builder'))
+        self.assertEqual(res.status_code, 200)
+        self.assertTemplateUsed(res, 'store/gift_builder.html')
+        content = res.content.decode('utf-8')
+        self.assertIn('خدمة الإهداء', content)
+        self.assertIn('توصيل للمحافظات', content)
+        self.assertIn(self.perfume.name_ar, content)
+
+    def test_gifting_live_calculation_htmx(self):
+        """فحص الحساب اللحظي المباشر عبر HTMX للعملتين YER و SAR والتغليف الملكي"""
+        data = {
+            'perfume_id': self.perfume.id,
+            'perfume_grade': 'original',
+            'is_luxury_gift_wrapping': 'true',
+        }
+        res = self.client.post(reverse('store:gift_calculate'), data)
+        self.assertEqual(res.status_code, 200)
+        self.assertTemplateUsed(res, 'store/partials/gift_builder_summary.html')
+        content = res.content.decode('utf-8')
+        # السعر الأصلي 100,000 + التغليف 3,000 = 103,000 ر.ي
+        self.assertIn('103000', content)
+        self.assertIn('المعادل بالريال السعودي', content)
+        self.assertIn('إخفاء السعر عن المستلم', content)
+
+    def test_gifting_order_full_journey(self):
+        """فحص مسار الإهداء الكامل: من المعالج، مروراً بالسلة إلى إنشاء الطلب بحجب الأسعار والجدولة"""
+        # 1. إرسال خيارات الإهداء من المعالج
+        post_data = {
+            'perfume_id': self.perfume.id,
+            'perfume_grade': 'original',
+            'recipient_name': 'خالد المنصوري',
+            'recipient_phone': '771234567',
+            'gift_card_sender': 'صالح (جدة)',
+            'gift_card_message': 'ألف مبروك التخرج والنجاح الباهر',
+            'preferred_delivery_date': '2026-11-20',
+            'is_luxury_gift_wrapping': 'true',
+        }
+        res = self.client.post(reverse('store:gift_builder'), post_data)
+        self.assertRedirects(res, reverse('store:checkout'))
+
+        # التحقق من أن الجلسة حفظت بيانات الهدية والسلة
+        session = self.client.session
+        self.assertTrue(session['gift_data']['is_gift'])
+        self.assertEqual(session['gift_data']['recipient_name'], 'خالد المنصوري')
+
+        # 2. إتمام الطلب في صفحة الدفع
+        checkout_post = {
+            'customer_name': 'صالح اليافعي',
+            'customer_phone': '0550000000',
+            'customer_email': 'saleh@example.com',
+            'shipping_city': self.zone_sanaa.id,
+            'shipping_address': 'صنعاء، حدة، بجوار البريد',
+            'payment_method': self.payment_acc.id,
+            'payment_reference_no': 'REF-GIFT-9988',
+            'is_gift': 'true',
+            'recipient_name': 'خالد المنصوري',
+            'recipient_phone': '771234567',
+            'gift_card_sender': 'صالح (جدة)',
+            'gift_card_recipient': 'خالد المنصوري',
+            'gift_card_message': 'ألف مبروك التخرج والنجاح الباهر',
+            'preferred_delivery_date': '2026-11-20',
+            'hide_invoice_prices': 'true',
+            'is_luxury_gift_wrapping': 'true',
+        }
+        res_checkout = self.client.post(reverse('store:checkout'), checkout_post)
+        order = Order.objects.filter(recipient_name='خالد المنصوري').first()
+        self.assertIsNotNone(order)
+        self.assertRedirects(res_checkout, reverse('store:order_success', kwargs={'order_number': order.order_number}))
+        
+        # التأكد من صحة بيانات الحقول الجديدة
+        self.assertTrue(order.is_gift)
+        self.assertTrue(order.hide_invoice_prices)
+        self.assertEqual(str(order.preferred_delivery_date), '2026-11-20')
+        self.assertEqual(order.gift_card_sender, 'صالح (جدة)')
+        self.assertTrue(order.is_luxury_gift_wrapping)
+

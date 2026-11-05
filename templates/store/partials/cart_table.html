@@ -90,86 +90,77 @@
             {% endfor %}
 
             <!-- Return to shopping link -->
-            <div class="p-3 bg-rose-50/30 flex items-center justify-between text-xs">
-                <a href="{% url 'store:product_list' %}" class="text-brand-700 hover:text-brand-900 font-bold inline-flex items-center gap-1.5 transition">
+            <div class="p-3 bg-slate-50 flex items-center justify-between text-xs">
+                <a href="{% url 'store:product_list' %}" class="text-slate-700 hover:text-slate-900 font-bold inline-flex items-center gap-1.5 transition">
                     <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                    <span>إضافة منتجات أخرى للسلة</span>
+                    <span>إضافة منتجات أخرى</span>
                 </a>
-                <span class="text-[11px] text-slate-400">الأسعار تشمل الضرائب</span>
             </div>
         </div>
 
-        <!-- Order Summary Card (4 Cols - Sticky on Desktop) -->
+        <!-- Order Summary Card -->
         <div class="lg:col-span-4 sticky top-24 space-y-3">
-            <div class="bg-white rounded-2xl p-5 border border-rose-100 shadow-luxury space-y-4">
-                <h3 class="font-bold text-slate-900 text-sm pb-2.5 border-b border-rose-100 flex items-center justify-between">
-                    <span>ملخص الحساب</span>
-                    <span class="text-xs text-slate-500 font-normal">({{ cart_items|length }} منتج)</span>
+            <div class="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 space-y-3.5">
+                <h3 class="font-bold text-slate-900 text-sm pb-2 border-b border-slate-100 flex items-center justify-between">
+                    <span>ملخص الطلب</span>
+                    <span class="text-xs text-slate-500 font-normal">({{ cart_items|length }} عنصر)</span>
                 </h3>
 
                 <!-- Subtotals -->
-                <div class="space-y-2.5 text-xs">
+                <div class="space-y-2 text-xs">
                     <div class="flex items-center justify-between text-slate-600">
-                        <span>المجموع الفرعي للمنتجات:</span>
+                        <span>المجموع الفرعي:</span>
                         <span class="font-bold text-slate-900 font-num">{{ subtotal_yer|floatformat:0 }} ر.ي</span>
                     </div>
 
                     <div class="flex items-center justify-between text-slate-600">
-                        <span>المعادل بالريال السعودي:</span>
-                        <span class="font-bold text-brand-700 font-num">{{ subtotal_sar }} ر.س</span>
+                        <span>المعادل بالسعودي:</span>
+                        <span class="font-bold text-emerald-700 font-num">{{ subtotal_sar }} ر.س</span>
                     </div>
 
-                    <div class="flex items-center justify-between text-slate-500 text-[11px] pt-1 border-t border-rose-50">
-                        <span>رسوم الشحن والتوصيل:</span>
-                        <span class="text-emerald-700 font-medium">تُحسب بالخطوة التالية حسب المدينة</span>
+                    <div class="flex items-center justify-between text-slate-500 text-[11px] pt-1 border-t border-slate-100">
+                        <span>الشحن:</span>
+                        <span class="text-slate-600">يُحسب في الخطوة التالية</span>
                     </div>
                 </div>
 
                 <!-- Final Estimate Box -->
-                <div class="p-3.5 rounded-xl bg-gradient-to-br from-rose-50 to-pink-50/40 border border-rose-200/80 space-y-1">
+                <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1">
                     <div class="flex items-baseline justify-between">
-                        <span class="font-bold text-slate-900 text-xs">المجموع المستحق:</span>
+                        <span class="font-bold text-slate-900 text-xs">المجموع:</span>
                         <div class="text-left">
-                            <span class="text-xl font-black text-slate-950 font-num">{{ subtotal_yer|floatformat:0 }}</span>
-                            <span class="text-[11px] font-bold text-slate-600 mr-0.5">ر.ي</span>
+                            <span class="text-lg font-black text-slate-900 font-num">{{ subtotal_yer|floatformat:0 }}</span>
+                            <span class="text-xs text-slate-600 mr-0.5">ر.ي</span>
                         </div>
-                    </div>
-                    <div class="text-left text-[11px] font-bold text-brand-800 font-num">
-                        ≈ {{ subtotal_sar }} ريال سعودي
                     </div>
                 </div>
 
                 <!-- Primary Checkout CTA -->
                 <a 
                     href="{% url 'store:checkout' %}" 
-                    class="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-brand-600 to-rose-500 hover:from-brand-500 hover:to-rose-400 text-white font-bold text-xs sm:text-sm shadow-luxury transition-all duration-200 hover:scale-[1.01] flex items-center justify-center gap-2 cursor-pointer text-center min-h-[46px] active:scale-98"
+                    class="w-full py-2.5 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer text-center"
                 >
-                    <span>متابعة إتمام الطلب</span>
-                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    <span>إتمام الطلب</span>
+                    <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
                 </a>
-
-                <div class="flex items-center justify-center gap-1.5 text-[10px] text-slate-400 font-medium text-center pt-1">
-                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
-                    <span>سداد آمن، معتمد، وفحص للشحنة قبل الدفع</span>
-                </div>
             </div>
         </div>
 
     </div>
     {% else %}
     <!-- Clean Minimalist Empty State -->
-    <div class="bg-white rounded-2xl p-10 sm:p-14 text-center border border-rose-100 shadow-sm space-y-4 max-w-md mx-auto">
-        <div class="w-16 h-16 rounded-2xl bg-rose-50 text-brand-600 flex items-center justify-center mx-auto shadow-2xs">
-            <i data-lucide="shopping-bag" class="w-8 h-8"></i>
+    <div class="bg-white rounded-xl p-8 sm:p-12 text-center border border-slate-200 space-y-3 max-w-sm mx-auto">
+        <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center mx-auto">
+            <i data-lucide="shopping-bag" class="w-6 h-6"></i>
         </div>
         <div class="space-y-1">
-            <h3 class="font-serif font-bold text-slate-900 text-lg sm:text-xl">سلة المشتريات فارغة</h3>
-            <p class="text-xs text-slate-500 font-light leading-relaxed">لم تقم بإضافة أي عطور أو ساعات أو منتجات حتى الآن.</p>
+            <h3 class="font-bold text-slate-900 text-base">سلة المشتريات فارغة</h3>
+            <p class="text-xs text-slate-500">لم تقم بإضافة أي منتجات للسلة.</p>
         </div>
         <div class="pt-2">
-            <a href="{% url 'store:product_list' %}" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-900 hover:bg-brand-600 text-white text-xs font-bold transition shadow-2xs cursor-pointer">
-                <span>تصفح تشكيلة المنتجات</span>
-                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            <a href="{% url 'store:product_list' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer">
+                <span>تصفح المنتجات</span>
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
             </a>
         </div>
     </div>

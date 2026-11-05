@@ -27,10 +27,10 @@
                 class="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-xl shadow-emerald-600/25 transition-all duration-300 hover:scale-105 cursor-pointer"
             >
                 <i data-lucide="message-circle" class="w-5 h-5"></i>
-                <span>مشاركة تفاصيل الفاتورة والسند عبر واتساب</span>
+                <span>إرسال إشعار الدفع عبر واتساب</span>
             </a>
             <p class="text-[11px] text-slate-400 mt-2 font-light">
-                انقر على الزر أعلاه لتأكيد طلبك فوراً وإرسال إشعار السند لإدارة المتجر
+                تواصل مع خدمة العملاء لتأكيد الحوالة وبدء تجهيز الشحنة
             </p>
         </div>
 
@@ -68,7 +68,7 @@
                 <div class="flex items-center justify-between text-xs font-black text-brand-800">
                     <span class="flex items-center gap-1.5">
                         <i data-lucide="gift" class="w-4 h-4 text-brand-600"></i>
-                        <span>طلب إهداء خاص للمستلم: {{ order.recipient_name }}</span>
+                        <span>طلب إهداء للمستلم: {{ order.recipient_name }}</span>
                     </span>
                     {% if order.is_luxury_gift_wrapping %}
                     <span class="px-2 py-0.5 rounded-full bg-rose-200/80 text-brand-900 text-[10px] font-black">تغليف هدايا</span>
@@ -126,7 +126,7 @@
         <div class="pt-4 flex flex-wrap items-center justify-center gap-5">
             <a href="{% url 'store:track_order' %}?q={{ order.order_number }}" class="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1.5 transition">
                 <i data-lucide="truck" class="w-4 h-4"></i>
-                <span>متابعة حالة الشحنة لحظياً</span>
+                <span>تتبع الطلب</span>
             </a>
             <span class="text-slate-300">•</span>
             <a href="{% url 'store:home' %}" class="text-xs font-bold text-slate-600 hover:text-slate-900 transition">
