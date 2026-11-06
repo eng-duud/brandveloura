@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}وضع عدم الاتصال | {{ store_settings.store_name }}{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full text-center space-y-6 bg-white/85 backdrop-blur-md p-8 sm:p-10 rounded-3xl border border-pink-200 shadow-luxury-lg">
+        
+        <!-- Offline Icon Emblem -->
+        <div class="mx-auto w-20 h-20 rounded-2xl bg-pink-100 border border-pink-300 flex items-center justify-center shadow-xs">
+            <span class="text-3xl">📡</span>
+        </div>
+
+        <div class="space-y-2">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-[11px] font-bold">
+                <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                <span>وضع التصفح دون إنترنت (Offline Mode)</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">أنت غير متصل بالإنترنت حالياً</h1>
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                لا تقلق! يحتفظ تطبيق Brand Veloura ببيانات سلتك وعناصرك المفضلة. بمجرد عودة الاتصال ستتمكن من مواصلة التسوق وتأكيد طلباتك كالمعتاد.
+            </p>
+        </div>
+
+        <!-- Offline Actions -->
+        <div class="space-y-2.5 pt-2">
+            <button onclick="window.location.reload();" class="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-black text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition cursor-pointer">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                <span>إعادة المحاولة وفحص الاتصال</span>
+            </button>
+            
+            <a href="{% url 'store:cart_view' %}" class="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-pink-50 text-slate-800 border border-pink-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-2xs cursor-pointer">
+                <i data-lucide="shopping-bag" class="w-3.5 h-3.5 text-brand-500"></i>
+                <span>معاينة سلة المشتريات المحفوظة</span>
+            </a>
+
+            {% if store_settings.contact_whatsapp %}
+            <a href="https://wa.me/{{ store_settings.contact_whatsapp }}" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 px-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer">
+                <i data-lucide="message-circle" class="w-4 h-4 text-emerald-600"></i>
+                <span>الطلب المباشر عبر واتساب (SMS/هاتف)</span>
+            </a>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

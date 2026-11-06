@@ -390,7 +390,7 @@
                                     type="text" 
                                     name="gift_card_recipient" 
                                     id="gift_card_recipient"
-                                    value="{{ gift_data.gift_card_recipient|default:gift_data.recipient_name|default:'' }}"
+                                    value="{% if gift_data.gift_card_recipient %}{{ gift_data.gift_card_recipient }}{% elif gift_data.recipient_name %}{{ gift_data.recipient_name }}{% endif %}"
                                     placeholder="اسم الشخص بالبطاقة" 
                                     class="w-full h-9 bg-white border border-pink-200 rounded-lg px-2.5 text-xs text-slate-900 focus:outline-none focus:border-brand-500"
                                     {% if not is_gift_active %}disabled{% endif %}

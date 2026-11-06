@@ -5,8 +5,16 @@ from .models import StoreSettings, Category
 
 def store_context(request):
     """سياق عام يتم تمريره تلقائياً لكافة صفحات وقوالب المتجر"""
+    from django.core.cache import cache
     settings = StoreSettings.get_settings()
-    categories = Category.objects.filter(is_active=True).order_by('display_order')
+    
+    categories = cache.get('bv_active_categories')
+    if categories is None:
+        categories = list(Category.objects.filter(is_active=True).order_by('display_order'))
+        try:
+            cache.set('bv_active_categories', categories, timeout=300)
+        except Exception:
+            pass
     
     # حساب عدد عناصر السلة من الجلسة (Session-based cart)
     cart = request.session.get('cart', {})

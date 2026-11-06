@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}غير مصرح بالوصول (403) | {{ store_settings.store_name }}{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full text-center space-y-6 bg-white/80 backdrop-blur-md p-8 sm:p-10 rounded-3xl border border-pink-200 shadow-luxury-lg">
+        
+        <!-- Luxury Icon Emblem -->
+        <div class="mx-auto w-20 h-20 rounded-2xl bg-rose-50 border border-pink-200 flex items-center justify-center shadow-xs">
+            <span class="text-3xl">🔒</span>
+        </div>
+
+        <div class="space-y-2">
+            <span class="text-xs font-bold text-brand-600 uppercase tracking-widest block font-num">Error 403</span>
+            <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">عفواً، لا تملك الصلاحية للوصول</h1>
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                هذه الصفحة أو العملية مخصصة لحسابات محددة أو تتطلب تسجيل الدخول بحساب مصرح له.
+            </p>
+        </div>
+
+        <!-- Quick Navigation Actions -->
+        <div class="space-y-2.5 pt-2">
+            <a href="{% url 'store:login' %}" class="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-black text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition cursor-pointer">
+                <i data-lucide="log-in" class="w-4 h-4"></i>
+                <span>تسجيل الدخول بالحساب المصرح</span>
+            </a>
+            
+            <a href="{% url 'store:home' %}" class="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-pink-50 text-slate-800 border border-pink-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-2xs cursor-pointer">
+                <i data-lucide="home" class="w-3.5 h-3.5 text-brand-500"></i>
+                <span>العودة للرئيسية</span>
+            </a>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

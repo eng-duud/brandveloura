@@ -335,6 +335,18 @@
                         <span>تتبع الطلب</span>
                     </a>
 
+                    <!-- Currency Switcher (Dual YER/SAR Currency Toggle) -->
+                    <button 
+                        hx-post="{% url 'store:toggle_currency' %}" 
+                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                        hx-swap="outerHTML" 
+                        class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white hover:bg-pink-50 border border-pink-200 text-slate-800 text-xs font-bold transition-all shadow-2xs cursor-pointer min-h-[40px]"
+                        title="تبديل العملة المعروضة بين الريال اليمني والسعودي"
+                    >
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>{% if active_currency == 'SAR' %}🇸🇦 ر.س{% else %}🇾🇪 ر.ي{% endif %}</span>
+                    </button>
+
                     <!-- Cart Button with HTMX Dynamic Badge -->
                     <a href="{% url 'store:cart_view' %}" class="relative p-2.5 md:px-3.5 md:py-2 rounded-xl bg-white hover:bg-pink-50 border border-pink-200 text-slate-800 transition-all shadow-2xs flex items-center gap-1.5 group cursor-pointer min-h-[44px]">
                         <div class="relative">
@@ -754,6 +766,22 @@
                             </span>
                             <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold font-num">{{ cart_count }}</span>
                         </a>
+                        <!-- Currency Switcher in Mobile Drawer -->
+                        <div class="px-3 py-2 my-1 flex items-center justify-between rounded-xl bg-pink-50/70 border border-pink-200">
+                            <span class="flex items-center gap-2 text-slate-700 font-bold">
+                                <i data-lucide="coins" class="w-4 h-4 text-brand-600"></i>
+                                <span>العملة الحالية:</span>
+                            </span>
+                            <button 
+                                hx-post="{% url 'store:toggle_currency' %}" 
+                                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                hx-swap="outerHTML" 
+                                class="px-3 py-1 rounded-lg bg-white border border-pink-300 text-slate-900 font-bold text-xs shadow-2xs cursor-pointer"
+                                title="تبديل العملة"
+                            >
+                                {% if active_currency == 'SAR' %}🇸🇦 ر.س (سعودي){% else %}🇾🇪 ر.ي (يمني){% endif %}
+                            </button>
+                        </div>
                         <a href="{% url 'store:track_order' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition">
                             <i data-lucide="truck" class="w-4 h-4 text-slate-400"></i>
                             <span>تتبع الشحنة والطلب</span>

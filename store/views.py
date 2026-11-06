@@ -1,4 +1,6 @@
+import os
 import uuid
+import logging
 from decimal import Decimal
 from urllib.parse import urlencode
 import requests
@@ -7,7 +9,9 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
 from django.db.models import Q
+from django.core.cache import cache
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout, update_session_auth_hash
 from django.contrib.auth.models import User
@@ -22,24 +26,74 @@ from .models import (
     WebPushSubscription
 )
 
+logger = logging.getLogger(__name__)
+
+
+def _get_safe_redirect(request, default='store:home'):
+    """التحقق من رابط التوجيه والتأكد من أمانه لمنع ثغرات Open Redirect"""
+    next_url = request.POST.get('next') or request.GET.get('next') or request.GET.get('state') or request.META.get('HTTP_REFERER')
+    if next_url and url_has_allowed_host_and_scheme(url=next_url, allowed_hosts={request.get_host()}):
+        return next_url
+    return reverse(default)
+
+
+def validate_receipt_file(uploaded_file):
+    """التحقق الأمني الشامل من ملف إشعار التحويل البنكي (الحجم، الامتداد، وتوقيع المحتوى الثنائي)"""
+    if uploaded_file.size > 10 * 1024 * 1024:
+        return False, 'حجم ملف إشعار التحويل كبير جداً. الحد الأقصى المسموح به هو 10 ميجابايت.'
+        
+    ext = os.path.splitext(uploaded_file.name)[1].lower()
+    allowed_exts = ['.jpg', '.jpeg', '.png', '.webp', '.pdf', '.heic', '.heif']
+    if ext not in allowed_exts:
+        return False, 'صيغة ملف الإشعار غير مقبولة. يرجى رفع صورة أو مستند PDF صالح.'
+        
+    try:
+        initial_pos = uploaded_file.tell() if hasattr(uploaded_file, 'tell') else 0
+        header = uploaded_file.read(1024)
+        if hasattr(uploaded_file, 'seek'):
+            uploaded_file.seek(initial_pos)
+            
+        if ext == '.pdf':
+            if not header.startswith(b'%PDF-'):
+                return False, 'ملف الـ PDF تالف أو غير صالح كإشعار تحويل.'
+        elif ext in ['.heic', '.heif']:
+            if b'ftyp' not in header[:32]:
+                return False, 'ملف صورة HEIC غير صالح أو تالف.'
+        else:
+            from PIL import Image
+            img = Image.open(uploaded_file)
+            img.verify()
+            if hasattr(uploaded_file, 'seek'):
+                uploaded_file.seek(initial_pos)
+    except Exception:
+        return False, 'تعذر قراءة ملف الإشعار أو أنه ملف غير صالح كصورة إشعار.'
+        
+    return True, None
+
+
 
 def home_view(request):
     """الصفحة الرئيسية للمتجر بتصميم فاخر وقنوات أفقية تفاعلية"""
+    from django.db.models import Count
     banners = HeroBanner.objects.filter(is_active=True).order_by('display_order')
     categories = Category.objects.filter(is_active=True).order_by('display_order')
     
     # المنتجات المميزة لشريط التمرير الأفقي
     featured_products = Product.objects.filter(
         is_active=True, is_featured=True
-    ).order_by('-created_at')[:12]
+    ).select_related('category').prefetch_related('images').order_by('-created_at')[:12]
     if not featured_products.exists():
-        featured_products = Product.objects.filter(is_active=True).order_by('-created_at')[:12]
+        featured_products = Product.objects.filter(
+            is_active=True
+        ).select_related('category').prefetch_related('images').order_by('-created_at')[:12]
         
-    # براندات العطور الفاخرة مع بيانات مخصصة لشريط التمرير
-    perfume_brand_names = list(
-        Product.objects.filter(
-            category__category_type='perfumes', is_active=True
-        ).exclude(brand_name='').values_list('brand_name', flat=True).distinct()
+    # براندات العطور الفاخرة مع بيانات مخصصة لشريط التمرير (استعلام تجميعي واحد سريع)
+    brand_counts = dict(
+        Product.objects.filter(category__category_type='perfumes', is_active=True)
+        .exclude(brand_name='')
+        .values('brand_name')
+        .annotate(total=Count('id'))
+        .values_list('brand_name', 'total')
     )
     
     brand_emblems = {
@@ -52,7 +106,7 @@ def home_view(request):
     }
     
     perfume_brands_data = []
-    for b_name in perfume_brand_names:
+    for b_name, count in brand_counts.items():
         meta = brand_emblems.get(b_name, {'name': b_name, 'country': 'Luxury Boutique', 'icon': 'sparkles', 'badge': 'فاخر'})
         perfume_brands_data.append({
             'brand_name': b_name,
@@ -60,13 +114,13 @@ def home_view(request):
             'country': meta['country'],
             'icon': meta['icon'],
             'badge': meta['badge'],
-            'count': Product.objects.filter(brand_name__iexact=b_name, is_active=True).count(),
+            'count': count,
         })
 
     # باقات الهدايا والمناسبات الفاخرة
     gift_bundles = Product.objects.filter(
         category__category_type='bundles', is_active=True
-    ).order_by('-created_at')[:8]
+    ).select_related('category').prefetch_related('images').order_by('-created_at')[:8]
 
     context = {
         'banners': banners,
@@ -78,9 +132,12 @@ def home_view(request):
     return render(request, 'store/home.html', context)
 
 
+
 def perfumes_catalog_view(request):
     """الصفحة المخصصة للعطور الملكية مع فلاتر النوع (رجالي/نسائي/للجنسين) والدرجة (أصلي/ماستر) والبراند"""
-    products = Product.objects.filter(category__category_type='perfumes', is_active=True)
+    products = Product.objects.filter(
+        category__category_type='perfumes', is_active=True
+    ).select_related('category').prefetch_related('images')
     
     gender_filter = request.GET.get('gender', '').strip() # men, women, unisex
     grade_filter = request.GET.get('grade', '').strip()   # original, master
@@ -150,7 +207,9 @@ def perfumes_catalog_view(request):
 
 def watches_catalog_view(request):
     """الصفحة المخصصة للساعات الفاخرة مع فلاتر الحركة ومقاومة الماء والماركة"""
-    products = Product.objects.filter(category__category_type='watches', is_active=True)
+    products = Product.objects.filter(
+        category__category_type='watches', is_active=True
+    ).select_related('category').prefetch_related('images')
     
     brand_filter = request.GET.get('brand', '').strip()
     movement_filter = request.GET.get('movement', '').strip()
@@ -213,7 +272,7 @@ def cosmetics_catalog_view(request):
     """الصفحة المخصصة لمستحضرات التجميل والعناية بالبشرة مع فلاتر الماركة والتصنيف"""
     products = Product.objects.filter(
         category__category_type__in=['cosmetics', 'care'], is_active=True
-    )
+    ).select_related('category').prefetch_related('images')
     
     subcat_filter = request.GET.get('subcat', '').strip()
     brand_filter = request.GET.get('brand', '').strip()
@@ -263,7 +322,7 @@ def cosmetics_catalog_view(request):
 
 def product_list_view(request):
     """كتالوج المنتجات مع الفلترة الذكية والبحث التفاعلي عبر HTMX"""
-    products = Product.objects.filter(is_active=True)
+    products = Product.objects.filter(is_active=True).select_related('category').prefetch_related('images')
     
     category_slug = request.GET.get('category')
     search_query = request.GET.get('q', '').strip()
@@ -318,7 +377,11 @@ def product_list_view(request):
 
 def product_quick_view(request, slug):
     """عرض نافذة منبثقة تفاعلية للمنتج (Quick View Modal) دون مغادرة الصفحة"""
-    product = get_object_or_404(Product, slug=slug, is_active=True)
+    product = get_object_or_404(
+        Product.objects.select_related('category').prefetch_related('images'), 
+        slug=slug, 
+        is_active=True
+    )
     images = product.images.all().order_by('display_order')
     settings = StoreSettings.get_settings()
     
@@ -337,13 +400,17 @@ def product_detail_view(request, slug):
     if request.headers.get('HX-Request') and not request.GET.get('full_page'):
         return product_quick_view(request, slug)
 
-    product = get_object_or_404(Product, slug=slug, is_active=True)
+    product = get_object_or_404(
+        Product.objects.select_related('category').prefetch_related('images'), 
+        slug=slug, 
+        is_active=True
+    )
     images = product.images.all()
     
-    # منتجات ذات صلة من نفس القسم
+    # منتجات ذات صلة من نفس القسم مع تفادي N+1
     related_products = Product.objects.filter(
         category=product.category, is_active=True
-    ).exclude(id=product.id)[:4]
+    ).exclude(id=product.id).select_related('category').prefetch_related('images')[:4]
     
     context = {
         'product': product,
@@ -358,7 +425,13 @@ def product_detail_view(request, slug):
 def cart_add(request):
     """إضافة منتج للسلة لحظياً عبر HTMX مع فحص المخزون ودعم درجتي الأصلي والماستر"""
     product_id = request.POST.get('product_id')
-    quantity = int(request.POST.get('quantity', 1))
+    try:
+        quantity = int(request.POST.get('quantity', 1))
+        if quantity <= 0:
+            quantity = 1
+    except (ValueError, TypeError):
+        quantity = 1
+
     variant_info = request.POST.get('variant_info', '').strip()
     grade = request.POST.get('grade', '').strip() # 'original' أو 'master'
     
@@ -393,8 +466,15 @@ def cart_add(request):
     item_key = f"{product_id}_{grade}_{variant_info}".strip('_')
     
     current_cart_qty = cart.get(item_key, {}).get('quantity', 0)
-    if current_cart_qty + quantity > product.stock_quantity:
-        quantity = max(1, product.stock_quantity - current_cart_qty)
+    available_qty = max(0, product.stock_quantity - current_cart_qty)
+    if available_qty <= 0:
+        cart_count = sum(item.get('quantity', 1) for item in cart.values())
+        response = render(request, 'store/partials/cart_badge.html', {'cart_count': cart_count})
+        response['HX-Trigger'] = 'maxStockReached'
+        return response
+
+    if quantity > available_qty:
+        quantity = available_qty
     
     if item_key in cart:
         cart[item_key]['quantity'] += quantity
@@ -422,7 +502,7 @@ def cart_add(request):
 
 @require_POST
 def cart_update_quantity(request):
-    """تعديل كمية عنصر في السلة"""
+    """تعديل كمية عنصر في السلة مع احترام رصيد المخزون"""
     item_key = request.POST.get('item_key')
     action = request.POST.get('action') # 'increase' or 'decrease'
     
@@ -430,11 +510,19 @@ def cart_update_quantity(request):
     
     if item_key in cart:
         if action == 'increase':
-            cart[item_key]['quantity'] += 1
+            p_id = cart[item_key].get('product_id')
+            prod = Product.objects.filter(id=p_id, is_active=True).first()
+            if not prod:
+                del cart[item_key]
+            elif cart[item_key]['quantity'] >= prod.stock_quantity:
+                pass  # لا يسمح بتجاوز الكمية المتوفرة بالمخزون
+            else:
+                cart[item_key]['quantity'] += 1
         elif action == 'decrease':
             cart[item_key]['quantity'] -= 1
             if cart[item_key]['quantity'] <= 0:
                 del cart[item_key]
+
                 
     request.session['cart'] = cart
     request.session.modified = True
@@ -542,25 +630,37 @@ def cart_view(request):
     return render(request, 'store/cart.html', context)
 
 
-@require_POST
 def toggle_currency(request):
-    """تبديل العملة المعروضة بين ريال يمني (YER) وريال سعودي (SAR)"""
-    current = request.session.get('active_currency', 'YER')
-    new_currency = 'SAR' if current == 'YER' else 'YER'
-    request.session['active_currency'] = new_currency
-    request.session.modified = True
+    """تبديل العملة المعروضة بين ريال يمني (YER) وريال سعودي (SAR) مع دعم HTMX والتوجيه الآمن"""
+    if request.method == 'POST' or request.GET.get('toggle') == '1':
+        current = request.session.get('active_currency', 'YER')
+        new_currency = 'SAR' if current == 'YER' else 'YER'
+        request.session['active_currency'] = new_currency
+        request.session.modified = True
+    else:
+        new_currency = request.session.get('active_currency', 'YER')
     
-    # إعادة تحميل الصفحة أو تحديث الزر
-    return HttpResponse(f"""
+    if request.method == 'GET' and not request.headers.get('HX-Request'):
+        referer = request.META.get('HTTP_REFERER')
+        if referer and url_has_allowed_host_and_scheme(url=referer, allowed_hosts={request.get_host()}):
+            return redirect(referer)
+        return redirect('store:home')
+
+    response = HttpResponse(f"""
         <button 
-            hx-post="/set-currency/" 
+            hx-post="{reverse('store:toggle_currency')}" 
+            hx-headers='{{"X-CSRFToken": "{request.COOKIES.get("csrftoken", "")}"}}'
             hx-swap="outerHTML" 
-            class="px-3 py-1.5 rounded-full bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-semibold flex items-center gap-1.5 transition-all border border-rose-200 shadow-sm"
+            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white hover:bg-pink-50 border border-pink-200 text-slate-800 text-xs font-bold transition-all shadow-2xs cursor-pointer min-h-[40px]"
             title="تبديل العملة المعروضة">
-            <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-            {'🇸🇦 ريال سعودي' if new_currency == 'SAR' else '🇾🇪 ريال يمني'}
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>{'🇸🇦 ر.س' if new_currency == 'SAR' else '🇾🇪 ر.ي'}</span>
         </button>
     """)
+    if request.headers.get('HX-Request'):
+        response['HX-Refresh'] = 'true'
+    return response
+
 
 
 def get_shipping_fee(request):
@@ -621,15 +721,16 @@ def gift_builder_view(request):
 
     perfumes = Product.objects.filter(
         category__category_type='perfumes', is_active=True, stock_quantity__gt=0
-    ).order_by('-is_featured', '-is_best_seller')[:30]
+    ).select_related('category').prefetch_related('images').order_by('-is_featured', '-is_best_seller')[:30]
 
     accessories = Product.objects.filter(
         category__category_type__in=['watches', 'cosmetics', 'care'], is_active=True, stock_quantity__gt=0
-    ).order_by('-is_featured')[:30]
+    ).select_related('category').prefetch_related('images').order_by('-is_featured')[:30]
 
     gift_bundles = Product.objects.filter(
         category__category_type='bundles', is_active=True
-    ).order_by('-created_at')[:10]
+    ).select_related('category').prefetch_related('images').order_by('-created_at')[:10]
+
 
     if request.method == 'POST':
         perfume_ids = request.POST.getlist('perfume_id')
@@ -861,6 +962,12 @@ def checkout_view(request):
         payment_reference_no = request.POST.get('payment_reference_no', '').strip()
         customer_notes = request.POST.get('customer_notes', '').strip()
         payment_receipt = request.FILES.get('payment_receipt')
+        if payment_receipt:
+            is_valid, err_msg = validate_receipt_file(payment_receipt)
+            if not is_valid:
+                messages.error(request, err_msg)
+                return redirect('store:checkout')
+
         
         # 1. تدفق ومعالجة بيانات الإهداء بدقة
         if is_gift:
@@ -904,61 +1011,76 @@ def checkout_view(request):
         # إنشاء رقم طلب احترافي فريد
         order_number = f"BV-{uuid.uuid4().hex[:6].upper()}"
         
-        order = Order.objects.create(
-            order_number=order_number,
-            user=request.user if request.user.is_authenticated else None,
-            customer_name=customer_name,
-            customer_phone=customer_phone,
-            customer_email=customer_email,
-            shipping_city=city_name,
-            shipping_address=shipping_address,
-            shipping_fee_yer=actual_shipping_fee,
-            subtotal_yer=subtotal_yer,
-            total_yer=order_total_yer,
-            total_sar=order_total_sar,
-            exchange_rate_applied=yer_per_sar,
-            payment_method=selected_payment,
-            payment_method_name=payment_name,
-            payment_receipt=payment_receipt,
-            payment_reference_no=payment_reference_no,
-            customer_notes=customer_notes,
-            status='pending_verification',
-            # الحقول الجديدة: الهدايا والدفع بالريال السعودي
-            is_gift=is_gift,
-            recipient_name=recipient_name,
-            recipient_phone=recipient_phone,
-            gift_card_sender=gift_card_sender,
-            gift_card_recipient=gift_card_recipient,
-            gift_card_message=gift_card_message,
-            is_luxury_gift_wrapping=is_luxury_gift_wrapping,
-            gift_wrapping_fee_yer=gift_wrapping_fee_yer,
-            preferred_delivery_date=preferred_delivery_date,
-            hide_invoice_prices=hide_invoice_prices,
-            payment_currency_selected=payment_currency_selected,
-            amount_due_in_payment_currency=amount_due,
-            stock_deducted=True,
-        )
-        
-        # حفظ عناصر الطلب وخصم المخزون
-        for item_data in cart.values():
-            p_id = item_data.get('product_id')
-            prod = Product.objects.filter(id=p_id).first()
-            p_price = Decimal(str(item_data.get('price_yer', 0)))
-            p_qty = item_data.get('quantity', 1)
-            
-            OrderItem.objects.create(
-                order=order,
-                product=prod,
-                product_name=item_data.get('name', 'منتج'),
-                product_image_url=item_data.get('image_url', ''),
-                variant_info=item_data.get('variant_info', ''),
-                unit_price_yer=p_price,
-                quantity=p_qty,
-                total_price_yer=p_price * p_qty,
+        with transaction.atomic():
+            # فحص كفاية المخزون لجميع المنتجات وحجز الأسطر لمنع البيع الزائد (select_for_update)
+            insufficient_items = []
+            locked_products = []
+            for item_data in cart.values():
+                p_id = item_data.get('product_id')
+                p_qty = int(item_data.get('quantity', 1))
+                prod = Product.objects.select_for_update().filter(id=p_id, is_active=True).first()
+                if not prod or prod.stock_quantity < p_qty:
+                    avail = prod.stock_quantity if prod else 0
+                    p_name = item_data.get('name', 'منتج')
+                    insufficient_items.append(f"{p_name} (المتوفر: {avail})")
+                else:
+                    locked_products.append((prod, p_qty, item_data))
+
+            if insufficient_items:
+                items_str = '، '.join(insufficient_items)
+                messages.error(request, f"نعتذر، نفدت الكمية المتوفرة من بعض المنتجات: {items_str}. يرجى تعديل السلة.")
+                return redirect('store:checkout')
+
+            order = Order.objects.create(
+                order_number=order_number,
+                user=request.user if request.user.is_authenticated else None,
+                customer_name=customer_name,
+                customer_phone=customer_phone,
+                customer_email=customer_email,
+                shipping_city=city_name,
+                shipping_address=shipping_address,
+                shipping_fee_yer=actual_shipping_fee,
+                subtotal_yer=subtotal_yer,
+                total_yer=order_total_yer,
+                total_sar=order_total_sar,
+                exchange_rate_applied=yer_per_sar,
+                payment_method=selected_payment,
+                payment_method_name=payment_name,
+                payment_receipt=payment_receipt,
+                payment_reference_no=payment_reference_no,
+                customer_notes=customer_notes,
+                status='pending_verification',
+                # الحقول الجديدة: الهدايا والدفع بالريال السعودي
+                is_gift=is_gift,
+                recipient_name=recipient_name,
+                recipient_phone=recipient_phone,
+                gift_card_sender=gift_card_sender,
+                gift_card_recipient=gift_card_recipient,
+                gift_card_message=gift_card_message,
+                is_luxury_gift_wrapping=is_luxury_gift_wrapping,
+                gift_wrapping_fee_yer=gift_wrapping_fee_yer,
+                preferred_delivery_date=preferred_delivery_date,
+                hide_invoice_prices=hide_invoice_prices,
+                payment_currency_selected=payment_currency_selected,
+                amount_due_in_payment_currency=amount_due,
+                stock_deducted=True,
             )
             
-            # خصم الكمية من المخزون
-            if prod:
+            # حفظ عناصر الطلب وخصم المخزون
+            for prod, p_qty, item_data in locked_products:
+                p_price = Decimal(str(item_data.get('price_yer', 0)))
+                OrderItem.objects.create(
+                    order=order,
+                    product=prod,
+                    product_name=item_data.get('name', 'منتج'),
+                    product_image_url=item_data.get('image_url', ''),
+                    variant_info=item_data.get('variant_info', ''),
+                    unit_price_yer=p_price,
+                    quantity=p_qty,
+                    total_price_yer=p_price * p_qty,
+                )
+                
+                # خصم الكمية من المخزون
                 prod.stock_quantity = max(0, prod.stock_quantity - p_qty)
                 prod.save(update_fields=['stock_quantity'])
                 # تنبيه انخفاض المخزون للإدارة عند وصول الرصيد إلى 3 قطع أو أقل
@@ -1099,17 +1221,22 @@ def track_order_view(request):
 
 
 def pwa_manifest(request):
-    """ملف manifest.json لدعم تثبيت المتجر كتطبيق هاتف PWA"""
+    """ملف manifest.json لدعم تثبيت المتجر كتطبيق هاتف PWA متكامل"""
     settings = StoreSettings.get_settings()
     manifest_data = {
+        "id": "/",
         "name": settings.store_name,
         "short_name": "Veloura",
         "description": settings.store_tagline,
         "start_url": "/",
+        "scope": "/",
         "display": "standalone",
+        "orientation": "portrait",
         "background_color": "#FFF5F7",
         "theme_color": "#E11D48",
-        "orientation": "portrait",
+        "lang": "ar",
+        "dir": "rtl",
+        "categories": ["shopping", "lifestyle"],
         "icons": [
             {
                 "src": "/static/icons/icon-192.png",
@@ -1123,6 +1250,32 @@ def pwa_manifest(request):
                 "type": "image/png",
                 "purpose": "any maskable"
             }
+        ],
+        "shortcuts": [
+            {
+                "name": "العطور الملكية",
+                "url": "/perfumes/",
+                "description": "تصفح العطور الأصلية والماستر",
+                "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192"}]
+            },
+            {
+                "name": "الساعات الفاخرة",
+                "url": "/watches/",
+                "description": "تشكيلة الساعات الراقية",
+                "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192"}]
+            },
+            {
+                "name": "ركن الهدايا الملكي",
+                "url": "/gifting/",
+                "description": "تجهيز باقات الإهداء والتغليف الفاخر",
+                "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192"}]
+            },
+            {
+                "name": "سلة المشتريات",
+                "url": "/cart/",
+                "description": "معاينة السلة وإتمام الطلب",
+                "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192"}]
+            }
         ]
     }
     return JsonResponse(manifest_data, content_type='application/manifest+json')
@@ -1131,17 +1284,21 @@ def pwa_manifest(request):
 def service_worker(request):
     """ملف sw.js لإدارة الكاش، التصفح أوفلاين، واستقبال إشعارات PWA وتطبيق الهاتف"""
     sw_code = """
-    const CACHE_NAME = 'brand-veloura-pwa-v2';
-    const ASSETS_TO_CACHE = [
+    const CACHE_NAME = 'brand-veloura-pwa-v3';
+    const OFFLINE_URL = '/offline/';
+    const PRECACHE_ASSETS = [
         '/',
+        OFFLINE_URL,
+        '/manifest.json',
         '/static/icons/icon-192.png',
-        '/static/icons/icon-512.png'
+        '/static/icons/icon-512.png',
+        '/static/images/logo.jpg'
     ];
 
     self.addEventListener('install', (event) => {
         event.waitUntil(
             caches.open(CACHE_NAME).then((cache) => {
-                return cache.addAll(ASSETS_TO_CACHE);
+                return cache.addAll(PRECACHE_ASSETS);
             })
         );
         self.skipWaiting();
@@ -1164,17 +1321,48 @@ def service_worker(request):
 
     self.addEventListener('fetch', (event) => {
         if (event.request.method !== 'GET') return;
-        event.respondWith(
-            fetch(event.request)
-                .then((networkResponse) => {
-                    return caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, networkResponse.clone());
+        const url = new URL(event.request.url);
+        if (
+            url.pathname.startsWith('/admin') || 
+            url.pathname.startsWith('/api/') ||
+            url.pathname.startsWith('/cart') ||
+            url.pathname.startsWith('/checkout') ||
+            url.pathname.startsWith('/account') ||
+            url.pathname.startsWith('/order')
+        ) return;
+
+        if (event.request.mode === 'navigate') {
+            event.respondWith(
+                fetch(event.request)
+                    .then((networkResponse) => {
+                        if (networkResponse && networkResponse.status === 200) {
+                            const copy = networkResponse.clone();
+                            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+                        }
                         return networkResponse;
-                    });
-                })
-                .catch(() => {
-                    return caches.match(event.request);
-                })
+                    })
+                    .catch(async () => {
+                        const cachedResponse = await caches.match(event.request);
+                        if (cachedResponse) return cachedResponse;
+                        return caches.match(OFFLINE_URL);
+                    })
+            );
+            return;
+        }
+
+        event.respondWith(
+            caches.match(event.request).then((cachedResponse) => {
+                if (cachedResponse) return cachedResponse;
+                return fetch(event.request).then((networkResponse) => {
+                    if (networkResponse && networkResponse.status === 200) {
+                        const copy = networkResponse.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+                    }
+                    return networkResponse;
+                }).catch(() => {
+                    return new Response('', { status: 408, statusText: 'Request timed out' });
+                });
+            })
         );
     });
 
@@ -1232,6 +1420,7 @@ def service_worker(request):
     return HttpResponse(sw_code, content_type='application/javascript')
 
 
+
 def push_vapid_key(request):
     """إرجاع المفتاح العام VAPID لاشتراك أجهزة العملاء في إشعارات PWA"""
     from .push_notifications import get_or_create_vapid_keys
@@ -1276,22 +1465,21 @@ def push_subscribe(request):
 # أنظمة المصادقة والحسابات الشخصية (Authentication & User Accounts)
 # ==============================================================================
 
-def _get_safe_redirect(request, default='store:home'):
-    """التحقق من رابط التوجيه والتأكد من أمانه لمنع Open Redirect"""
-    next_url = request.POST.get('next') or request.GET.get('next') or request.GET.get('state')
-    if next_url and url_has_allowed_host_and_scheme(url=next_url, allowed_hosts={request.get_host()}):
-        return next_url
-    return reverse(default)
-
-
 def login_view(request):
-    """صفحة تسجيل الدخول الفاخرة للعملاء مع دعم الدخول عبر Google"""
+    """صفحة تسجيل الدخول الفاخرة للعملاء مع حماية ضد التخمين ودعم الدخول عبر Google"""
     if request.user.is_authenticated:
         return redirect('store:account_profile')
         
     next_url = request.GET.get('next', '')
     
     if request.method == 'POST':
+        client_ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+        throttle_key = f"bv_login_fails_{client_ip}"
+        failed_attempts = cache.get(throttle_key, 0)
+        if failed_attempts >= 10:
+            messages.error(request, 'تم تجاوز الحد الأقصى لمحاولات تسجيل الدخول. يرجى الانتظار 10 دقائق والمحاولة مجدداً.')
+            return render(request, 'store/auth/login.html', {'identifier': request.POST.get('identifier', ''), 'next_url': request.POST.get('next', '')})
+
         identifier = request.POST.get('identifier', '').strip()
         password = request.POST.get('password', '')
         remember_me = request.POST.get('remember_me')
@@ -1311,6 +1499,7 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             if user.is_active:
+                cache.delete(throttle_key)
                 auth_login(request, user)
                 if remember_me:
                     request.session.set_expiry(60 * 60 * 24 * 30) # 30 يوماً
@@ -1323,6 +1512,7 @@ def login_view(request):
             else:
                 messages.error(request, 'هذا الحساب معطل حالياً. يرجى التواصل مع إدارة المتجر.')
         else:
+            cache.set(throttle_key, failed_attempts + 1, timeout=600)
             messages.error(request, 'بيانات الدخول غير صحيحة. يرجى التحقق من البريد الإلكتروني وكلمة المرور.')
             
     return render(request, 'store/auth/login.html', {'next_url': next_url})
@@ -1623,7 +1813,7 @@ def account_profile_view(request):
     if profile.phone:
         order_query |= Q(customer_phone=profile.phone)
         
-    orders = Order.objects.filter(order_query).distinct().order_by('-created_at')
+    orders = Order.objects.filter(order_query).distinct().select_related('payment_method').prefetch_related('items__product').order_by('-created_at')
     
     total_orders_count = orders.count()
     active_statuses = ['pending_verification', 'payment_verified', 'processing', 'out_for_delivery']
@@ -1660,7 +1850,8 @@ def account_profile_view(request):
 @require_POST
 def reorder_view(request, order_number):
     """إعادة طلب منتجات من طلب سابق وإضافتها فوراً لسلة المشتريات"""
-    order = get_object_or_404(Order, order_number=order_number)
+    order = get_object_or_404(Order.objects.prefetch_related('items__product'), order_number=order_number)
+
     
     # التحقق من ملكية الطلب للمستخدم المسجل
     user_owns = (order.user == request.user) or (request.user.email and order.customer_email.lower() == request.user.email.lower())
@@ -1789,7 +1980,7 @@ def mark_all_notifications_read_view(request):
 # ==============================================================================
 
 def robots_txt(request):
-    """ملف robots.txt الموجه لمحركات البحث وعناكب الذكاء الاصطناعي"""
+    """ملف robots.txt الموجه لمحركات البحث وعناكب الذكاء الاصطناعي مع دعم كاش المتصفح"""
     base_url = request.build_absolute_uri('/')[:-1]
     content = f"""User-agent: *
 Allow: /
@@ -1811,10 +2002,14 @@ User-agent: ClaudeBot
 Allow: /
 User-agent: PerplexityBot
 Allow: /
+User-agent: Applebot
+Allow: /
 
 Sitemap: {base_url}/sitemap.xml
 """
-    return HttpResponse(content.strip(), content_type="text/plain; charset=utf-8")
+    response = HttpResponse(content.strip(), content_type="text/plain; charset=utf-8")
+    response['Cache-Control'] = 'public, max-age=86400'
+    return response
 
 
 def sitemap_xml(request):
@@ -1828,6 +2023,7 @@ def sitemap_xml(request):
         {'loc': f"{base_url}/perfumes/", 'priority': '0.9', 'changefreq': 'daily'},
         {'loc': f"{base_url}/watches/", 'priority': '0.9', 'changefreq': 'daily'},
         {'loc': f"{base_url}/cosmetics/", 'priority': '0.9', 'changefreq': 'daily'},
+        {'loc': f"{base_url}/gifting/", 'priority': '0.9', 'changefreq': 'daily'},
         {'loc': f"{base_url}/track-order/", 'priority': '0.5', 'changefreq': 'monthly'},
     ]
     
@@ -1865,7 +2061,9 @@ def sitemap_xml(request):
         xml_lines.append('  </url>')
     xml_lines.append('</urlset>')
     
-    return HttpResponse('\n'.join(xml_lines), content_type="application/xml; charset=utf-8")
+    response = HttpResponse('\n'.join(xml_lines), content_type="application/xml; charset=utf-8")
+    response['Cache-Control'] = 'public, max-age=3600'
+    return response
 
 
 def llms_txt(request):
@@ -1885,21 +2083,69 @@ def llms_txt(request):
   - Perfumes ({base_url}/perfumes/): عطور النخبة العالمية (أصلية 100% وإصدارات ماستر كواليتي طبق الأصل).
   - Luxury Watches ({base_url}/watches/): ساعات راقية رجالية ونسائية بحركات أوتوماتيكية ومحركات كوارتز.
   - Cosmetics & Care ({base_url}/cosmetics/): مستحضرات تجميل فاخرة وسيرومات العناية الفائقة بالبشرة.
-- **Accepted Currencies**: الريال السعودي (SAR) والريال اليمني (YER).
+  - Luxury Gift Builder ({base_url}/gifting/): ركن تصميم باقات الإهداء مع التغليف الملكي وكروت الإهداء المخصصة.
+- **Accepted Currencies**: الريال السعودي (SAR) والريال اليمني (YER) مع تحويل فوري شفاف.
 - **Payment Methods**: تحويل مصرفي مباشر (الكريمي، التضامن، المحافظ الإلكترونية، ومصرف الراجحي للمغتربين بالسعودي) والدفع عند الاستلام.
-- **Delivery Coverage**: توصيل سريع معتمد لكافة المحافظات والمدن اليمنية.
+- **Delivery Coverage**: توصيل سريع معتمد لكافة المحافظات والمدن اليمنية خلال 24-48 ساعة.
 - **Customer Support**: WhatsApp: {settings.contact_whatsapp or 'متوفر'} | Phone: {settings.contact_phone or 'متوفر'}
 """
-    return HttpResponse(content.strip(), content_type="text/plain; charset=utf-8")
+    response = HttpResponse(content.strip(), content_type="text/plain; charset=utf-8")
+    response['Cache-Control'] = 'public, max-age=86400'
+    return response
 
 
 def health_check(request):
-    """فحص سلامة وجاهزية التطبيق السحابي للاستضافة ومراقبة الخدمة (Railway Healthcheck)"""
+    """فحص سلامة وجاهزية التطبيق السحابي وقاعدة البيانات والكاش للاستضافة ومراقبة الخدمة (Railway Healthcheck)"""
+    from django.db import connection
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1;")
+            cursor.fetchone()
+        db_status = "connected"
+        http_status = 200
+        service_status = "healthy"
+    except Exception as e:
+        logger.error(f"Database health check failed: {e}", exc_info=True)
+        db_status = "disconnected"
+        http_status = 503
+        service_status = "unhealthy"
+
+    cache_status = "connected"
+    try:
+        cache.set('bv_health_ping', 'ok', timeout=10)
+        if cache.get('bv_health_ping') != 'ok':
+            cache_status = "degraded"
+    except Exception:
+        cache_status = "unavailable"
+
     return JsonResponse({
-        'status': 'healthy',
+        'status': service_status,
         'service': 'brandveloura',
-        'database': 'connected',
-    }, status=200)
+        'database': db_status,
+        'cache': cache_status,
+    }, status=http_status)
+
+
+def offline_view(request):
+    """صفحة تصفح وضع عدم الاتصال الفاخرة لتطبيق PWA"""
+    settings = StoreSettings.get_settings()
+    return render(request, 'store/offline.html', {'store_settings': settings})
+
+
+def custom_404_view(request, exception=None):
+    """صفحة خطأ 404 مخصصة بهوية المتجر الفاخرة"""
+    return render(request, '404.html', status=404)
+
+
+def custom_500_view(request):
+    """صفحة خطأ 500 مخصصة بهوية المتجر الفاخرة"""
+    return render(request, '500.html', status=500)
+
+
+def custom_403_view(request, exception=None):
+    """صفحة خطأ 403 مخصصة بهوية المتجر الفاخرة"""
+    return render(request, '403.html', status=403)
+
 
 
 

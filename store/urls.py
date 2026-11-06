@@ -15,6 +15,9 @@ urlpatterns = [
     path('products/<slug:slug>/', views.product_detail_view, name='product_detail'),
     path('products/<slug:slug>/modal/', views.product_quick_view, name='product_modal'),
     
+    # مسارات توافقية للمنتجات
+    path('product/<slug:slug>/', views.product_detail_view, name='product_detail_alias'),
+    
     # سلة المشتريات التفاعلية (HTMX)
     path('cart/', views.cart_view, name='cart_view'),
     path('cart/add/', views.cart_add, name='cart_add'),
@@ -28,6 +31,7 @@ urlpatterns = [
     # إتمام الطلب والتحقق والتتبع
     path('checkout/', views.checkout_view, name='checkout'),
     path('order-success/<str:order_number>/', views.order_success_view, name='order_success'),
+    path('order/success/<str:order_number>/', views.order_success_view, name='order_success_alias'),
     path('track-order/', views.track_order_view, name='track_order'),
     
     # الحسابات والمصادقة (تسجيل الدخول، إنشاء حساب، ودخول Google)
@@ -37,6 +41,7 @@ urlpatterns = [
     path('auth/google/', views.google_login_redirect, name='google_login'),
     path('auth/google/callback/', views.google_auth_callback, name='google_callback'),
     path('account/', views.account_profile_view, name='account_profile'),
+    path('account/orders/', views.account_profile_view, name='account_orders'),
     path('account/reorder/<str:order_number>/', views.reorder_view, name='reorder'),
     
     # مركز الإشعارات والتنبيهات التفاعلي (HTMX)
@@ -45,9 +50,10 @@ urlpatterns = [
     path('notifications/<int:notification_id>/read/', views.mark_notification_read_view, name='mark_notification_read'),
     path('notifications/mark-all-read/', views.mark_all_notifications_read_view, name='mark_all_notifications_read'),
 
-    # تطبيق الويب التقدمي (PWA) وإشعارات الهاتف
+    # تطبيق الويب التقدمي (PWA) وإشعارات الهاتف ووضع أوفلاين
     path('manifest.json', views.pwa_manifest, name='pwa_manifest'),
     path('sw.js', views.service_worker, name='service_worker'),
+    path('offline/', views.offline_view, name='offline'),
     path('api/push/vapid-key/', views.push_vapid_key, name='push_vapid_key'),
     path('api/push/subscribe/', views.push_subscribe, name='push_subscribe'),
 
@@ -55,5 +61,7 @@ urlpatterns = [
     path('robots.txt', views.robots_txt, name='robots_txt'),
     path('sitemap.xml', views.sitemap_xml, name='sitemap_xml'),
     path('llms.txt', views.llms_txt, name='llms_txt'),
+    path('health/', views.health_check, name='health_check'),
+    path('healthz/', views.health_check, name='healthz_check'),
 ]
 

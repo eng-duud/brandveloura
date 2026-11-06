@@ -29,8 +29,8 @@
   "offers": {
     "@type": "Offer",
     "url": "{{ request.scheme }}://{{ request.get_host }}{% url 'store:product_detail' slug=product.slug %}",
-    "priceCurrency": "SAR",
-    "price": "{{ product.price_sar }}",
+    "priceCurrency": "{% if active_currency == 'SAR' %}SAR{% else %}YER{% endif %}",
+    "price": "{% if active_currency == 'SAR' %}{{ product.price_sar }}{% else %}{{ product.price_yer|floatformat:0 }}{% endif %}",
     "priceValidUntil": "2027-12-31",
     "itemCondition": "https://schema.org/NewCondition",
     "availability": "{% if product.stock_quantity > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}",

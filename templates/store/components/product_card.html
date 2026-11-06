@@ -37,27 +37,49 @@
             </h3>
         </div>
 
-        <!-- Single-Row Price Hierarchy (SAR + approx YER) -->
+        <!-- Single-Row Price Hierarchy (Adapts to Active Currency YER / SAR) -->
         <div class="mt-2 pt-2 border-t border-pink-100 flex items-baseline justify-between gap-1">
             <div class="flex items-baseline gap-1">
-                {% if product.has_grades %}
-                <span class="text-[10px] text-slate-400 font-medium">يبدأ من:</span>
-                <span class="font-bold text-slate-950 text-sm sm:text-base font-num">
-                    {{ product.price_master_sar|default:product.price_sar }}
-                </span>
+                {% if active_currency == 'YER' %}
+                    {% if product.has_grades %}
+                    <span class="text-[10px] text-slate-400 font-medium">يبدأ من:</span>
+                    <span class="font-bold text-slate-950 text-sm sm:text-base font-num">
+                        {{ product.price_master_yer|default:product.price_yer|floatformat:0 }}
+                    </span>
+                    {% else %}
+                    <span class="font-bold text-slate-950 text-sm sm:text-base font-num">
+                        {{ product.price_yer|floatformat:0 }}
+                    </span>
+                    {% endif %}
+                    <span class="text-[10px] font-bold text-brand-600">ر.ي</span>
                 {% else %}
-                <span class="font-bold text-slate-950 text-sm sm:text-base font-num">
-                    {{ product.price_sar }}
-                </span>
+                    {% if product.has_grades %}
+                    <span class="text-[10px] text-slate-400 font-medium">يبدأ من:</span>
+                    <span class="font-bold text-slate-950 text-sm sm:text-base font-num">
+                        {{ product.price_master_sar|default:product.price_sar }}
+                    </span>
+                    {% else %}
+                    <span class="font-bold text-slate-950 text-sm sm:text-base font-num">
+                        {{ product.price_sar }}
+                    </span>
+                    {% endif %}
+                    <span class="text-[10px] font-bold text-brand-600">ر.س</span>
                 {% endif %}
-                <span class="text-[10px] font-bold text-brand-600">ر.س</span>
             </div>
             
             <span class="text-[10px] font-medium text-slate-500 font-num">
-                {% if product.has_grades and product.price_master_yer %}
-                    {{ product.price_master_yer|floatformat:0 }} ر.ي
+                {% if active_currency == 'YER' %}
+                    {% if product.has_grades and product.price_master_sar %}
+                        {{ product.price_master_sar }} ر.س
+                    {% else %}
+                        {{ product.price_sar }} ر.س
+                    {% endif %}
                 {% else %}
-                    {{ product.price_yer|floatformat:0 }} ر.ي
+                    {% if product.has_grades and product.price_master_yer %}
+                        {{ product.price_master_yer|floatformat:0 }} ر.ي
+                    {% else %}
+                        {{ product.price_yer|floatformat:0 }} ر.ي
+                    {% endif %}
                 {% endif %}
             </span>
         </div>

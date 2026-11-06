@@ -141,8 +141,14 @@ class CategoryAdmin(admin.ModelAdmin):
         )
     category_type_badge.short_description = 'نوع القسم'
 
+    def get_queryset(self, request):
+        from django.db.models import Count
+        return super().get_queryset(request).annotate(total_products=Count('products'))
+
     def products_count(self, obj):
-        count = obj.products.count()
+        count = getattr(obj, 'total_products', None)
+        if count is None:
+            count = obj.products.count()
         url = reverse('admin:store_product_changelist') + f"?category__id__exact={obj.id}"
         return format_html(
             '<a href="{}" style="font-weight: 700; color: #be123f; text-decoration: underline;" title="عرض منتجات هذا القسم">{} منتج ↗</a>',
@@ -190,10 +196,15 @@ class ProductAdmin(admin.ModelAdmin):
     date_hierarchy = 'created_at'
     list_per_page = 25
     list_editable = ['is_featured', 'is_new', 'is_active']
+    list_select_related = ['category']
     autocomplete_fields = ['category']
     prepopulated_fields = {'slug': ('name_ar',)}
     readonly_fields = ['currency_preview_info', 'created_at', 'updated_at']
     inlines = [ProductImageInline]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('category').prefetch_related('images')
+
     actions = [
         'duplicate_products',
         'send_push_campaign',
@@ -471,6 +482,7 @@ class OrderAdmin(admin.ModelAdmin):
     search_help_text = 'البحث برقم الطلب (BV-...)، اسم العميل، رقم الهاتف، أو رقم الحوالة'
     date_hierarchy = 'created_at'
     list_per_page = 25
+    list_select_related = ['user', 'payment_method']
     readonly_fields = [
         'order_number', 'created_at', 'updated_at', 
         'receipt_large_view', 'customer_whatsapp_link',
@@ -478,6 +490,10 @@ class OrderAdmin(admin.ModelAdmin):
         'formatted_subtotal', 'formatted_shipping_fee', 'stock_deducted', 'exchange_rate_applied', 'user'
     ]
     inlines = [OrderItemInline]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user', 'payment_method').prefetch_related('items')
+
 
     fieldsets = (
         ('حالة الطلب وسند التحويل المرفوع', {
@@ -553,6 +569,8 @@ class OrderAdmin(admin.ModelAdmin):
     currency_due_badge.short_description = 'المستحق'
 
     def customer_whatsapp_btn(self, obj):
+        if not obj or not obj.customer_phone:
+            return '—'
         phone = obj.customer_phone.replace('+', '').replace(' ', '')
         msg = f"مرحباً {obj.customer_name}، نتواصل معك من متجر Brand Veloura بخصوص طلبك #{obj.order_number}: حالة طلبك الحالية هي ({obj.get_status_display()})."
         url = f"https://wa.me/{phone}?text={urllib.parse.quote(msg)}"

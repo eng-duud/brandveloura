@@ -92,7 +92,11 @@ class StoreSettings(models.Model):
 
     @classmethod
     def get_settings(cls):
-        settings_obj, created = cls.objects.get_or_create(id=1)
+        settings_obj = cls.objects.first()
+        if not settings_obj:
+            settings_obj, created = cls.objects.get_or_create(id=1)
+        else:
+            created = False
         
         # Sync environment variables if present
         env_phone = os.getenv('STORE_PHONE', '').strip()
@@ -117,6 +121,47 @@ class StoreSettings(models.Model):
                 pass
                 
         return settings_obj
+
+    @classmethod
+    def get_exchange_rate(cls):
+        """الحصول على سعر الصرف المعتمد من الكاش السريع لتفادي N+1 استعلامات في القوائم والمنتجات"""
+        try:
+            from django.core.cache import cache
+            cached_rate = cache.get('bv_yer_per_sar')
+            if cached_rate is not None:
+                return cached_rate
+        except Exception:
+            pass
+
+        rate = cls.objects.values_list('yer_per_sar', flat=True).first()
+        if not rate:
+            settings_obj = cls.get_settings()
+            rate = settings_obj.yer_per_sar or Decimal('530.00')
+
+        try:
+            from django.core.cache import cache
+            cache.set('bv_yer_per_sar', rate, timeout=300)
+        except Exception:
+            pass
+        return rate
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        try:
+            from django.core.cache import cache
+            cache.delete('bv_yer_per_sar')
+        except Exception:
+            pass
+
+    def delete(self, *args, **kwargs):
+        try:
+            from django.core.cache import cache
+            cache.delete('bv_yer_per_sar')
+        except Exception:
+            pass
+        super().delete(*args, **kwargs)
+
+
 
     @property
     def effective_google_client_id(self):
@@ -264,6 +309,20 @@ class Category(models.Model):
             base = slugify(self.name_en or self.name_ar, allow_unicode=True)
             self.slug = base if base else f"cat-{uuid.uuid4().hex[:6]}"
         super().save(*args, **kwargs)
+        try:
+            from django.core.cache import cache
+            cache.delete('bv_active_categories')
+        except Exception:
+            pass
+
+    def delete(self, *args, **kwargs):
+        try:
+            from django.core.cache import cache
+            cache.delete('bv_active_categories')
+        except Exception:
+            pass
+        super().delete(*args, **kwargs)
+
 
     @property
     def get_image_url(self):
@@ -361,10 +420,10 @@ class Product(models.Model):
 
     @property
     def price_sar(self):
-        """حساب السعر بالريال السعودي آلياً بناءً على سعر الصرف اليومي بالمتجر"""
-        settings = StoreSettings.get_settings()
-        if settings.yer_per_sar and settings.yer_per_sar > 0:
-            sar_val = self.price_yer / settings.yer_per_sar
+        """حساب السعر بالريال السعودي آلياً بناءً على سعر الصرف اليومي المعتمد بالمتجر"""
+        rate = StoreSettings.get_exchange_rate()
+        if rate and rate > 0:
+            sar_val = self.price_yer / rate
             return round(sar_val, 1)
         return Decimal('0.00')
 
@@ -373,9 +432,9 @@ class Product(models.Model):
         """سعر الأصلي بالريال السعودي"""
         if not self.price_original_yer:
             return None
-        settings = StoreSettings.get_settings()
-        if settings.yer_per_sar and settings.yer_per_sar > 0:
-            return round(self.price_original_yer / settings.yer_per_sar, 1)
+        rate = StoreSettings.get_exchange_rate()
+        if rate and rate > 0:
+            return round(self.price_original_yer / rate, 1)
         return None
 
     @property
@@ -383,9 +442,9 @@ class Product(models.Model):
         """سعر الماستر / طبق الأصل بالريال السعودي"""
         if not self.price_master_yer:
             return None
-        settings = StoreSettings.get_settings()
-        if settings.yer_per_sar and settings.yer_per_sar > 0:
-            return round(self.price_master_yer / settings.yer_per_sar, 1)
+        rate = StoreSettings.get_exchange_rate()
+        if rate and rate > 0:
+            return round(self.price_master_yer / rate, 1)
         return None
 
     @property
@@ -393,9 +452,9 @@ class Product(models.Model):
         """حساب سعر الشطب بالسعودي آلياً"""
         if not self.compare_at_price_yer:
             return None
-        settings = StoreSettings.get_settings()
-        if settings.yer_per_sar and settings.yer_per_sar > 0:
-            sar_val = self.compare_at_price_yer / settings.yer_per_sar
+        rate = StoreSettings.get_exchange_rate()
+        if rate and rate > 0:
+            sar_val = self.compare_at_price_yer / rate
             return round(sar_val, 1)
         return None
 
@@ -409,10 +468,20 @@ class Product(models.Model):
 
     @property
     def primary_image_url(self):
+        fallback = 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=80'
+        if hasattr(self, '_prefetched_objects_cache') and 'images' in self._prefetched_objects_cache:
+            imgs = self._prefetched_objects_cache['images']
+            for img in imgs:
+                if img.is_primary:
+                    return img.get_image_url
+            if imgs:
+                return imgs[0].get_image_url
+            return fallback
         first_img = self.images.filter(is_primary=True).first() or self.images.first()
         if first_img:
             return first_img.get_image_url
-        return 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=80'
+        return fallback
+
 
 
 class ProductImage(models.Model):
@@ -601,7 +670,7 @@ class Order(models.Model):
                     message=msg,
                     notification_type=n_type,
                     order=self,
-                    link=f"/order/success/{self.order_number}/"
+                    link=f"/order-success/{self.order_number}/"
                 )
 
     @property
@@ -742,7 +811,7 @@ class Notification(models.Model):
             message=message,
             notification_type=notification_type,
             order=order,
-            link=link or (f"/order/success/{order.order_number}/" if order else "/account/"),
+            link=link or (f"/order-success/{order.order_number}/" if order else "/account/"),
         )
 
     @classmethod
