@@ -646,5 +646,87 @@ class UserRoutesAndOperationsTests(TestCase):
         res_z = self.client.get(reverse('healthz_check'))
         self.assertEqual(res_z.status_code, 200)
 
+    def test_catalog_4_icon_filters_and_mobile_ergonomics(self):
+        """فحص أن صفحات العطور والساعات ومستحضرات التجميل والكتالوج تعرض الفلتر في صف واحد بـ 4 أيقونات دون سكرول أفقي"""
+        # 1. Perfumes catalog
+        res_perfumes = self.client.get(reverse('store:perfumes_catalog'))
+        self.assertEqual(res_perfumes.status_code, 200)
+        self.assertContains(res_perfumes, 'id="perfumes-filter-form"')
+        self.assertContains(res_perfumes, 'grid grid-cols-4')
+        self.assertContains(res_perfumes, 'data-lucide="users"')
+        self.assertContains(res_perfumes, 'data-lucide="sparkles"')
+        self.assertContains(res_perfumes, 'data-lucide="crown"')
+        self.assertContains(res_perfumes, 'data-lucide="arrow-down-up"')
+        self.assertContains(res_perfumes, 'filter-dot')
+        self.assertContains(res_perfumes, 'data-short="الأقل سعراً"')
+        self.assertContains(res_perfumes, 'data-short="رجالي"')
+        self.assertContains(res_perfumes, 'text-base')
+        self.assertNotContains(res_perfumes, 'overflow-x-auto no-scrollbar flex-nowrap')
+
+        # 1b. Perfumes with active filter
+        res_perf_active = self.client.get(reverse('store:perfumes_catalog') + '?gender=men&sort=price_low')
+        self.assertEqual(res_perf_active.status_code, 200)
+        self.assertContains(res_perf_active, 'active-filters-bar')
+        self.assertContains(res_perf_active, 'resetCatalogFilterForm')
+
+        # 2. Watches catalog
+        res_watches = self.client.get(reverse('store:watches_catalog'))
+        self.assertEqual(res_watches.status_code, 200)
+        self.assertContains(res_watches, 'id="watches-filter-form"')
+        self.assertContains(res_watches, 'grid grid-cols-4')
+        self.assertContains(res_watches, 'data-lucide="users"')
+        self.assertContains(res_watches, 'data-lucide="watch"')
+        self.assertContains(res_watches, 'data-lucide="crown"')
+        self.assertContains(res_watches, 'data-lucide="arrow-down-up"')
+        self.assertContains(res_watches, 'filter-dot')
+        self.assertContains(res_watches, 'data-short="أوتوماتيك"')
+        self.assertNotContains(res_watches, 'overflow-x-auto no-scrollbar flex-nowrap')
+
+        # 3. Cosmetics catalog
+        res_cosmetics = self.client.get(reverse('store:cosmetics_catalog'))
+        self.assertEqual(res_cosmetics.status_code, 200)
+        self.assertContains(res_cosmetics, 'id="cosmetics-filter-form"')
+        self.assertContains(res_cosmetics, 'grid grid-cols-4')
+        self.assertContains(res_cosmetics, 'data-lucide="sparkles"')
+        self.assertContains(res_cosmetics, 'data-lucide="crown"')
+        self.assertContains(res_cosmetics, 'data-lucide="arrow-down-up"')
+        self.assertContains(res_cosmetics, 'data-lucide="rotate-ccw"')
+        self.assertContains(res_cosmetics, 'resetCatalogFilterForm')
+        self.assertContains(res_cosmetics, 'data-short="تجميل"')
+        self.assertNotContains(res_cosmetics, 'overflow-x-auto no-scrollbar flex-nowrap')
+
+        # 4. Global Product list
+        res_products = self.client.get(reverse('store:product_list'))
+        self.assertEqual(res_products.status_code, 200)
+        self.assertContains(res_products, 'id="filter-controls-form"')
+        self.assertContains(res_products, 'grid grid-cols-4')
+        self.assertContains(res_products, 'data-lucide="layout-grid"')
+        self.assertContains(res_products, 'data-lucide="crown"')
+        self.assertContains(res_products, 'data-lucide="arrow-down-up"')
+        self.assertContains(res_products, 'data-lucide="rotate-ccw"')
+        self.assertContains(res_products, 'resetCatalogFilterForm')
+        self.assertNotContains(res_products, 'overflow-x-auto no-scrollbar flex-nowrap')
+
+    def test_account_page_2x2_mobile_grid_metrics(self):
+        """فحص تنظيم إحصائيات حساب العميل في شبكة 2*2 للجوال مع البيانات الأربعة وإمكانية الوصول"""
+        self.client.force_login(self.user)
+        res = self.client.get(reverse('store:account_profile'))
+        self.assertEqual(res.status_code, 200)
+        # Verify 2x2 grid container
+        self.assertContains(res, 'grid grid-cols-2 lg:grid-cols-4')
+        # Verify the 4 cards: total orders, delivered, in delivery, notifications
+        self.assertContains(res, 'إجمالي الطلبات')
+        self.assertContains(res, 'الطلبات المكتملة')
+        self.assertContains(res, 'قيد التوصيل')
+        self.assertContains(res, 'الإشعارات')
+        # Verify total spent banner
+        self.assertContains(res, 'إجمالي المشتريات')
+        # Verify accessible roles
+        self.assertContains(res, 'role="button"')
+        self.assertContains(res, 'tabindex="0"')
+        self.assertContains(res, "switchTab('orders')")
+        self.assertContains(res, "switchTab('notifications')")
+
+
 
 

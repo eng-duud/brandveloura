@@ -879,6 +879,60 @@
             }
         }
         document.body.addEventListener('cartUpdated', syncCartBadges);
+        function syncFilterBtn(select) {
+            const btn = select.closest('.filter-btn');
+            if (!btn) return;
+            const label = btn.querySelector('.filter-label');
+            const icon = btn.querySelector('i, svg');
+            const dot = btn.querySelector('.filter-dot');
+            const val = select.value;
+            const isSort = select.name === 'sort';
+            const isDefault = !val || (isSort && val === 'newest');
+            
+            if (isDefault) {
+                if (label) label.textContent = select.dataset.defaultLabel || 'تصفية';
+                btn.classList.remove('bg-slate-900', 'text-white', 'border-slate-900', 'shadow-xs');
+                btn.classList.add('bg-pink-50/40', 'hover:bg-pink-100/60', 'text-slate-700', 'border-pink-200/80');
+                if (icon) {
+                    icon.classList.remove('text-pink-300');
+                    icon.classList.add('text-brand-600');
+                }
+                if (dot) dot.classList.add('hidden');
+            } else {
+                const opt = select.options[select.selectedIndex];
+                const text = (opt && (opt.dataset.short || opt.getAttribute('data-short'))) || 
+                             (opt ? opt.text.replace(/^(عطور|ساعات|محرك|مستحضرات)\s+/, '') : '');
+                if (label && text) label.textContent = text;
+                btn.classList.remove('bg-pink-50/40', 'hover:bg-pink-100/60', 'text-slate-700', 'border-pink-200/80');
+                btn.classList.add('bg-slate-900', 'text-white', 'border-slate-900', 'shadow-xs');
+                if (icon) {
+                    icon.classList.remove('text-brand-600');
+                    icon.classList.add('text-pink-300');
+                }
+                if (dot) dot.classList.remove('hidden');
+            }
+        }
+
+        function resetCatalogFilterForm(el) {
+            const form = (el && el.closest('form')) || document.querySelector('#perfumes-filter-form, #watches-filter-form, #cosmetics-filter-form, #filter-controls-form');
+            if (!form) return;
+            
+            // Clear search input
+            const qInput = form.querySelector('input[name="q"]');
+            if (qInput) qInput.value = '';
+            
+            // Reset all selects to default
+            const selects = form.querySelectorAll('select');
+            selects.forEach(select => {
+                select.selectedIndex = 0;
+                select.value = select.name === 'sort' ? 'newest' : '';
+                syncFilterBtn(select);
+            });
+            
+            // Hide active filters bar if present
+            const activeBar = form.querySelector('.active-filters-bar');
+            if (activeBar) activeBar.classList.add('hidden');
+        }
 
         document.body.addEventListener('htmx:afterSwap', function(evt) {
             lucide.createIcons();

@@ -43,30 +43,113 @@
         </div>
     </div>
 
-    <!-- 2. Overview Stats (ملخص النشاط) -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <div class="bg-white rounded-xl p-4 border border-slate-200">
-            <span class="text-xs text-slate-500 block mb-1">إجمالي الطلبات</span>
+    <!-- 2. Overview Stats (شبكة ملخص النشاط 2*2 للجوال) -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <!-- 1. إجمالي الطلبات -->
+        <div 
+            role="button" 
+            tabindex="0" 
+            onclick="switchTab('orders')" 
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); switchTab('orders');}"
+            class="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200 shadow-2xs cursor-pointer hover:border-pink-300 transition group flex flex-col justify-between focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            title="عرض سجل الطلبات الكامل"
+        >
+            <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="text-xs text-slate-500 font-medium group-hover:text-slate-900 transition">إجمالي الطلبات</span>
+                <div class="w-7 h-7 rounded-lg bg-pink-50 text-brand-600 flex items-center justify-center shrink-0">
+                    <i data-lucide="package" class="w-3.5 h-3.5"></i>
+                </div>
+            </div>
             <div class="flex items-baseline gap-1.5">
-                <span class="text-2xl font-bold text-slate-900 font-num">{{ total_orders_count }}</span>
-                <span class="text-xs text-slate-400">طلب</span>
+                <span class="text-xl sm:text-2xl font-bold text-slate-900 font-num">{{ total_orders_count }}</span>
+                <span class="text-[11px] text-slate-400">طلب</span>
             </div>
         </div>
 
-        <div class="bg-white rounded-xl p-4 border border-slate-200">
-            <span class="text-xs text-slate-500 block mb-1">الطلبات الجارية</span>
+        <!-- 2. الطلبات المكتملة -->
+        <div 
+            role="button" 
+            tabindex="0" 
+            onclick="switchTab('orders')" 
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); switchTab('orders');}"
+            class="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200 shadow-2xs cursor-pointer hover:border-emerald-300 transition group flex flex-col justify-between focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            title="عرض الطلبات المسلمة"
+        >
+            <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="text-xs text-slate-500 font-medium group-hover:text-slate-900 transition">الطلبات المكتملة</span>
+                <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                    <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                </div>
+            </div>
             <div class="flex items-baseline gap-1.5">
-                <span class="text-2xl font-bold text-slate-900 font-num">{{ active_orders_count }}</span>
-                <span class="text-xs text-slate-400">قيد المعالجة والتوصيل</span>
+                <span class="text-xl sm:text-2xl font-bold text-slate-900 font-num">{{ delivered_orders_count }}</span>
+                <span class="text-[11px] text-slate-400">تم التسليم</span>
             </div>
         </div>
 
-        <div class="bg-white rounded-xl p-4 border border-slate-200">
-            <span class="text-xs text-slate-500 block mb-1">إجمالي المشتريات</span>
-            <div class="flex items-baseline gap-1.5">
-                <span class="text-xl font-bold text-slate-900 font-num">{{ total_spent_yer|floatformat:0 }}</span>
-                <span class="text-xs text-slate-400">ر.ي ({{ total_spent_sar|floatformat:1 }} ر.س)</span>
+        <!-- 3. قيد التوصيل والنشطة -->
+        <div 
+            role="button" 
+            tabindex="0" 
+            onclick="switchTab('orders')" 
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); switchTab('orders');}"
+            class="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200 shadow-2xs cursor-pointer hover:border-purple-300 transition group flex flex-col justify-between focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+            title="عرض الطلبات الجارية وقيد التوصيل"
+        >
+            <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="text-xs text-slate-500 font-medium group-hover:text-slate-900 transition">قيد التوصيل</span>
+                <div class="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                    <i data-lucide="truck" class="w-3.5 h-3.5"></i>
+                </div>
             </div>
+            <div class="flex items-baseline gap-1.5">
+                <span class="text-xl sm:text-2xl font-bold text-slate-900 font-num">{{ active_orders_count }}</span>
+                <span class="text-[11px] text-slate-400">نشطة</span>
+            </div>
+        </div>
+
+        <!-- 4. الإشعارات والتنبيهات -->
+        <div 
+            role="button" 
+            tabindex="0" 
+            onclick="switchTab('notifications')" 
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); switchTab('notifications');}"
+            class="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200 shadow-2xs cursor-pointer hover:border-blue-300 transition group flex flex-col justify-between focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            title="عرض الإشعارات والتنبيهات"
+        >
+            <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="text-xs text-slate-500 font-medium group-hover:text-slate-900 transition">الإشعارات</span>
+                <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 relative">
+                    <i data-lucide="bell" class="w-3.5 h-3.5"></i>
+                    {% if notifications_unread_count > 0 %}
+                    <span class="w-2 h-2 rounded-full bg-rose-500 absolute -top-0.5 -right-0.5"></span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="flex items-baseline gap-1.5">
+                <span class="text-xl sm:text-2xl font-bold text-slate-900 font-num">{{ notifications_unread_count }}</span>
+                <span class="text-[11px] text-slate-400">{% if notifications_unread_count > 0 %}جديدة{% else %}لا جديد{% endif %}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Purchases Summary Banner -->
+    <div class="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-pink-50 text-brand-600 flex items-center justify-center shrink-0">
+                <i data-lucide="wallet" class="w-4 h-4"></i>
+            </div>
+            <div>
+                <span class="text-[11px] text-slate-400 block font-medium">إجمالي المشتريات في حسابك</span>
+                <div class="flex items-baseline gap-1.5">
+                    <span class="text-base sm:text-lg font-bold text-slate-900 font-num">{{ total_spent_yer|floatformat:0 }}</span>
+                    <span class="text-xs text-slate-600 font-medium">ر.ي</span>
+                    <span class="text-xs text-slate-400 font-num">({{ total_spent_sar|floatformat:1 }} ر.س)</span>
+                </div>
+            </div>
+        </div>
+        <div class="text-[11px] text-slate-400 font-medium hidden sm:block">
+            إجمالي الطلبات المؤكدة والجارية باستثناء الملغية
         </div>
     </div>
 
@@ -503,8 +586,6 @@
         if (activeBtn) {
             activeBtn.className = 'tab-button pb-3 border-b-2 border-slate-900 text-slate-900 cursor-pointer transition flex items-center gap-1.5';
         }
-        if (window.lucide) lucide.createIcons();
-    }
         if (window.lucide) lucide.createIcons();
     }
 

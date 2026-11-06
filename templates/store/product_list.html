@@ -39,17 +39,17 @@
         </div>
     </div>
 
-    <!-- SINGLE HORIZONTAL FILTER BAR -->
-    <div class="bg-white rounded-2xl p-2.5 sm:p-3 border border-pink-200 shadow-2xs">
+    <!-- 4-ICON FILTER BAR (SINGLE ROW - ZERO HORIZONTAL SCROLL) -->
+    <div class="bg-white rounded-2xl p-2.5 sm:p-3.5 border border-pink-200 shadow-2xs">
         <form 
             id="filter-controls-form" 
             hx-get="{% url 'store:product_list' %}" 
             hx-target="#product-grid" 
             hx-push-url="true"
-            class="flex items-center gap-2 sm:gap-2.5 overflow-x-auto no-scrollbar flex-nowrap py-0.5"
+            class="space-y-2.5"
         >
-            <!-- 1. Search Input -->
-            <div class="relative flex-1 min-w-[170px] sm:min-w-[220px]">
+            <!-- 1. Full-Width Search Input -->
+            <div class="relative w-full">
                 <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
                 <input 
                     type="text" 
@@ -61,72 +61,104 @@
                 >
             </div>
 
-            <!-- 2. Category Selector Dropdown -->
-            <div class="relative shrink-0 min-w-[130px] sm:min-w-[150px]">
-                <div class="flex items-center gap-1.5 w-full h-10 bg-pink-50/40 border border-pink-200 rounded-xl px-2.5 focus-within:border-brand-500 focus-within:bg-white transition shadow-2xs">
-                    <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-brand-600 shrink-0"></i>
+            <!-- 2. Single Clean Row of 4 Distinct Expressive Icon Filter Buttons (Zero Scroll) -->
+            <div class="grid grid-cols-4 gap-1.5 sm:gap-2.5 w-full">
+                
+                <!-- Button 1: الأقسام (Category) -->
+                <div class="filter-btn relative flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-center cursor-pointer {% if current_category %}bg-slate-900 text-white border-slate-900 shadow-xs{% else %}bg-pink-50/40 hover:bg-pink-100/60 text-slate-700 border-pink-200/80{% endif %}">
+                    <span class="filter-dot w-1.5 h-1.5 rounded-full bg-pink-400 absolute top-1.5 right-1.5 {% if not current_category %}hidden{% endif %}"></span>
+                    <i data-lucide="layout-grid" class="w-4 h-4 {% if current_category %}text-pink-300{% else %}text-brand-600{% endif %} shrink-0"></i>
+                    <span class="filter-label text-[10px] sm:text-xs font-bold truncate max-w-full mt-1">
+                        {% if current_category %}{{ current_category.name_ar }}{% else %}الأقسام{% endif %}
+                    </span>
                     <select 
                         name="category" 
                         hx-trigger="change"
-                        class="w-full bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer py-1"
+                        data-default-label="الأقسام"
+                        onchange="syncFilterBtn(this)"
+                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 text-base"
+                        title="تحديد القسم"
                     >
                         <option value="">كافة الأقسام</option>
                         {% for cat in global_categories %}
-                        <option value="{{ cat.slug }}" {% if current_category and current_category.slug == cat.slug %}selected{% endif %}>
+                        <option value="{{ cat.slug }}" data-short="{{ cat.name_ar }}" {% if current_category and current_category.slug == cat.slug %}selected{% endif %}>
                             {{ cat.name_ar }}
                         </option>
                         {% endfor %}
                     </select>
                 </div>
-            </div>
 
-            <!-- 3. Brand Selector Dropdown -->
-            <div class="relative shrink-0 min-w-[130px] sm:min-w-[150px]">
-                <div class="flex items-center gap-1.5 w-full h-10 bg-pink-50/40 border border-pink-200 rounded-xl px-2.5 focus-within:border-brand-500 focus-within:bg-white transition shadow-2xs">
-                    <i data-lucide="award" class="w-3.5 h-3.5 text-brand-600 shrink-0"></i>
+                <!-- Button 2: الماركات (Brand) -->
+                <div class="filter-btn relative flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-center cursor-pointer {% if brand_filter %}bg-slate-900 text-white border-slate-900 shadow-xs{% else %}bg-pink-50/40 hover:bg-pink-100/60 text-slate-700 border-pink-200/80{% endif %}">
+                    <span class="filter-dot w-1.5 h-1.5 rounded-full bg-pink-400 absolute top-1.5 right-1.5 {% if not brand_filter %}hidden{% endif %}"></span>
+                    <i data-lucide="crown" class="w-4 h-4 {% if brand_filter %}text-pink-300{% else %}text-brand-600{% endif %} shrink-0"></i>
+                    <span class="filter-label text-[10px] sm:text-xs font-bold truncate max-w-full mt-1">
+                        {% if brand_filter %}{{ brand_filter }}{% else %}الماركات{% endif %}
+                    </span>
                     <select 
                         name="brand" 
                         hx-trigger="change"
-                        class="w-full bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer py-1"
+                        data-default-label="الماركات"
+                        onchange="syncFilterBtn(this)"
+                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 text-base"
+                        title="تحديد الماركة"
                     >
                         <option value="">كافة الماركات</option>
                         {% for b in available_brands %}
-                        <option value="{{ b }}" {% if brand_filter == b %}selected{% endif %}>{{ b }}</option>
+                        <option value="{{ b }}" data-short="{{ b }}" {% if brand_filter == b %}selected{% endif %}>{{ b }}</option>
                         {% endfor %}
                     </select>
                 </div>
-            </div>
 
-            <!-- 4. Sorting Dropdown -->
-            <div class="relative shrink-0 min-w-[125px] sm:min-w-[140px]">
-                <div class="flex items-center gap-1.5 w-full h-10 bg-pink-50/40 border border-pink-200 rounded-xl px-2.5 focus-within:border-brand-500 focus-within:bg-white transition shadow-2xs">
-                    <i data-lucide="arrow-down-up" class="w-3.5 h-3.5 text-brand-600 shrink-0"></i>
+                <!-- Button 3: الترتيب (Sort) -->
+                <div class="filter-btn relative flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-center cursor-pointer {% if sort_by and sort_by != 'newest' %}bg-slate-900 text-white border-slate-900 shadow-xs{% else %}bg-pink-50/40 hover:bg-pink-100/60 text-slate-700 border-pink-200/80{% endif %}">
+                    <span class="filter-dot w-1.5 h-1.5 rounded-full bg-pink-400 absolute top-1.5 right-1.5 {% if not sort_by or sort_by == 'newest' %}hidden{% endif %}"></span>
+                    <i data-lucide="arrow-down-up" class="w-4 h-4 {% if sort_by and sort_by != 'newest' %}text-pink-300{% else %}text-brand-600{% endif %} shrink-0"></i>
+                    <span class="filter-label text-[10px] sm:text-xs font-bold truncate max-w-full mt-1">
+                        {% if sort_by == 'best_sellers' %}الأكثر طلباً{% elif sort_by == 'price_low' %}الأقل سعراً{% elif sort_by == 'price_high' %}الأعلى سعراً{% else %}الترتيب{% endif %}
+                    </span>
                     <select 
                         name="sort" 
                         hx-trigger="change"
-                        class="w-full bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer py-1"
+                        data-default-label="الترتيب"
+                        onchange="syncFilterBtn(this)"
+                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 text-base"
+                        title="ترتيب المنتجات"
                     >
-                        <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>وصل حديثاً</option>
-                        <option value="best_sellers" {% if sort_by == 'best_sellers' %}selected{% endif %}>الأكثر طلباً</option>
-                        <option value="price_low" {% if sort_by == 'price_low' %}selected{% endif %}>السعر: الأقل أولاً</option>
-                        <option value="price_high" {% if sort_by == 'price_high' %}selected{% endif %}>السعر: الأعلى أولاً</option>
+                        <option value="newest" data-short="الأحدث" {% if sort_by == 'newest' %}selected{% endif %}>وصل حديثاً</option>
+                        <option value="best_sellers" data-short="الأكثر طلباً" {% if sort_by == 'best_sellers' %}selected{% endif %}>الأكثر طلباً</option>
+                        <option value="price_low" data-short="الأقل سعراً" {% if sort_by == 'price_low' %}selected{% endif %}>السعر: الأقل أولاً</option>
+                        <option value="price_high" data-short="الأعلى سعراً" {% if sort_by == 'price_high' %}selected{% endif %}>السعر: الأعلى أولاً</option>
                     </select>
                 </div>
+
+                <!-- Button 4: إعادة الضبط (Reset) -->
+                <a 
+                    href="{% url 'store:product_list' %}" 
+                    hx-get="{% url 'store:product_list' %}"
+                    hx-target="#product-grid"
+                    hx-push-url="true"
+                    onclick="resetCatalogFilterForm(this)"
+                    class="filter-btn relative flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-center cursor-pointer {% if current_category or brand_filter or search_query or sort_by != 'newest' %}bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 shadow-2xs{% else %}bg-pink-50/40 text-slate-500 border-pink-200/80 hover:bg-pink-100/60 hover:text-slate-700{% endif %}"
+                    title="إعادة ضبط كافة الفلاتر"
+                >
+                    <i data-lucide="rotate-ccw" class="w-4 h-4 {% if current_category or brand_filter or search_query or sort_by != 'newest' %}text-rose-600{% else %}text-brand-600{% endif %} shrink-0"></i>
+                    <span class="filter-label text-[10px] sm:text-xs font-bold truncate max-w-full mt-1">
+                        إلغاء الفلترة
+                    </span>
+                </a>
+
             </div>
 
-            <!-- 5. Quick Reset Button -->
-            {% if current_category or search_query or brand_filter or sort_by != 'newest' %}
-            <a 
-                href="{% url 'store:product_list' %}" 
-                hx-get="{% url 'store:product_list' %}"
-                hx-target="#product-grid"
-                hx-push-url="true"
-                class="shrink-0 h-10 px-3.5 rounded-xl bg-pink-50 hover:bg-brand-500 hover:text-white text-slate-800 border border-pink-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
-                title="إعادة ضبط الفلاتر"
-            >
-                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                <span class="hidden sm:inline">إلغاء الفلترة</span>
-            </a>
+            <!-- Active Filters Indicator -->
+            {% if current_category or brand_filter or search_query or sort_by != 'newest' %}
+            <div class="active-filters-bar flex items-center justify-between pt-1.5 border-t border-pink-100 text-xs">
+                <div class="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+                    <span>تصفية نشطة:</span>
+                    {% if current_category %}<span class="px-2 py-0.5 rounded-md bg-pink-100 text-brand-700 font-medium">{{ current_category.name_ar }}</span>{% endif %}
+                    {% if brand_filter %}<span class="px-2 py-0.5 rounded-md bg-pink-100 text-brand-700 font-medium">{{ brand_filter }}</span>{% endif %}
+                </div>
+            </div>
             {% endif %}
 
         </form>
