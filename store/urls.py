@@ -45,9 +45,11 @@ urlpatterns = [
     path('notifications/<int:notification_id>/read/', views.mark_notification_read_view, name='mark_notification_read'),
     path('notifications/mark-all-read/', views.mark_all_notifications_read_view, name='mark_all_notifications_read'),
 
-    # تطبيق الويب التقدمي (PWA)
+    # تطبيق الويب التقدمي (PWA) وإشعارات الهاتف
     path('manifest.json', views.pwa_manifest, name='pwa_manifest'),
     path('sw.js', views.service_worker, name='service_worker'),
+    path('api/push/vapid-key/', views.push_vapid_key, name='push_vapid_key'),
+    path('api/push/subscribe/', views.push_subscribe, name='push_subscribe'),
 
     # مسارات الفهرسة والذكاء الاصطناعي (SEO / GEO / AI Overviews)
     path('robots.txt', views.robots_txt, name='robots_txt'),

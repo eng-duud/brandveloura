@@ -18,7 +18,8 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from .models import (
     StoreSettings, PaymentAccount, ShippingZone, 
     Category, Product, ProductImage, 
-    Order, OrderItem, HeroBanner, UserProfile, Notification
+    Order, OrderItem, HeroBanner, UserProfile, Notification,
+    WebPushSubscription
 )
 
 
@@ -1128,12 +1129,11 @@ def pwa_manifest(request):
 
 
 def service_worker(request):
-    """ملف sw.js لإدارة الكاش والتصفح أوفلاين على الهواتف"""
+    """ملف sw.js لإدارة الكاش، التصفح أوفلاين، واستقبال إشعارات PWA وتطبيق الهاتف"""
     sw_code = """
-    const CACHE_NAME = 'brand-veloura-pwa-v1';
+    const CACHE_NAME = 'brand-veloura-pwa-v2';
     const ASSETS_TO_CACHE = [
         '/',
-        '/static/css/tailwind.css',
         '/static/icons/icon-192.png',
         '/static/icons/icon-512.png'
     ];
@@ -1177,8 +1177,99 @@ def service_worker(request):
                 })
         );
     });
+
+    // الاستماع لإشعارات الويب وتطبيق الهاتف المباشرة (Push Notifications)
+    self.addEventListener('push', (event) => {
+        let payload = {
+            title: 'Brand Veloura',
+            body: 'إشعار جديد من المتجر',
+            url: '/',
+            icon: '/static/icons/icon-192.png',
+            badge: '/static/icons/icon-192.png'
+        };
+        if (event.data) {
+            try {
+                payload = Object.assign(payload, event.data.json());
+            } catch (err) {
+                payload.body = event.data.text();
+            }
+        }
+        const options = {
+            body: payload.body,
+            icon: payload.icon || '/static/icons/icon-192.png',
+            badge: payload.badge || '/static/icons/icon-192.png',
+            vibrate: [200, 100, 200],
+            data: { url: payload.url || '/' },
+            dir: 'rtl',
+            lang: 'ar',
+            tag: 'brand-veloura-notification'
+        };
+        event.waitUntil(
+            self.registration.showNotification(payload.title, options)
+        );
+    });
+
+    // التعامل مع النقر على الإشعار وتوجيه العميل للرابط المطلوب
+    self.addEventListener('notificationclick', (event) => {
+        event.notification.close();
+        const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/';
+        event.waitUntil(
+            clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+                for (let i = 0; i < windowClients.length; i++) {
+                    const client = windowClients[i];
+                    if (client.url.includes(self.location.origin) && 'focus' in client) {
+                        client.navigate(targetUrl);
+                        return client.focus();
+                    }
+                }
+                if (clients.openWindow) {
+                    return clients.openWindow(targetUrl);
+                }
+            })
+        );
+    });
     """
     return HttpResponse(sw_code, content_type='application/javascript')
+
+
+def push_vapid_key(request):
+    """إرجاع المفتاح العام VAPID لاشتراك أجهزة العملاء في إشعارات PWA"""
+    from .push_notifications import get_or_create_vapid_keys
+    pub_key, _, _ = get_or_create_vapid_keys()
+    return JsonResponse({'publicKey': pub_key})
+
+
+@csrf_exempt
+def push_subscribe(request):
+    """تسجيل وتحديث اشتراك جهاز العميل في إشعارات الويب وتطبيق الهاتف"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    import json
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        endpoint = data.get('endpoint')
+        keys = data.get('keys', {})
+        p256dh = keys.get('p256dh')
+        auth = keys.get('auth')
+
+        if not endpoint or not p256dh or not auth:
+            return JsonResponse({'error': 'Invalid subscription payload'}, status=400)
+
+        user = request.user if request.user.is_authenticated else None
+        user_agent = request.META.get('HTTP_USER_AGENT', '')[:250]
+
+        sub, created = WebPushSubscription.objects.update_or_create(
+            endpoint=endpoint,
+            defaults={
+                'user': user,
+                'p256dh': p256dh,
+                'auth': auth,
+                'user_agent': user_agent
+            }
+        )
+        return JsonResponse({'success': True, 'id': sub.id, 'created': created})
+    except Exception as ex:
+        return JsonResponse({'error': str(ex)}, status=400)
 
 
 # ==============================================================================

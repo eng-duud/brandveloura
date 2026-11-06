@@ -23,9 +23,11 @@ urlpatterns = [
     # مسارات المتجر
     path('', include('store.urls')),
     
-    # مسارات PWA على المستوى الجذري
+    # مسارات PWA وإشعارات الويب على المستوى الجذري
     path('manifest.json', store_views.pwa_manifest, name='root_manifest'),
     path('sw.js', store_views.service_worker, name='root_sw'),
+    path('api/push/vapid-key/', store_views.push_vapid_key, name='root_push_vapid_key'),
+    path('api/push/subscribe/', store_views.push_subscribe, name='root_push_subscribe'),
     
     # مسارات محركات البحث والذكاء الاصطناعي (SEO / GEO / AI Overviews)
     path('robots.txt', store_views.robots_txt, name='robots_txt'),

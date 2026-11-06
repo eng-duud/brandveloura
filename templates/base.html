@@ -218,22 +218,51 @@
     <!-- Global Toast Notification Container -->
     <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all"></div>
 
-    <!-- PWA Install Banner -->
-    <div id="pwa-install-banner" class="hidden bg-gradient-to-r from-slate-900 via-brand-900 to-slate-900 text-white px-4 py-2.5 text-xs md:text-sm flex items-center justify-between shadow-lg sticky top-0 z-50 border-b border-brand-500/30">
+    <!-- PWA Install Banner (Luxury Boutique Palette - Matched with Brand Logo) -->
+    <div id="pwa-install-banner" class="hidden bg-[#0f172a] text-white px-4 py-2.5 text-xs md:text-sm flex items-center justify-between shadow-md sticky top-0 z-50 border-b border-white/10">
         <div class="flex items-center gap-3">
-            <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-8 h-8 rounded-xl object-cover shadow-sm border border-brand-400/40 shrink-0">
+            <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-8 h-8 rounded-xl object-cover shadow-xs border border-[#fec2f5]/40 shrink-0">
             <div>
-                <p class="font-bold tracking-wide">ثبّت تطبيق {{ store_settings.store_name }} على هاتفك</p>
-                <p class="text-rose-200/80 text-[11px]">تصفح فوري، بدون استهلاك للإنترنت، مع تتبع مباشر لطلباتك</p>
+                <p class="font-bold tracking-wide text-white">تطبيق {{ store_settings.store_name }}</p>
+                <p class="text-slate-300 text-[11px]">تصفح أسرع، بدون استهلاك للإنترنت، ومتابعة فورية لطلباتك</p>
             </div>
         </div>
         <div class="flex items-center gap-2">
-            <button id="pwa-install-btn" class="bg-gradient-to-r from-brand-500 to-rose-500 hover:from-brand-600 hover:to-rose-600 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-md transition cursor-pointer">
+            <button id="pwa-install-btn" class="bg-[#fec2f5] hover:bg-[#fba7e8] text-[#0f172a] px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-xs transition duration-200 cursor-pointer">
                 تثبيت التطبيق
             </button>
-            <button onclick="document.getElementById('pwa-install-banner').remove()" class="text-white/60 hover:text-white p-1.5 cursor-pointer rounded-lg hover:bg-white/10 transition" aria-label="إغلاق">
+            <button onclick="dismissInstallBanner()" class="text-slate-400 hover:text-white p-1.5 cursor-pointer rounded-lg hover:bg-white/10 transition" aria-label="إغلاق">
                 <i data-lucide="x" class="w-4 h-4"></i>
             </button>
+        </div>
+    </div>
+
+    <!-- PWA Push Notification Permission Card (كارت تفعيل إشعارات التطبيق والطلبات الفورية) -->
+    <div id="pwa-notif-card" class="hidden fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-40 max-w-sm w-[calc(100%-2rem)] bg-white/95 backdrop-blur-md rounded-2xl shadow-luxury-lg border border-pink-200/90 p-4 transition-all duration-300 transform translate-y-4 opacity-0 pointer-events-none" role="dialog" aria-labelledby="notif-card-title">
+        <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-[#fec2f5]/50 border border-[#fba7e8] text-slate-800 flex items-center justify-center shrink-0 shadow-xs">
+                <i data-lucide="bell-ring" class="w-5 h-5 text-slate-800"></i>
+            </div>
+            <div class="flex-grow space-y-1">
+                <div class="flex items-center justify-between">
+                    <h3 id="notif-card-title" class="font-bold text-sm text-slate-900">تفعيل إشعارات المتجر 🔔</h3>
+                    <button onclick="dismissNotifPrompt()" class="text-slate-400 hover:text-slate-700 p-0.5 rounded-md" aria-label="إغلاق">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                    اسمح للتطبيق بإرسال إشعارات مباشرة لتصلك تحديثات حالة طلباتك، وتنبيهات أحدث العروض والتخفيضات فور صدورها.
+                </p>
+                <div class="flex items-center gap-2 pt-2">
+                    <button onclick="requestPushPermission()" class="bg-[#0f172a] hover:bg-black text-white px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+                        <span>تفعيل الإشعارات</span>
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button onclick="dismissNotifPrompt()" class="text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-xl text-xs font-semibold hover:bg-slate-100 transition cursor-pointer">
+                        لاحقاً
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -848,32 +877,137 @@
             }, 2500);
         }
 
-        // PWA Service Worker Registration
+        // Helper: Convert VAPID base64 string to Uint8Array for PushManager
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding)
+                .replace(/\-/g, '+')
+                .replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        // PWA Service Worker Registration & Notification Check
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW error:', err));
+                navigator.serviceWorker.register('/sw.js').then((reg) => {
+                    checkAndPromptPushNotification(reg);
+                }).catch(err => console.log('SW error:', err));
             });
         }
 
-        // PWA Install Prompt Banner
+        // PWA Install Prompt Banner Controls
         let deferredPrompt;
         const installBanner = document.getElementById('pwa-install-banner');
         const installBtn = document.getElementById('pwa-install-btn');
 
+        function dismissInstallBanner() {
+            if (installBanner) installBanner.classList.add('hidden');
+            sessionStorage.setItem('bv_install_dismissed', 'true');
+        }
+
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            if (installBanner) installBanner.classList.remove('hidden');
+            if (installBanner && !sessionStorage.getItem('bv_install_dismissed')) {
+                installBanner.classList.remove('hidden');
+            }
         });
 
         if (installBtn) {
             installBtn.addEventListener('click', async () => {
                 if (deferredPrompt) {
                     deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
                     deferredPrompt = null;
                     if (installBanner) installBanner.classList.add('hidden');
+                    if (outcome === 'accepted') {
+                        // After successful install, prompt for push notifications!
+                        setTimeout(() => showNotifPromptCard(), 1500);
+                    }
                 }
             });
+        }
+
+        // Notification Prompt Card Controls
+        const notifCard = document.getElementById('pwa-notif-card');
+
+        function showNotifPromptCard() {
+            if (!notifCard) return;
+            if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+            if (Notification.permission !== 'default') return;
+            const dismissedUntil = localStorage.getItem('bv_notif_dismissed_until');
+            if (dismissedUntil && Date.now() < parseInt(dismissedUntil, 10)) return;
+
+            notifCard.classList.remove('hidden');
+            setTimeout(() => {
+                notifCard.classList.remove('translate-y-4', 'opacity-0', 'pointer-events-none');
+                notifCard.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+                if (window.lucide) lucide.createIcons();
+            }, 60);
+        }
+
+        function hideNotifPromptCard() {
+            if (!notifCard) return;
+            notifCard.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+            notifCard.classList.add('translate-y-4', 'opacity-0', 'pointer-events-none');
+            setTimeout(() => notifCard.classList.add('hidden'), 300);
+        }
+
+        function dismissNotifPrompt() {
+            hideNotifPromptCard();
+            // Don't prompt again for 7 days
+            localStorage.setItem('bv_notif_dismissed_until', (Date.now() + 7 * 24 * 60 * 60 * 1000).toString());
+        }
+
+        function checkAndPromptPushNotification(registration) {
+            if (!('Notification' in window)) return;
+            if (Notification.permission === 'default') {
+                // Show after 3.5 seconds of browsing
+                setTimeout(() => showNotifPromptCard(), 3500);
+            }
+        }
+
+        async function requestPushPermission() {
+            hideNotifPromptCard();
+            if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+                showToast('المتصفح الحالي لا يدعم خاصية الإشعارات', 'error');
+                return;
+            }
+
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    // Fetch VAPID public key
+                    const keyRes = await fetch('/api/push/vapid-key/');
+                    const keyData = await keyRes.json();
+                    
+                    if (keyData.publicKey) {
+                        const reg = await navigator.serviceWorker.ready;
+                        const subscription = await reg.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: urlBase64ToUint8Array(keyData.publicKey)
+                        });
+
+                        // Save subscription to backend
+                        await fetch('/api/push/subscribe/', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(subscription)
+                        });
+
+                        showToast('تم تفعيل الإشعارات بنجاح ✨ ستصلك تحديثات طلباتك وعروضنا أولاً بأول.', 'success');
+                    }
+                } else if (permission === 'denied') {
+                    showToast('تم رفض إذن الإشعارات من المتصفح.', 'error');
+                }
+            } catch (err) {
+                console.error('Push subscription failed:', err);
+            }
         }
 
         // Mobile Sidebar Drawer Controls

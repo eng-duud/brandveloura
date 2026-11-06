@@ -228,3 +228,54 @@ class NotificationSystemTests(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, 'مركز الإشعارات والتنبيهات')
         self.assertContains(res, 'تحديث حسابك')
+
+    def test_push_vapid_key_endpoint(self):
+        """اختبار توفير المفتاح العام VAPID للأجهزة"""
+        res = self.client.get(reverse('store:push_vapid_key'))
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn('publicKey', data)
+        self.assertTrue(len(data['publicKey']) > 20)
+
+    def test_push_subscribe_endpoint(self):
+        """اختبار تسجيل اشتراك جهاز جديد في إشعارات الويب"""
+        import json
+        from store.models import WebPushSubscription
+        payload = {
+            'endpoint': 'https://fcm.googleapis.com/fcm/send/test-device-token-12345',
+            'keys': {
+                'p256dh': 'BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QT9t0Ppk6YsklTuW324gn9T4',
+                'auth': 'tBHItJI5svbpez7KI4CCXg'
+            }
+        }
+        res = self.client.post(
+            reverse('store:push_subscribe'),
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data.get('success'))
+        self.assertTrue(WebPushSubscription.objects.filter(endpoint=payload['endpoint']).exists())
+
+    def test_service_worker_contains_push_events(self):
+        """اختبار أن ملف sw.js يحتوي على مستمعات إشعارات الدفع والنقر"""
+        res = self.client.get('/sw.js')
+        self.assertEqual(res.status_code, 200)
+        content = res.content.decode('utf-8')
+        self.assertIn("addEventListener('push'", content)
+        self.assertIn("addEventListener('notificationclick'", content)
+
+    def test_send_product_promotion_push(self):
+        """اختبار إنشاء إشعار ترويجي عند عمل تخفيض على منتج"""
+        from store.push_notifications import send_product_promotion_push
+        from store.models import Notification
+        self.product.compare_at_price_yer = Decimal('60000.00')
+        self.product.save()
+
+        count = send_product_promotion_push(self.product)
+        # Should record a notification in Notification log
+        notif = Notification.objects.filter(notification_type='promotion').latest('created_at')
+        self.assertIn('تخفيض حصري', notif.title)
+        self.assertIn(self.product.name_ar, notif.title)
+        self.assertEqual(notif.link, f"/product/{self.product.slug}/")

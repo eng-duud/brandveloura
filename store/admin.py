@@ -22,7 +22,8 @@ admin.site.index_title = "لوحة التحكم — إدارة العطور، ا
 from .models import (
     StoreSettings, PaymentAccount, ShippingZone, 
     Category, Product, ProductImage, 
-    Order, OrderItem, HeroBanner, UserProfile, Notification
+    Order, OrderItem, HeroBanner, UserProfile, Notification,
+    WebPushSubscription
 )
 
 # تزويد قوالب لوحة الإدارة بإحصائيات لوحة التحكم وسعر الصرف المباشر
@@ -195,6 +196,7 @@ class ProductAdmin(admin.ModelAdmin):
     inlines = [ProductImageInline]
     actions = [
         'duplicate_products',
+        'send_push_campaign',
         'make_active',
         'make_inactive',
         'make_featured',
@@ -250,7 +252,27 @@ class ProductAdmin(admin.ModelAdmin):
                 'specifications',
             )
         }),
+        ('7. إرسال إشعار ترويجي فوري لهواتف العملاء (Web Push Broadcast)', {
+            'classes': ('collapse',),
+            'description': 'عند تفعيل خيار الإرسال والضغط على حفظ، سيتم إرسال إشعار فوري لهواتف جميع مشتركي التطبيق بالتخفيض أو بالمنتج الجديد مع تحويلهم مباشرة لصفحة المنتج عند النقر.',
+            'fields': (
+                'send_push_notification_on_save',
+                ('push_notification_title', 'push_notification_body'),
+            )
+        }),
     )
+
+    def save_model(self, request, obj, form, change):
+        send_push = form.cleaned_data.get('send_push_notification_on_save', False)
+        custom_title = form.cleaned_data.get('push_notification_title', '')
+        custom_body = form.cleaned_data.get('push_notification_body', '')
+        obj.send_push_notification_on_save = False
+        super().save_model(request, obj, form, change)
+
+        if send_push:
+            from .push_notifications import send_product_promotion_push
+            sent = send_product_promotion_push(obj, custom_title=custom_title, custom_body=custom_body)
+            self.message_user(request, f"📢 تم إرسال الإشعار الترويجي لمنتج ({obj.name_ar}) بنجاح إلى {sent} من مشتركي التطبيق!")
 
     def brand_name_badge(self, obj):
         if obj.brand_name:
@@ -401,6 +423,14 @@ class ProductAdmin(admin.ModelAdmin):
     def unmark_as_new(self, request, queryset):
         updated = queryset.update(is_new=False)
         self.message_user(request, f"تمت إزالة شارة وصل حديثاً عن {updated} منتج.")
+
+    @admin.action(description='📢 إرسال إشعار ترويجي فوري لهواتف المشتركين (Push Notification)')
+    def send_push_campaign(self, request, queryset):
+        from .push_notifications import send_product_promotion_push
+        total_sent = 0
+        for prod in queryset:
+            total_sent += send_product_promotion_push(prod)
+        self.message_user(request, f"تم بنجاح إرسال إشعار ترويجي لـ {queryset.count()} منتج إلى {total_sent} جهاز مشترك!")
 
     @admin.action(description='⚠️ تحديد كـ نفد من المخزون (المخزون = 0)')
     def mark_out_of_stock(self, request, queryset):
@@ -615,6 +645,20 @@ class OrderAdmin(admin.ModelAdmin):
             restored_count += 1
         self.message_user(request, f'تم إلغاء {restored_count} طلب واسترجاع كميات منتجاتها إلى المخزون فوراً.')
 
+    def save_model(self, request, obj, form, change):
+        old_status = None
+        if change and obj.pk:
+            try:
+                old_status = Order.objects.get(pk=obj.pk).status
+            except Exception:
+                pass
+        super().save_model(request, obj, form, change)
+        if old_status and old_status != obj.status:
+            from .push_notifications import send_order_status_push
+            sent = send_order_status_push(obj, obj.status)
+            if sent:
+                self.message_user(request, f"🔔 تم إرسال إشعار تحديث الحالة لهاتف العميل بنجاح!")
+
 
 # ==============================================================================
 # 4. إعدادات المتجر وسعر الصرف اليومي (Store Settings)
@@ -752,7 +796,7 @@ class NotificationAdmin(admin.ModelAdmin):
     list_filter = ['is_read', 'for_admin', 'notification_type', 'created_at']
     search_fields = ['title', 'message', 'recipient__username', 'recipient__email', 'order__order_number']
     list_per_page = 30
-    actions = ['mark_as_read', 'mark_as_unread']
+    actions = ['mark_as_read', 'mark_as_unread', 'broadcast_push']
 
     def target_badge(self, obj):
         if obj.for_admin:
@@ -799,6 +843,19 @@ class NotificationAdmin(admin.ModelAdmin):
         count = queryset.update(is_read=False)
         self.message_user(request, f"تم تحديد {count} إشعار كغير مقروء.")
 
+    @admin.action(description='📢 بث الإشعارات المحددة كهواتف (Web Push Broadcast)')
+    def broadcast_push(self, request, queryset):
+        from .push_notifications import broadcast_web_push
+        total_sent = 0
+        for notif in queryset:
+            total_sent += broadcast_web_push(
+                title=notif.title,
+                body=notif.message,
+                url=notif.link or "/",
+                user_filter=notif.recipient
+            )
+        self.message_user(request, f"تم بنجاح بث {queryset.count()} إشعار إلى {total_sent} جهاز مشترك!")
+
 
 # ==============================================================================
 # 10. ملفات العملاء المسجلين (User Profiles)
@@ -817,3 +874,38 @@ class UserProfileAdmin(admin.ModelAdmin):
     def user_email(self, obj):
         return obj.user.email or '—'
     user_email.short_description = 'البريد الإلكتروني'
+
+
+# ==============================================================================
+# 11. مشتركو إشعارات وتطبيق الهاتف (Web Push Subscribers)
+# ==============================================================================
+
+@admin.register(WebPushSubscription)
+class WebPushSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ['subscriber_label', 'user_agent_short', 'created_at', 'updated_at']
+    search_fields = ['user__username', 'user__first_name', 'user__email', 'endpoint']
+    list_filter = ['created_at']
+    readonly_fields = ['created_at', 'updated_at', 'endpoint', 'p256dh', 'auth', 'user_agent']
+    actions = ['send_test_push']
+
+    def subscriber_label(self, obj):
+        if obj.user:
+            return format_html(
+                '<span style="font-weight: 700; color: #0284c7;">👤 {}</span>',
+                obj.user.get_full_name() or obj.user.username
+            )
+        return format_html('<span style="color: #64748b;">📱 زائر مجهول (هاتف)</span>')
+    subscriber_label.short_description = 'المشترك'
+
+    def user_agent_short(self, obj):
+        return obj.user_agent[:50] + ('...' if len(obj.user_agent) > 50 else '') if obj.user_agent else '—'
+    user_agent_short.short_description = 'الجهاز / المتصفح'
+
+    @admin.action(description='🔔 إرسال إشعار تجريبي مباشر للأجهزة المحددة')
+    def send_test_push(self, request, queryset):
+        from .push_notifications import send_web_push
+        count = 0
+        for sub in queryset:
+            if send_web_push(sub, title="Brand Veloura ✨", body="هذا إشعار تجريبي ناجح من لوحة إدارة المتجر!", url="/"):
+                count += 1
+        self.message_user(request, f"تم بنجاح إرسال الإشعار التجريبي لـ {count} جهاز.")

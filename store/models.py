@@ -54,6 +54,20 @@ class StoreSettings(models.Model):
         help_text='المفتاح السري لتطبيق Google OAuth'
     )
     
+    # إعدادات إشعارات الويب وتطبيق الهاتف (Web Push Notifications - VAPID)
+    vapid_public_key = models.CharField(
+        max_length=255, blank=True, default='',
+        verbose_name='مفتاح VAPID العام للإشعارات (Public Key)'
+    )
+    vapid_private_key = models.CharField(
+        max_length=255, blank=True, default='',
+        verbose_name='مفتاح VAPID السري للإشعارات (Private Key)'
+    )
+    vapid_claims_email = models.CharField(
+        max_length=150, blank=True, default='mailto:support@brandveloura.com',
+        verbose_name='البريد الإلكتروني للجهة المصدرة لـ VAPID'
+    )
+    
     updated_at = models.DateTimeField(auto_now=True, verbose_name='آخر تحديث')
 
     class Meta:
@@ -272,6 +286,24 @@ class Product(models.Model):
         blank=True, 
         verbose_name='المواصفات الفنية التفصيلية (JSON)',
         help_text='للعطور: الهرم العطري والتركيز والحجم | للساعات: مقاس الميناء ونوع السوار والمحرك | للتجميل: درجات الألوان ونوع البشرة'
+    )
+    
+    # خيارات الإشعار الترويجي للمشتركين عند الحفظ
+    send_push_notification_on_save = models.BooleanField(
+        default=False,
+        verbose_name='📢 إرسال إشعار فوري لجميع المشتركين على هواتفهم الآن',
+        help_text='فعّل هذا الخيار واضغط حفظ لإرسال إشعار فوري لجميع مستخدمي التطبيق والمشتركين بالتخفيض أو المنتج الجديد'
+    )
+    push_notification_title = models.CharField(
+        max_length=200, 
+        blank=True,
+        verbose_name='عنوان مخصص للإشعار (اختياري)',
+        help_text='إن تركته فارغاً، سيتم إنشاء عنوان تلقائي فاخر مثل: "🔥 تخفيض حصري على {الاسم}"'
+    )
+    push_notification_body = models.TextField(
+        blank=True,
+        verbose_name='نص مخصص للإشعار (اختياري)',
+        help_text='إن تركته فارغاً، سيتم توليد نص تسويقي جذاب يشمل السعر ونسبة الخصم تلقائياً'
     )
     
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإضافة')
@@ -699,4 +731,32 @@ class Notification(models.Model):
             order=order,
             link=link or (f"/admin/store/order/{order.id}/change/" if order else "/admin/"),
         )
+
+
+class WebPushSubscription(models.Model):
+    """سجل أجهزة العملاء المشتركين في إشعارات الويب وتطبيق الهاتف PWA"""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='push_subscriptions',
+        verbose_name='العميل المسجل'
+    )
+    endpoint = models.URLField(max_length=500, unique=True, verbose_name='رابط نقطة النهاية (Endpoint)')
+    p256dh = models.CharField(max_length=255, verbose_name='مفتاح التشفير (p256dh)')
+    auth = models.CharField(max_length=255, verbose_name='رمز المصادقة (auth)')
+    user_agent = models.CharField(max_length=255, blank=True, verbose_name='نوع الجهاز / المتصفح')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الاشتراك')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='آخر تحديث')
+
+    class Meta:
+        verbose_name = 'مشترك إشعارات (Push Subscriber)'
+        verbose_name_plural = 'مشتركو الإشعارات وتطبيق الهاتف (Push Subscribers)'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        user_label = self.user.get_full_name() or self.user.username if self.user else 'عميل زائر'
+        return f"{user_label} - {self.endpoint[:40]}..."
+
 
