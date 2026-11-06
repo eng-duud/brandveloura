@@ -23,7 +23,7 @@
         </a>
 
         <!-- Pending Orders Verification Card -->
-        <a href="{% url 'admin:store_order_changelist' %}?status__exact=pending_verification" style="text-decoration: none;" class="bv-kpi-card" style="border-color: #fde68a;">
+        <a href="{% url 'admin:store_order_changelist' %}?status__exact=pending_verification" style="text-decoration: none; border-color: #fde68a;" class="bv-kpi-card">
             <div class="bv-kpi-info">
                 <h4 style="color: #b45309;">بانتظار التحقق من الإشعار</h4>
                 <div class="bv-kpi-val" style="color: #d97706;">{{ admin_pending_orders|default:"0" }}</div>
