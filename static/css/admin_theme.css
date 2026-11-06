@@ -258,18 +258,44 @@ input[type="email"]:focus, textarea:focus, select:focus {
     font-weight: 700 !important;
 }
 
-/* Dashboard Custom KPI Cards (Rendered in index.html - Structured 2x2 Grid) */
+/* Dashboard Custom KPI Cards (Rendered in index.html - Strict 2x2 Grid on All Screens) */
 .bv-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px;
-    margin-bottom: 28px;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 16px;
+    margin-bottom: 24px;
 }
 
 @media (max-width: 680px) {
     .bv-kpi-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
+        gap: 10px !important;
+        margin-bottom: 18px !important;
+    }
+    .bv-kpi-card {
+        padding: 12px 10px !important;
+        border-radius: 14px !important;
+        flex-direction: column-reverse !important;
+        align-items: flex-start !important;
+        justify-content: flex-end !important;
+        gap: 8px !important;
+        min-height: 105px !important;
+    }
+    .bv-kpi-icon {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 1.05rem !important;
+        border-radius: 8px !important;
+    }
+    .bv-kpi-info h4 {
+        font-size: 0.68rem !important;
+        margin-bottom: 2px !important;
+        line-height: 1.25 !important;
+    }
+    .bv-kpi-info .bv-kpi-val {
+        font-size: 1.2rem !important;
+    }
+    .bv-kpi-info span {
+        font-size: 0.62rem !important;
     }
 }
 
@@ -317,7 +343,7 @@ input[type="email"]:focus, textarea:focus, select:focus {
     font-size: 1.4rem;
 }
 
-/* Quick Actions Grid */
+/* Quick Actions Grid (Structured 2-Column on Mobile) */
 .bv-quick-actions {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
@@ -325,9 +351,19 @@ input[type="email"]:focus, textarea:focus, select:focus {
     margin-bottom: 24px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 680px) {
     .bv-quick-actions {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+        margin-bottom: 18px !important;
+    }
+    .bv-action-btn {
+        padding: 9px 8px !important;
+        font-size: 0.72rem !important;
+        border-radius: 10px !important;
+        gap: 6px !important;
+        justify-content: center !important;
+        text-align: center !important;
     }
 }
 
@@ -416,19 +452,74 @@ fieldset.collapse h2 a {
     font-size: 0.78rem !important;
 }
 
-/* Bespoke Store Portal Hub (in index.html - Structured 2x2 Grid) */
+/* Bespoke Store Portal Hub (in index.html - Strict 2x2 Grid on Mobile & Desktop) */
 .bv-portal-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 22px;
     margin-bottom: 30px;
     align-items: stretch;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 768px) {
     .bv-portal-grid {
-        grid-template-columns: 1fr;
-        gap: 16px;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+        margin-bottom: 22px !important;
+    }
+    .bv-portal-card {
+        border-radius: 14px !important;
+    }
+    .bv-portal-header {
+        padding: 10px 10px !important;
+        gap: 8px !important;
+        align-items: center !important;
+    }
+    .bv-portal-header-icon {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 1.1rem !important;
+        border-radius: 8px !important;
+        flex-shrink: 0 !important;
+    }
+    .bv-portal-header-title {
+        font-size: 0.78rem !important;
+        line-height: 1.2 !important;
+    }
+    .bv-portal-header-subtitle {
+        display: none !important; /* Hide subtitle to keep 2x2 cards compact on mobile */
+    }
+    .bv-portal-body {
+        padding: 8px !important;
+        gap: 6px !important;
+    }
+    .bv-portal-item {
+        padding: 8px 6px !important;
+        border-radius: 8px !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 6px !important;
+    }
+    .bv-portal-item-desc {
+        display: none !important; /* Hide long description on mobile tiles */
+    }
+    .bv-portal-item-name {
+        font-size: 0.72rem !important;
+        line-height: 1.25 !important;
+        justify-content: space-between !important;
+    }
+    .bv-portal-item-actions {
+        width: 100% !important;
+        display: flex !important;
+        gap: 4px !important;
+    }
+    .bv-portal-btn {
+        flex: 1 !important;
+        justify-content: center !important;
+        padding: 4px 4px !important;
+        font-size: 0.66rem !important;
+        border-radius: 6px !important;
+        text-align: center !important;
     }
 }
 
