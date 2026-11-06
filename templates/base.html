@@ -8,6 +8,9 @@
     <meta name="description" content="{% block meta_description %}{{ store_settings.store_name }} — متجر العطور والساعات ومستحضرات التجميل{% endblock %}">
     <meta name="keywords" content="{% block meta_keywords %}عطور أصلية, عطور ماستر, ساعات, مستحضرات تجميل, عناية بالبشرة, Brand Veloura, متجر فيلورا, عطور اليمن{% endblock %}">
     <meta name="robots" content="{% block robots %}index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1{% endblock %}">
+    {% if google_site_verification %}
+    <meta name="google-site-verification" content="{{ google_site_verification }}">
+    {% endif %}
     
     <!-- Canonical Link -->
     <link rel="canonical" href="{% block canonical %}{{ request.build_absolute_uri }}{% endblock %}">

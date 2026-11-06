@@ -61,6 +61,7 @@ def store_context(request):
         'yer_per_sar': settings.yer_per_sar or Decimal('530.00'),
         'google_client_id': google_client_id,
         'google_callback_url': google_callback_url,
+        'google_site_verification': os.getenv('GOOGLE_SITE_VERIFICATION', '').strip(),
         'unread_notifications_count': unread_notifications_count,
         'admin_unread_notifications_count': admin_unread_notifications_count,
     }
