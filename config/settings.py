@@ -208,9 +208,10 @@ if cld_cloud_name and cld_api_key and cld_api_secret:
         'CLOUD_NAME': cld_cloud_name,
         'API_KEY': cld_api_key,
         'API_SECRET': cld_api_secret,
+        'PREFIX': '',
     }
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-    MEDIA_URL = f'https://res.cloudinary.com/{cld_cloud_name}/'
+    MEDIA_URL = '/media/'
     media_storage_backend = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 else:
     media_storage_backend = 'django.core.files.storage.FileSystemStorage'

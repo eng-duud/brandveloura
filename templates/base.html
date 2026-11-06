@@ -315,9 +315,20 @@
                     </form>
                 </div>
 
-                <!-- Action Buttons: Track Order + Cart + User Profile / Login -->
+                <!-- Action Buttons: Instagram + Track Order + Cart + User Profile / Login -->
                 <div class="flex items-center gap-2">
                     
+                    {% if store_settings.instagram_url %}
+                    <!-- Instagram Link (Desktop) -->
+                    <a href="{{ store_settings.instagram_url }}" target="_blank" rel="noopener noreferrer" class="hidden sm:flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 hover:scale-105 transition-all text-white shadow-2xs cursor-pointer shrink-0" title="تابعنا على انستغرام" aria-label="انستغرام">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect>
+                            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                            <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line>
+                        </svg>
+                    </a>
+                    {% endif %}
+
                     <!-- Track Order Link (Desktop) -->
                     <a href="{% url 'store:track_order' %}" class="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-white text-xs font-medium transition cursor-pointer min-h-[40px]" title="تتبع طلبي">
                         <i data-lucide="truck" class="w-4 h-4 text-slate-500"></i>
@@ -498,15 +509,19 @@
                         متجر متخصص في العطور والساعات ومستحضرات التجميل مع الشحن لكافة المحافظات.
                     </p>
                     <div class="flex items-center gap-2 pt-1">
-                        <a href="https://wa.me/{{ store_settings.contact_whatsapp }}" target="_blank" class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white flex items-center justify-center transition shadow-2xs cursor-pointer" title="واتساب" aria-label="واتساب">
+                        <a href="https://wa.me/{{ store_settings.contact_whatsapp }}" target="_blank" rel="noopener noreferrer" class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white flex items-center justify-center transition shadow-2xs hover:scale-105 cursor-pointer" title="واتساب" aria-label="واتساب">
                             <i data-lucide="message-circle" class="w-4 h-4"></i>
                         </a>
-                        {% if store_settings.contact_instagram %}
-                        <a href="https://instagram.com/{{ store_settings.contact_instagram }}" target="_blank" class="w-8 h-8 rounded-xl bg-rose-50 text-brand-600 hover:bg-brand-600 hover:text-white flex items-center justify-center transition shadow-2xs cursor-pointer" title="انستغرام" aria-label="انستغرام">
-                            <i data-lucide="instagram" class="w-4 h-4"></i>
+                        {% if store_settings.instagram_url %}
+                        <a href="{{ store_settings.instagram_url }}" target="_blank" rel="noopener noreferrer" class="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white flex items-center justify-center transition shadow-2xs hover:scale-105 cursor-pointer" title="انستغرام" aria-label="انستغرام">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect>
+                                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                                <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line>
+                            </svg>
                         </a>
                         {% endif %}
-                        <a href="tel:{{ store_settings.contact_phone }}" class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-900 hover:text-white flex items-center justify-center transition shadow-2xs cursor-pointer" title="اتصال هاتف" aria-label="هاتف">
+                        <a href="tel:{{ store_settings.contact_phone }}" class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-900 hover:text-white flex items-center justify-center transition shadow-2xs hover:scale-105 cursor-pointer" title="اتصال هاتف" aria-label="هاتف">
                             <i data-lucide="phone" class="w-4 h-4"></i>
                         </a>
                     </div>
@@ -779,10 +794,22 @@
 
             <!-- Footer of Sidebar -->
             <div class="p-3.5 border-t border-slate-200 bg-slate-50 space-y-2">
-                <a href="https://wa.me/{{ store_settings.contact_whatsapp }}" target="_blank" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs flex items-center justify-center gap-2 transition shadow-xs cursor-pointer">
-                    <i data-lucide="message-circle" class="w-4 h-4"></i>
-                    <span>تواصل عبر واتساب</span>
-                </a>
+                <div class="grid {% if store_settings.instagram_url %}grid-cols-2{% else %}grid-cols-1{% endif %} gap-2">
+                    <a href="https://wa.me/{{ store_settings.contact_whatsapp }}" target="_blank" rel="noopener noreferrer" class="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer">
+                        <i data-lucide="message-circle" class="w-4 h-4 shrink-0"></i>
+                        <span>واتساب</span>
+                    </a>
+                    {% if store_settings.instagram_url %}
+                    <a href="{{ store_settings.instagram_url }}" target="_blank" rel="noopener noreferrer" class="py-2.5 px-3 rounded-xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 hover:opacity-95 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer">
+                        <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect>
+                            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                            <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line>
+                        </svg>
+                        <span>انستغرام</span>
+                    </a>
+                    {% endif %}
+                </div>
                 <p class="text-[10px] text-center text-slate-400">© 2026 {{ store_settings.store_name }}</p>
             </div>
         </div>

@@ -201,3 +201,4 @@ def send_order_status_push(order, new_status):
         return broadcast_web_push(title=title, body=body, url=url, user_filter=order.user)
 
     return 0
+

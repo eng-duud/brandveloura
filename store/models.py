@@ -1,9 +1,22 @@
 import uuid
 import os
+import re
 from decimal import Decimal
 from django.db import models
 from django.conf import settings
 from django.utils.text import slugify
+
+
+def sanitize_image_url(url, fallback=''):
+    """تنظيف وتصحيح روابط الصور وتفادي مشاكل البادئات المكررة في Cloudinary"""
+    if not url:
+        return fallback
+    url_str = str(url).strip()
+    if 'image/upload/http' in url_str:
+        c_name = getattr(settings, 'CLOUDINARY_STORAGE', {}).get('CLOUD_NAME', '') or os.getenv('CLOUDINARY_CLOUD_NAME', 'ct6yw21y')
+        pattern = r'https?://res\.cloudinary\.com/[^/]+/image/upload/https?:/+(?:res\.cloudinary\.com/[^/]+/)?'
+        url_str = re.sub(pattern, f'https://res.cloudinary.com/{c_name}/image/upload/', url_str)
+    return url_str
 
 
 class StoreSettings(models.Model):
@@ -114,6 +127,24 @@ class StoreSettings(models.Model):
         return self.google_client_secret.strip() or os.getenv('GOOGLE_CLIENT_SECRET', '').strip()
 
     @property
+    def instagram_url(self):
+        """رابط حساب انستغرام المعالج بشكل سليم مهما كانت طريقة كتابته"""
+        val = (self.contact_instagram or '').strip()
+        if not val:
+            return ''
+        if val.startswith('http://') or val.startswith('https://'):
+            return val
+        clean_user = val.lstrip('@').strip().strip('/')
+        return f"https://instagram.com/{clean_user}"
+
+    @property
+    def get_logo_url(self):
+        """رابط شعار المتجر"""
+        if self.store_logo:
+            return sanitize_image_url(self.store_logo.url, '/static/images/logo.jpg')
+        return '/static/images/logo.jpg'
+
+    @property
     def gift_wrapping_fee_sar(self):
         """سعر التغليف بالريال السعودي"""
         if self.yer_per_sar and self.yer_per_sar > 0:
@@ -192,11 +223,10 @@ class HeroBanner(models.Model):
 
     @property
     def get_image_url(self):
+        fallback = self.image_url_fallback or 'https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1600&q=80'
         if self.image:
-            return self.image.url
-        if self.image_url_fallback:
-            return self.image_url_fallback
-        return 'https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1600&q=80'
+            return sanitize_image_url(self.image.url, fallback)
+        return fallback
 
 
 class Category(models.Model):
@@ -237,11 +267,10 @@ class Category(models.Model):
 
     @property
     def get_image_url(self):
+        fallback = self.image_url_fallback or 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=80'
         if self.image:
-            return self.image.url
-        if self.image_url_fallback:
-            return self.image_url_fallback
-        return 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=80'
+            return sanitize_image_url(self.image.url, fallback)
+        return fallback
 
 
 class Product(models.Model):
@@ -401,11 +430,10 @@ class ProductImage(models.Model):
 
     @property
     def get_image_url(self):
+        fallback = self.image_url_fallback or 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=80'
         if self.image:
-            return self.image.url
-        if self.image_url_fallback:
-            return self.image_url_fallback
-        return 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=80'
+            return sanitize_image_url(self.image.url, fallback)
+        return fallback
 
 
 class Order(models.Model):
@@ -579,10 +607,8 @@ class Order(models.Model):
     @property
     def get_receipt_url(self):
         if self.payment_receipt:
-            return self.payment_receipt.url
-        if self.payment_receipt_url:
-            return self.payment_receipt_url
-        return None
+            return sanitize_image_url(self.payment_receipt.url, self.payment_receipt_url or '')
+        return self.payment_receipt_url or None
 
 
 class OrderItem(models.Model):
