@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}الماركات والبراندات العالمية | {{ store_settings.store_name }}{% endblock %}
+
+{% block meta_description %}تصفح أشهر وأرقى الماركات والبراندات العالمية للعطور الفاخرة والساعات الراقية ومستحضرات التجميل الأصلية في متجر {{ store_settings.store_name }}.{% endblock %}
+{% block canonical %}{{ request.scheme }}://{{ request.get_host }}{% url 'store:brands_list' %}{% endblock %}
+{% block og_title %}الماركات والبراندات العالمية | {{ store_settings.store_name }}{% endblock %}
+{% block og_description %}استكشف تشكيلة الماركات العالمية الأصلية والماستر مع التوصيل لكافة المحافظات والدفع الميسر.{% endblock %}
+
+{% block content %}
+
+<!-- Header & Breadcrumbs -->
+<section class="bg-white/40 py-6 sm:py-8 border-b border-pink-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <nav class="flex items-center gap-2 text-[11px] text-slate-500 mb-3" aria-label="مسار التنقل">
+            <a href="{% url 'store:home' %}" class="hover:text-brand-600 transition">الرئيسية</a>
+            <i data-lucide="chevron-left" class="w-3.5 h-3.5 text-slate-400"></i>
+            <span class="text-slate-900 font-bold">الماركات والبراندات</span>
+        </nav>
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-xl sm:text-2xl font-bold text-slate-900 leading-tight flex items-center gap-2.5">
+                    <span class="w-2.5 h-6 bg-brand-500 rounded-full inline-block"></span>
+                    <span>الماركات والبراندات العالمية</span>
+                </h1>
+                <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                    تصفح أرقى بيوت العطور، الساعات ومستحضرات التجميل العالمية المختارة بعناية.
+                </p>
+            </div>
+            <div class="flex items-center gap-2 self-start sm:self-auto">
+                <span class="px-3 py-1.5 rounded-xl bg-white border border-pink-200 text-xs font-bold text-slate-800 shadow-2xs font-num">
+                    {{ total_count }} ماركة معتمدة
+                </span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Main Brands Directory Section -->
+<section class="py-8 bg-transparent min-h-[500px]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+
+        <!-- Search Bar with Live HTMX -->
+        <div class="bg-white rounded-2xl p-3 sm:p-4 border border-pink-200 shadow-2xs">
+            <form 
+                id="brands-search-form"
+                hx-get="{% url 'store:brands_list' %}"
+                hx-target="#brands-grid"
+                hx-indicator="#brands-loading-spinner"
+                hx-push-url="true"
+                class="relative"
+            >
+                <div class="relative w-full">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                    <input 
+                        type="text" 
+                        name="q" 
+                        value="{{ search_query|default:'' }}"
+                        placeholder="ابحث باسم الماركة بالعربي أو الإنجليزي (مثال: Dior, Chanel, رولكس)..." 
+                        hx-trigger="keyup changed delay:350ms, search"
+                        class="w-full h-11 bg-pink-50/40 border border-pink-200 focus:border-brand-500 focus:bg-white focus:outline-none rounded-xl py-2 pr-10 pl-10 text-xs text-slate-900 transition placeholder-slate-400 shadow-2xs"
+                    >
+                    <div id="brands-loading-spinner" class="htmx-indicator absolute left-3 top-1/2 -translate-y-1/2">
+                        <div class="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Brands Grid Container -->
+        {% include 'store/partials/brands_grid.html' with brands=brands search_query=search_query %}
+
+    </div>
+</section>
+
+<script>
+    document.addEventListener('htmx:afterSwap', function(evt) {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    });
+</script>
+
+{% endblock %}

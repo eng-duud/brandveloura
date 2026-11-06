@@ -281,28 +281,28 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16 md:h-18 gap-3">
                 
-                <!-- 3-Dots Mobile Menu + Logo & Brand Identity -->
+                <!-- 1. Right: Mobile Menu Trigger + Brand Identity -->
                 <div class="flex items-center gap-2.5 sm:gap-3">
-                    <!-- Mobile 3-Dots Trigger (Ergonomic Touch Target >= 44px) -->
+                    <!-- Mobile Menu Trigger Button -->
                     <button 
                         type="button" 
                         onclick="openMobileSidebar()" 
-                        class="md:hidden w-11 h-11 rounded-2xl bg-white hover:bg-pink-50 text-slate-800 border border-pink-200 flex items-center justify-center transition cursor-pointer shrink-0 shadow-2xs active:scale-95"
+                        class="md:hidden w-10 h-10 rounded-2xl bg-white hover:bg-pink-50 text-slate-800 border border-pink-200 flex items-center justify-center transition cursor-pointer shrink-0 shadow-2xs active:scale-95"
                         aria-label="القائمة الجانبية والأقسام"
                         title="القائمة"
                     >
-                        <i data-lucide="more-vertical" class="w-5 h-5"></i>
+                        <i data-lucide="menu" class="w-5 h-5"></i>
                     </button>
 
-                    <a href="{% url 'store:home' %}" class="flex items-center gap-2.5 group cursor-pointer">
-                        <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-10 h-10 md:w-11 md:h-11 rounded-2xl object-cover shadow-xs group-hover:scale-105 transition-all duration-300 border border-pink-200 shrink-0">
+                    <a href="{% url 'store:home' %}" class="flex items-center gap-2 sm:gap-2.5 group cursor-pointer">
+                        <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-2xl object-cover shadow-xs group-hover:scale-105 transition-all duration-300 border border-pink-200 shrink-0">
                         <div>
                             <span class="font-brand-logo text-xl md:text-2xl text-slate-900 tracking-wide block leading-tight">Brand Veloura</span>
                         </div>
                     </a>
                 </div>
 
-                <!-- Desktop Search Bar -->
+                <!-- 2. Desktop Search Bar (Hidden on Mobile) -->
                 <div class="hidden lg:flex flex-1 max-w-sm mx-4">
                     <form action="{% url 'store:product_list' %}" method="GET" class="w-full relative">
                         <input 
@@ -318,8 +318,8 @@
                     </form>
                 </div>
 
-                <!-- Action Buttons: Instagram + Track Order + Cart + User Profile / Login -->
-                <div class="flex items-center gap-2">
+                <!-- 3. Action Controls (Uncluttered, Organized, Zero Mobile Distraction) -->
+                <div class="flex items-center gap-1.5 sm:gap-2">
                     
                     {% if store_settings.instagram_url %}
                     <!-- Instagram Link (Desktop) -->
@@ -338,32 +338,32 @@
                         <span>تتبع الطلب</span>
                     </a>
 
-                    <!-- Currency Switcher (Dual YER/SAR Currency Toggle) -->
+                    <!-- Currency Switcher (Dual YER/SAR Currency Toggle for All Devices) -->
                     <button 
                         hx-post="{% url 'store:toggle_currency' %}" 
                         hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
                         hx-swap="outerHTML" 
-                        class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white hover:bg-pink-50 border border-pink-200 text-slate-800 text-xs font-bold transition-all shadow-2xs cursor-pointer min-h-[40px]"
+                        class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white hover:bg-pink-50 border border-pink-200 text-slate-800 text-[11px] sm:text-xs font-bold transition-all shadow-2xs cursor-pointer min-h-[38px] shrink-0"
                         title="تبديل العملة المعروضة بين الريال اليمني والسعودي"
                     >
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                         <span>{% if active_currency == 'SAR' %}🇸🇦 ر.س{% else %}🇾🇪 ر.ي{% endif %}</span>
                     </button>
 
-                    <!-- Cart Button with HTMX Dynamic Badge -->
-                    <a href="{% url 'store:cart_view' %}" class="relative p-2.5 md:px-3.5 md:py-2 rounded-xl bg-white hover:bg-pink-50 border border-pink-200 text-slate-800 transition-all shadow-2xs flex items-center gap-1.5 group cursor-pointer min-h-[44px]">
-                        <div class="relative">
-                            <i data-lucide="shopping-bag" class="w-4 h-4 text-slate-800 group-hover:scale-110 transition-transform"></i>
-                            <div id="cart-badge-container" class="absolute -top-2 -right-2">
-                                {% include 'store/partials/cart_badge.html' with cart_count=cart_count %}
-                            </div>
-                        </div>
-                        <span class="hidden md:inline text-xs font-bold text-slate-800">السلة</span>
-                    </a>
+                    <!-- Mobile Quick Search Trigger Button -->
+                    <button 
+                        type="button" 
+                        onclick="toggleMobileSearch()" 
+                        class="lg:hidden w-10 h-10 rounded-xl bg-white hover:bg-pink-50 text-slate-700 hover:text-brand-600 border border-pink-200 flex items-center justify-center transition cursor-pointer shrink-0 shadow-2xs active:scale-95"
+                        aria-label="البحث في المتجر"
+                        title="البحث"
+                    >
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                    </button>
 
-                    <!-- Notification Bell Dropdown Button -->
+                    <!-- Notification Bell Dropdown Button (Desktop & Tablet) -->
                     {% if user.is_authenticated %}
-                    <div class="relative" id="notifications-menu-container">
+                    <div class="relative hidden sm:block" id="notifications-menu-container">
                         <button 
                             type="button" 
                             id="notifications-menu-btn"
@@ -394,9 +394,20 @@
                     </div>
                     {% endif %}
 
-                    <!-- User Account / Login Button -->
+                    <!-- Desktop Cart Button (Hidden on Mobile because Bottom Bar has Elevated Center Hero Cart) -->
+                    <a href="{% url 'store:cart_view' %}" class="hidden md:flex relative px-3.5 py-2 rounded-xl bg-white hover:bg-pink-50 border border-pink-200 text-slate-800 transition-all shadow-2xs items-center gap-1.5 group cursor-pointer min-h-[44px]">
+                        <div class="relative">
+                            <i data-lucide="shopping-bag" class="w-4 h-4 text-slate-800 group-hover:scale-110 transition-transform"></i>
+                            <div id="cart-badge-container" class="absolute -top-2 -right-2">
+                                {% include 'store/partials/cart_badge.html' with cart_count=cart_count %}
+                            </div>
+                        </div>
+                        <span class="text-xs font-bold text-slate-800">السلة</span>
+                    </a>
+
+                    <!-- Desktop User Account / Login Button (Hidden on Mobile because Bottom Bar & Sidebar have it) -->
                     {% if user.is_authenticated %}
-                    <div class="relative" id="user-menu-dropdown-container">
+                    <div class="hidden md:block relative" id="user-menu-dropdown-container">
                         <button 
                             type="button" 
                             id="user-menu-btn"
@@ -409,7 +420,7 @@
                                 {{ user.first_name|default:user.username|slice:":1"|upper }}
                             </div>
                             {% endif %}
-                            <span class="hidden sm:inline max-w-[85px] truncate text-slate-900">{{ user.first_name|default:user.username }}</span>
+                            <span class="max-w-[85px] truncate text-slate-900">{{ user.first_name|default:user.username }}</span>
                             <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 group-hover:text-brand-600 transition-transform duration-200"></i>
                         </button>
 
@@ -450,13 +461,30 @@
                         </div>
                     </div>
                     {% else %}
-                    <!-- Guest Login Link -->
-                    <a href="{% url 'store:login' %}" class="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer min-h-[40px]">
+                    <!-- Guest Login Link (Desktop Only) -->
+                    <a href="{% url 'store:login' %}" class="hidden md:flex px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs items-center gap-1.5 transition shadow-xs cursor-pointer min-h-[40px]">
                         <i data-lucide="user" class="w-3.5 h-3.5"></i>
-                        <span class="hidden sm:inline">تسجيل الدخول</span>
+                        <span>تسجيل الدخول</span>
                     </a>
                     {% endif %}
                 </div>
+            </div>
+
+            <!-- Slide-down Mobile Search Bar (Toggles smoothly on mobile tap of 🔍) -->
+            <div id="mobile-search-bar" class="hidden lg:hidden py-2.5 border-t border-pink-200/80 transition-all duration-300">
+                <form action="{% url 'store:product_list' %}" method="GET" class="relative w-full">
+                    <input 
+                        type="text" 
+                        name="q" 
+                        id="mobile-search-input"
+                        placeholder="ابحث عن عطر، ماركة، ساعة، روج..." 
+                        value="{{ search_query|default:'' }}"
+                        class="w-full bg-white border border-pink-200 focus:border-brand-500 focus:outline-none rounded-xl py-2 px-4 pr-10 text-xs font-medium text-slate-800 placeholder-slate-400 transition-all h-10 shadow-2xs"
+                    >
+                    <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-600 transition p-1" aria-label="بحث">
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                    </button>
+                </form>
             </div>
 
             <!-- Category Navigation Links (Desktop) -->
@@ -472,6 +500,9 @@
                 </a>
                 <a href="{% url 'store:cosmetics_catalog' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'cosmetics' in request.path %}text-brand-600 border-b-2 border-brand-500 pb-1{% else %}text-slate-700 hover:text-brand-600{% endif %}">
                     <span>مستحضرات التجميل</span>
+                </a>
+                <a href="{% url 'store:brands_list' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'brands' in request.path %}text-brand-600 border-b-2 border-brand-500 pb-1{% else %}text-slate-700 hover:text-brand-600{% endif %}">
+                    <span>الماركات</span>
                 </a>
                 <a href="{% url 'store:gift_builder' %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if 'gifting' in request.path %}text-brand-600 border-b-2 border-brand-500 pb-1{% else %}text-slate-700 hover:text-brand-600{% endif %}">
                     <span>خدمة الإهداء</span>
@@ -500,8 +531,8 @@
     </div>
     {% endif %}
 
-    <!-- Dynamic Main Content (with bottom padding compensation for mobile bottom nav) -->
-    <main class="flex-grow pb-20 md:pb-0">
+    <!-- Dynamic Main Content (with bottom padding compensation for elevated mobile bottom nav) -->
+    <main class="flex-grow pb-28 md:pb-0">
         {% block content %}{% endblock %}
     </main>
 
@@ -562,6 +593,11 @@
                         <li>
                             <a href="{% url 'store:cosmetics_catalog' %}" class="hover:text-slate-900 transition flex items-center gap-1.5">
                                 <span>مستحضرات التجميل</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'store:brands_list' %}" class="hover:text-slate-900 transition flex items-center gap-1.5">
+                                <span>الماركات والبراندات</span>
                             </a>
                         </li>
                         <li>
@@ -657,98 +693,135 @@
         </div>
     </footer>
 
-    <!-- Mobile Fixed Bottom Navigation Bar (شريط الأيقونات والتنقل السفلي السريع للجوال) -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-pink-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-2 py-1.5 flex items-center justify-around" aria-label="شريط التنقل السفلي">
+    <!-- Mobile Fixed Bottom Navigation Bar (شريط التنقل السفلي الفاخر مع بروز العنصر الأوسط) -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-pink-200/90 shadow-[0_-4px_25px_rgba(15,23,42,0.08)] px-1 h-16 flex items-center justify-around" aria-label="شريط التنقل السفلي">
         <!-- 1. الرئيسية -->
-        <a href="{% url 'store:home' %}" class="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition min-w-[62px] {% if request.path == '/' %}text-brand-600 font-bold{% else %}text-slate-500 hover:text-slate-900 font-medium{% endif %}">
+        <a href="{% url 'store:home' %}" class="flex-1 flex flex-col items-center justify-center gap-0.5 py-1 transition {% if request.path == '/' %}text-brand-600 font-bold{% else %}text-slate-500 hover:text-slate-900 font-medium{% endif %}">
             <i data-lucide="home" class="w-5 h-5 {% if request.path == '/' %}stroke-[2.5]{% else %}stroke-[1.8]{% endif %}"></i>
             <span class="text-[10px]">الرئيسية</span>
         </a>
 
-        <!-- 2. الإهداء -->
-        <a href="{% url 'store:gift_builder' %}" class="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition min-w-[62px] {% if 'gift' in request.path %}text-brand-600 font-bold{% else %}text-slate-500 hover:text-slate-900 font-medium{% endif %}">
-            <i data-lucide="gift" class="w-5 h-5 {% if 'gift' in request.path %}stroke-[2.5]{% else %}stroke-[1.8]{% endif %}"></i>
-            <span class="text-[10px]">الإهداء</span>
+        <!-- 2. المنتجات والكتالوج -->
+        <a href="{% url 'store:product_list' %}" class="flex-1 flex flex-col items-center justify-center gap-0.5 py-1 transition {% if 'product' in request.path and not 'brands' in request.path %}text-brand-600 font-bold{% else %}text-slate-500 hover:text-slate-900 font-medium{% endif %}">
+            <i data-lucide="layout-grid" class="w-5 h-5 {% if 'product' in request.path and not 'brands' in request.path %}stroke-[2.5]{% else %}stroke-[1.8]{% endif %}"></i>
+            <span class="text-[10px]">المنتجات</span>
         </a>
 
-        <!-- 3. السلة -->
-        <a href="{% url 'store:cart_view' %}" class="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition min-w-[62px] relative {% if 'cart' in request.path %}text-brand-600 font-bold{% else %}text-slate-500 hover:text-slate-900 font-medium{% endif %}">
-            <div class="relative">
-                <i data-lucide="shopping-bag" class="w-5 h-5 {% if 'cart' in request.path %}stroke-[2.5]{% else %}stroke-[1.8]{% endif %}"></i>
-                <div id="bottom-bar-cart-badge" class="absolute -top-1.5 -right-2">
+        <!-- 3. العنصر الأوسط البارز: السلة الفاخرة (Elevated Floating Center Hero) -->
+        <div class="flex-1 flex flex-col items-center justify-center relative -top-3.5">
+            <a href="{% url 'store:cart_view' %}" class="relative group cursor-pointer" aria-label="سلة المشتريات">
+                <!-- Floating Elevated Disc with Cutout Glow Ring -->
+                <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-brand-600 via-brand-500 to-pink-500 text-white shadow-[0_8px_22px_rgba(232,58,184,0.45)] ring-4 ring-[#FFF0F7] flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-active:scale-95">
+                    <i data-lucide="shopping-bag" class="w-6 h-6 stroke-[2.2]"></i>
+                </div>
+                <!-- Dynamic Cart Count Badge -->
+                <div id="bottom-bar-cart-badge" class="absolute -top-1 -right-1 z-20">
                     {% include 'store/partials/cart_badge.html' with cart_count=cart_count %}
                 </div>
-            </div>
-            <span class="text-[10px]">السلة</span>
+            </a>
+            <span class="text-[10px] font-bold text-slate-800 mt-1">السلة</span>
+        </div>
+
+        <!-- 4. الماركات والبراندات -->
+        <a href="{% url 'store:brands_list' %}" class="flex-1 flex flex-col items-center justify-center gap-0.5 py-1 transition {% if 'brand' in request.path %}text-brand-600 font-bold{% else %}text-slate-500 hover:text-slate-900 font-medium{% endif %}">
+            <i data-lucide="crown" class="w-5 h-5 {% if 'brand' in request.path %}stroke-[2.5]{% else %}stroke-[1.8]{% endif %}"></i>
+            <span class="text-[10px]">الماركات</span>
         </a>
 
-        <!-- 4. حسابي -->
-        <a href="{% if user.is_authenticated %}{% url 'store:account_profile' %}{% else %}{% url 'store:login' %}{% endif %}" class="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition min-w-[62px] {% if 'account' in request.path or 'login' in request.path or 'register' in request.path %}text-brand-600 font-bold{% else %}text-slate-500 hover:text-slate-900 font-medium{% endif %}">
+        <!-- 5. حسابي -->
+        <a href="{% if user.is_authenticated %}{% url 'store:account_profile' %}{% else %}{% url 'store:login' %}{% endif %}" class="flex-1 flex flex-col items-center justify-center gap-0.5 py-1 transition {% if 'account' in request.path or 'login' in request.path or 'register' in request.path %}text-brand-600 font-bold{% else %}text-slate-500 hover:text-slate-900 font-medium{% endif %}">
             <i data-lucide="user" class="w-5 h-5 {% if 'account' in request.path or 'login' in request.path or 'register' in request.path %}stroke-[2.5]{% else %}stroke-[1.8]{% endif %}"></i>
             <span class="text-[10px]">حسابي</span>
         </a>
     </nav>
 
-    <!-- Mobile Sidebar Drawer (نافبار جانبي بثلاث نقاط) -->
+    <!-- Mobile Sidebar Drawer (القائمة الجانبية المنظمة والموجزة) -->
     <div id="mobile-sidebar-drawer" class="fixed inset-0 z-50 pointer-events-none transition-all duration-300">
         <!-- Backdrop -->
         <div id="mobile-sidebar-backdrop" onclick="closeMobileSidebar()" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs opacity-0 transition-opacity duration-300"></div>
         
         <!-- Sidebar Panel -->
-        <div id="mobile-sidebar-panel" class="fixed top-0 bottom-0 right-0 w-[290px] max-w-[85vw] bg-white shadow-2xl z-10 flex flex-col justify-between translate-x-full transition-transform duration-300 ease-in-out border-l border-slate-200">
-            <!-- Header of Sidebar -->
-            <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div id="mobile-sidebar-panel" class="fixed top-0 bottom-0 right-0 w-[300px] max-w-[85vw] bg-white shadow-2xl z-10 flex flex-col justify-between translate-x-full transition-transform duration-300 ease-in-out border-l border-pink-200">
+            
+            <!-- 1. Header of Sidebar -->
+            <div class="p-4 border-b border-pink-200 flex items-center justify-between bg-[#FFF0F7]">
                 <div class="flex items-center gap-2.5">
-                    <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-9 h-9 rounded-xl object-cover shadow-xs border border-slate-200 shrink-0">
+                    <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-9 h-9 rounded-xl object-cover shadow-xs border border-pink-200 shrink-0">
                     <div>
-                        <span class="font-brand-logo text-base text-slate-900 tracking-wide block leading-tight">Brand Veloura</span>
+                        <span class="font-brand-logo text-lg text-slate-900 tracking-wide block leading-tight">Brand Veloura</span>
                     </div>
                 </div>
-                <button type="button" onclick="closeMobileSidebar()" class="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-900 border border-slate-200 flex items-center justify-center transition cursor-pointer" aria-label="إغلاق">
+                <button type="button" onclick="closeMobileSidebar()" class="w-8 h-8 rounded-full bg-white hover:bg-pink-100 text-slate-500 hover:text-slate-900 border border-pink-200 flex items-center justify-center transition cursor-pointer" aria-label="إغلاق">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
 
-            <!-- Scrollable Content of Sidebar -->
+            <!-- 2. Scrollable Content of Sidebar -->
             <div class="flex-1 overflow-y-auto p-4 space-y-4">
-                <!-- Mobile Search Input -->
-                <form action="{% url 'store:product_list' %}" method="GET" class="relative">
-                    <input 
-                        type="text" 
-                        name="q" 
-                        placeholder="ابحث عن منتج..." 
-                        class="w-full bg-slate-100/70 border border-slate-200 focus:border-slate-900 focus:bg-white focus:outline-none rounded-xl py-2 px-3.5 pr-9 text-xs text-slate-800 placeholder-slate-400 transition h-9"
-                    >
-                    <button type="submit" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 p-0.5" aria-label="بحث">
-                        <i data-lucide="search" class="w-3.5 h-3.5"></i>
-                    </button>
-                </form>
+                
+                <!-- User Status Banner Card -->
+                {% if user.is_authenticated %}
+                <div class="p-3 rounded-2xl bg-gradient-to-r from-pink-50 to-white border border-pink-200 flex items-center gap-3 shadow-2xs">
+                    {% if user.store_profile.avatar_url %}
+                    <img src="{{ user.store_profile.avatar_url }}" alt="{{ user.first_name }}" class="w-10 h-10 rounded-xl object-cover border border-brand-300 shrink-0">
+                    {% else %}
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-pink-500 text-white font-serif font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs">
+                        {{ user.first_name|default:user.username|slice:":1"|upper }}
+                    </div>
+                    {% endif %}
+                    <div class="flex-1 min-w-0">
+                        <span class="text-xs font-bold text-slate-900 block truncate">{{ user.get_full_name|default:user.username }}</span>
+                        <span class="text-[10px] text-brand-600 font-semibold block">عضو متجر فيلورا ✨</span>
+                    </div>
+                    <a href="{% url 'store:account_profile' %}" onclick="closeMobileSidebar()" class="p-1.5 rounded-lg bg-white border border-pink-200 text-slate-500 hover:text-brand-600 transition" title="الملف الشخصي">
+                        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                    </a>
+                </div>
+                {% else %}
+                <div class="p-3.5 rounded-2xl bg-gradient-to-r from-pink-50 via-white to-pink-50/50 border border-pink-200 space-y-2 shadow-2xs">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
+                        <span class="text-xs font-bold text-slate-900">أهلاً بك في فخامة فيلورا 🌸</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 leading-relaxed font-light">سجّل دخولك لمتابعة شحناتك والاستفادة من العروض الخاصة.</p>
+                    <a href="{% url 'store:login' %}" onclick="closeMobileSidebar()" class="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold text-center block transition shadow-xs">
+                        تسجيل الدخول / إنشاء حساب
+                    </a>
+                </div>
+                {% endif %}
 
-                <!-- Navigation Section: Main Store Sections -->
+                <!-- Section 1: أقسام المتجر (Main Catalog) -->
                 <div>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 px-1">أقسام المتجر</span>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 px-1">تصفح الأقسام</span>
                     <nav class="space-y-1 text-xs font-semibold">
-                        <a href="{% url 'store:home' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if request.path == '/' %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-slate-900{% endif %}">
-                            <i data-lucide="home" class="w-4 h-4 {% if request.path == '/' %}text-white{% else %}text-slate-400{% endif %}"></i>
+                        <a href="{% url 'store:home' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if request.path == '/' %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-pink-50 hover:text-slate-900{% endif %}">
+                            <i data-lucide="home" class="w-4 h-4 {% if request.path == '/' %}text-white{% else %}text-brand-500{% endif %}"></i>
                             <span>الرئيسية</span>
                         </a>
-                        <a href="{% url 'store:perfumes_catalog' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'perfumes' in request.path %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-slate-900{% endif %}">
-                            <i data-lucide="sparkle" class="w-4 h-4 {% if 'perfumes' in request.path %}text-white{% else %}text-slate-400{% endif %}"></i>
-                            <span>العطور</span>
+                        <a href="{% url 'store:perfumes_catalog' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'perfumes' in request.path %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-pink-50 hover:text-slate-900{% endif %}">
+                            <i data-lucide="sparkle" class="w-4 h-4 {% if 'perfumes' in request.path %}text-white{% else %}text-brand-500{% endif %}"></i>
+                            <span>العطور الملكية</span>
                         </a>
-                        <a href="{% url 'store:watches_catalog' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'watches' in request.path %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-slate-900{% endif %}">
-                            <i data-lucide="watch" class="w-4 h-4 {% if 'watches' in request.path %}text-white{% else %}text-slate-400{% endif %}"></i>
-                            <span>الساعات</span>
+                        <a href="{% url 'store:watches_catalog' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'watches' in request.path %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-pink-50 hover:text-slate-900{% endif %}">
+                            <i data-lucide="watch" class="w-4 h-4 {% if 'watches' in request.path %}text-white{% else %}text-brand-500{% endif %}"></i>
+                            <span>الساعات الراقية</span>
                         </a>
-                        <a href="{% url 'store:cosmetics_catalog' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'cosmetics' in request.path %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-slate-900{% endif %}">
-                            <i data-lucide="heart" class="w-4 h-4 {% if 'cosmetics' in request.path %}text-white{% else %}text-slate-400{% endif %}"></i>
+                        <a href="{% url 'store:cosmetics_catalog' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'cosmetics' in request.path %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-pink-50 hover:text-slate-900{% endif %}">
+                            <i data-lucide="heart" class="w-4 h-4 {% if 'cosmetics' in request.path %}text-white{% else %}text-brand-500{% endif %}"></i>
                             <span>مستحضرات التجميل</span>
                         </a>
-                        <a href="{% url 'store:gift_builder' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'gifting' in request.path %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-slate-900{% endif %}">
-                            <i data-lucide="gift" class="w-4 h-4 {% if 'gifting' in request.path %}text-white{% else %}text-slate-400{% endif %}"></i>
-                            <span>خدمة الإهداء</span>
+                        <a href="{% url 'store:brands_list' %}" onclick="closeMobileSidebar()" class="flex items-center justify-between px-3 py-2.5 rounded-xl transition {% if 'brands' in request.path %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-pink-50 hover:text-slate-900{% endif %}">
+                            <span class="flex items-center gap-2.5">
+                                <i data-lucide="crown" class="w-4 h-4 {% if 'brands' in request.path %}text-white{% else %}text-brand-500{% endif %}"></i>
+                                <span>الماركات والبراندات</span>
+                            </span>
+                            <span class="px-2 py-0.5 rounded-md bg-brand-500 text-white text-[9px] font-bold">جديد</span>
                         </a>
-                        <a href="{% url 'store:product_list' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition text-slate-700 hover:bg-slate-100 hover:text-slate-900">
+                        <a href="{% url 'store:gift_builder' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition {% if 'gifting' in request.path %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-pink-50 hover:text-slate-900{% endif %}">
+                            <i data-lucide="gift" class="w-4 h-4 {% if 'gifting' in request.path %}text-white{% else %}text-brand-500{% endif %}"></i>
+                            <span>خدمة الإهداء والتغليف</span>
+                        </a>
+                        <a href="{% url 'store:product_list' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition text-slate-700 hover:bg-pink-50 hover:text-slate-900">
                             <i data-lucide="layout-grid" class="w-4 h-4 text-slate-400"></i>
                             <span>كافة المنتجات</span>
                         </a>
@@ -756,45 +829,22 @@
                 </div>
 
                 <!-- Division -->
-                <div class="border-t border-slate-100"></div>
+                <div class="border-t border-pink-100"></div>
 
-                <!-- Services & Customer Account -->
+                <!-- Section 2: الخدمات والمعلومات (Services & Orders) -->
                 <div>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 px-1">الخدمات والحساب</span>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 px-1">الخدمات والطلبات</span>
                     <nav class="space-y-1 text-xs font-semibold">
-                        <a href="{% url 'store:cart_view' %}" onclick="closeMobileSidebar()" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition">
-                            <span class="flex items-center gap-2.5">
-                                <i data-lucide="shopping-bag" class="w-4 h-4 text-slate-400"></i>
-                                <span>سلة المشتريات</span>
-                            </span>
-                            <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold font-num">{{ cart_count }}</span>
-                        </a>
-                        <!-- Currency Switcher in Mobile Drawer -->
-                        <div class="px-3 py-2 my-1 flex items-center justify-between rounded-xl bg-pink-50/70 border border-pink-200">
-                            <span class="flex items-center gap-2 text-slate-700 font-bold">
-                                <i data-lucide="coins" class="w-4 h-4 text-brand-600"></i>
-                                <span>العملة الحالية:</span>
-                            </span>
-                            <button 
-                                hx-post="{% url 'store:toggle_currency' %}" 
-                                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                                hx-swap="outerHTML" 
-                                class="px-3 py-1 rounded-lg bg-white border border-pink-300 text-slate-900 font-bold text-xs shadow-2xs cursor-pointer"
-                                title="تبديل العملة"
-                            >
-                                {% if active_currency == 'SAR' %}🇸🇦 ر.س (سعودي){% else %}🇾🇪 ر.ي (يمني){% endif %}
-                            </button>
-                        </div>
-                        <a href="{% url 'store:track_order' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition">
+                        <a href="{% url 'store:track_order' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-pink-50 hover:text-slate-900 transition">
                             <i data-lucide="truck" class="w-4 h-4 text-slate-400"></i>
                             <span>تتبع الشحنة والطلب</span>
                         </a>
                         {% if user.is_authenticated %}
-                        <a href="{% url 'store:account_profile' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition">
+                        <a href="{% url 'store:account_profile' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-pink-50 hover:text-slate-900 transition">
                             <i data-lucide="user" class="w-4 h-4 text-slate-400"></i>
                             <span>حسابي وسجل طلباتي</span>
                         </a>
-                        <a href="{% url 'store:account_profile' %}?tab=notifications" onclick="closeMobileSidebar()" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition">
+                        <a href="{% url 'store:account_profile' %}?tab=notifications" onclick="closeMobileSidebar()" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-700 hover:bg-pink-50 hover:text-slate-900 transition">
                             <div class="flex items-center gap-2.5">
                                 <i data-lucide="bell" class="w-4 h-4 text-slate-400"></i>
                                 <span>مركز الإشعارات</span>
@@ -813,25 +863,44 @@
                             <i data-lucide="log-out" class="w-4 h-4"></i>
                             <span>تسجيل الخروج</span>
                         </a>
-                        {% else %}
-                        <a href="{% url 'store:login' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-900 text-white font-medium transition shadow-xs">
-                            <i data-lucide="log-in" class="w-4 h-4"></i>
-                            <span>تسجيل الدخول / إنشاء حساب</span>
-                        </a>
                         {% endif %}
                     </nav>
                 </div>
+
+                <!-- Division -->
+                <div class="border-t border-pink-100"></div>
+
+                <!-- Section 3: تبديل العملة (Currency Switcher) -->
+                <div>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 px-1">عملة التسوق</span>
+                    <div class="px-3 py-2 flex items-center justify-between rounded-xl bg-pink-50/70 border border-pink-200">
+                        <span class="flex items-center gap-2 text-slate-700 font-bold text-xs">
+                            <i data-lucide="coins" class="w-4 h-4 text-brand-600"></i>
+                            <span>العملة الحالية:</span>
+                        </span>
+                        <button 
+                            hx-post="{% url 'store:toggle_currency' %}" 
+                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                            hx-swap="outerHTML" 
+                            class="px-2.5 py-1 rounded-lg bg-white border border-pink-300 text-slate-900 font-bold text-xs shadow-2xs cursor-pointer hover:bg-pink-50 transition"
+                            title="تبديل العملة"
+                        >
+                            {% if active_currency == 'SAR' %}🇸🇦 ر.س (سعودي){% else %}🇾🇪 ر.ي (يمني){% endif %}
+                        </button>
+                    </div>
+                </div>
+
             </div>
 
-            <!-- Footer of Sidebar -->
-            <div class="p-3.5 border-t border-slate-200 bg-slate-50 space-y-2">
+            <!-- 3. Footer of Sidebar -->
+            <div class="p-3.5 border-t border-pink-200 bg-[#FFF0F7] space-y-2">
                 <div class="grid {% if store_settings.instagram_url %}grid-cols-2{% else %}grid-cols-1{% endif %} gap-2">
-                    <a href="https://wa.me/{{ store_settings.contact_whatsapp }}" target="_blank" rel="noopener noreferrer" class="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer">
+                    <a href="https://wa.me/{{ store_settings.contact_whatsapp }}" target="_blank" rel="noopener noreferrer" class="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer">
                         <i data-lucide="message-circle" class="w-4 h-4 shrink-0"></i>
-                        <span>واتساب</span>
+                        <span>واتساب الدعم</span>
                     </a>
                     {% if store_settings.instagram_url %}
-                    <a href="{{ store_settings.instagram_url }}" target="_blank" rel="noopener noreferrer" class="py-2.5 px-3 rounded-xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 hover:opacity-95 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer">
+                    <a href="{{ store_settings.instagram_url }}" target="_blank" rel="noopener noreferrer" class="py-2 px-3 rounded-xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 hover:opacity-95 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer">
                         <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect>
                             <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
@@ -1152,6 +1221,22 @@
                 drawer.classList.add('pointer-events-none');
                 document.body.style.overflow = '';
             }, 300);
+        }
+
+        // Mobile Slide-down Search Bar Controls
+        function toggleMobileSearch() {
+            const searchBar = document.getElementById('mobile-search-bar');
+            const searchInput = document.getElementById('mobile-search-input');
+            if (!searchBar) return;
+            const isHidden = searchBar.classList.contains('hidden');
+            if (isHidden) {
+                searchBar.classList.remove('hidden');
+                if (searchInput) {
+                    setTimeout(() => searchInput.focus(), 60);
+                }
+            } else {
+                searchBar.classList.add('hidden');
+            }
         }
 
         // User Dropdown Menu Controls

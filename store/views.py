@@ -21,7 +21,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 
 from .models import (
     StoreSettings, PaymentAccount, ShippingZone, 
-    Category, Product, ProductImage, 
+    Category, Brand, Product, ProductImage, 
     Order, OrderItem, HeroBanner, UserProfile, Notification,
     WebPushSubscription
 )
@@ -87,7 +87,12 @@ def home_view(request):
             is_active=True
         ).select_related('category').prefetch_related('images').order_by('-created_at')[:12]
         
-    # براندات العطور الفاخرة مع بيانات مخصصة لشريط التمرير (استعلام تجميعي واحد سريع)
+    # الماركات والبراندات الفاخرة المسجلة في لوحة التحكم (مع استعلام تجميعي لعدد المنتجات)
+    featured_brands = Brand.objects.filter(is_active=True).annotate(
+        products_count=Count('products', filter=Q(products__is_active=True))
+    ).order_by('display_order', '-products_count', 'name_ar')
+
+    # براندات العطور الفاخرة مع بيانات مخصصة لشريط التمرير (استعلام تجميعي واحد سريع للتوافق)
     brand_counts = dict(
         Product.objects.filter(category__category_type='perfumes', is_active=True)
         .exclude(brand_name='')
@@ -126,6 +131,7 @@ def home_view(request):
         'banners': banners,
         'categories': categories,
         'featured_products': featured_products,
+        'featured_brands': featured_brands,
         'perfume_brands': perfume_brands_data,
         'gift_bundles': gift_bundles,
     }
@@ -318,6 +324,121 @@ def cosmetics_catalog_view(request):
         return render(request, 'store/partials/product_grid.html', context)
         
     return render(request, 'store/cosmetics_list.html', context)
+
+
+def brands_list_view(request):
+    """دليل وتصنيف كافة الماركات والبراندات العالمية الفاخرة بالمتجر"""
+    from django.db.models import Count
+    search_query = request.GET.get('q', '').strip()
+    
+    brands = Brand.objects.filter(is_active=True).annotate(
+        products_count=Count('products', filter=Q(products__is_active=True))
+    ).prefetch_related('categories')
+    
+    if search_query:
+        brands = brands.filter(
+            Q(name_ar__icontains=search_query) |
+            Q(name_en__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+        
+    brands = brands.order_by('display_order', '-products_count', 'name_ar')
+    
+    context = {
+        'brands': brands,
+        'search_query': search_query,
+        'total_count': brands.count(),
+    }
+    
+    if request.headers.get('HX-Request') and not request.GET.get('full_page'):
+        return render(request, 'store/partials/brands_grid.html', context)
+        
+    return render(request, 'store/brands_list.html', context)
+
+
+def brand_detail_view(request, slug):
+    """صفحة الماركة الفاخرة مع عرض منتجاتها وفلاتر التصفية الـ 4 وشبكة 2*2 للجوال"""
+    brand = get_object_or_404(Brand, slug=slug, is_active=True)
+    
+    # ربط المنتجات بالبراند إما عبر حقل brand أو الاسم المتطابق (للتوافق العكسي التام)
+    products = Product.objects.filter(
+        Q(brand=brand) | Q(brand_name__iexact=brand.name_en) | Q(brand_name__iexact=brand.name_ar),
+        is_active=True
+    ).select_related('category', 'brand').prefetch_related('images')
+    
+    # معلمات الفلترة الأربعة (نفس تصميم صفحة العطور والساعات 4 أيقونات بصف واحد دون سكرول)
+    category_filter = request.GET.get('category', '').strip()
+    grade_filter = request.GET.get('grade', '').strip()     # original, master
+    gender_filter = request.GET.get('gender', '').strip()   # men, women, unisex
+    sort_by = request.GET.get('sort', 'newest')             # newest, price_low, price_high, best_sellers
+    search_query = request.GET.get('q', '').strip()
+    
+    if category_filter:
+        products = products.filter(category__slug=category_filter)
+        
+    if grade_filter == 'original':
+        products = products.filter(
+            Q(price_original_yer__isnull=False) |
+            Q(specifications__grade='original')
+        )
+    elif grade_filter == 'master':
+        products = products.filter(
+            Q(has_grades=True) |
+            Q(price_master_yer__isnull=False) |
+            Q(specifications__grade='master')
+        )
+        
+    if gender_filter:
+        products = products.filter(
+            Q(specifications__gender=gender_filter) |
+            Q(description__icontains=gender_filter) |
+            Q(name_ar__icontains='رجالي' if gender_filter == 'men' else ('نسائي' if gender_filter == 'women' else 'للجنسين'))
+        )
+        
+    if search_query:
+        products = products.filter(
+            Q(name_ar__icontains=search_query) |
+            Q(name_en__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+        
+    if sort_by == 'price_low':
+        products = products.order_by('price_yer')
+    elif sort_by == 'price_high':
+        products = products.order_by('-price_yer')
+    elif sort_by == 'best_sellers':
+        products = products.order_by('-is_best_seller', '-created_at')
+    else:
+        products = products.order_by('-created_at')
+        
+    # الأقسام المتاحة لمنتجات هذا البراند
+    all_brand_products = Product.objects.filter(
+        Q(brand=brand) | Q(brand_name__iexact=brand.name_en) | Q(brand_name__iexact=brand.name_ar),
+        is_active=True
+    )
+    available_category_ids = all_brand_products.values_list('category_id', flat=True).distinct()
+    available_categories = Category.objects.filter(id__in=available_category_ids, is_active=True).order_by('display_order', 'name_ar')
+    
+    # براندات أخرى مقترحة
+    other_brands = Brand.objects.filter(is_active=True).exclude(id=brand.id).order_by('display_order')[:6]
+
+    context = {
+        'brand': brand,
+        'products': products,
+        'category_filter': category_filter,
+        'grade_filter': grade_filter,
+        'gender_filter': gender_filter,
+        'sort_by': sort_by,
+        'search_query': search_query,
+        'available_categories': available_categories,
+        'other_brands': other_brands,
+        'total_count': products.count(),
+    }
+    
+    if request.headers.get('HX-Request') and not request.GET.get('full_page'):
+        return render(request, 'store/partials/product_grid.html', context)
+        
+    return render(request, 'store/brand_detail.html', context)
 
 
 def product_list_view(request):
@@ -2023,6 +2144,7 @@ def sitemap_xml(request):
         {'loc': f"{base_url}/perfumes/", 'priority': '0.9', 'changefreq': 'daily'},
         {'loc': f"{base_url}/watches/", 'priority': '0.9', 'changefreq': 'daily'},
         {'loc': f"{base_url}/cosmetics/", 'priority': '0.9', 'changefreq': 'daily'},
+        {'loc': f"{base_url}/brands/", 'priority': '0.9', 'changefreq': 'daily'},
         {'loc': f"{base_url}/gifting/", 'priority': '0.9', 'changefreq': 'daily'},
         {'loc': f"{base_url}/track-order/", 'priority': '0.5', 'changefreq': 'monthly'},
     ]
@@ -2033,6 +2155,15 @@ def sitemap_xml(request):
         urls.append({
             'loc': f"{base_url}/products/?category={cat.slug}",
             'priority': '0.8',
+            'changefreq': 'weekly',
+        })
+        
+    # Brands
+    brands = Brand.objects.filter(is_active=True)
+    for b in brands:
+        urls.append({
+            'loc': f"{base_url}/brands/{b.slug}/",
+            'priority': '0.85',
             'changefreq': 'weekly',
         })
         
@@ -2083,6 +2214,7 @@ def llms_txt(request):
   - Perfumes ({base_url}/perfumes/): عطور النخبة العالمية (أصلية 100% وإصدارات ماستر كواليتي طبق الأصل).
   - Luxury Watches ({base_url}/watches/): ساعات راقية رجالية ونسائية بحركات أوتوماتيكية ومحركات كوارتز.
   - Cosmetics & Care ({base_url}/cosmetics/): مستحضرات تجميل فاخرة وسيرومات العناية الفائقة بالبشرة.
+  - Luxury Brands Directory ({base_url}/brands/): دليل الماركات ودور العطور والساعات ومستحضرات التجميل العالمية المعتمدة.
   - Luxury Gift Builder ({base_url}/gifting/): ركن تصميم باقات الإهداء مع التغليف الملكي وكروت الإهداء المخصصة.
 - **Accepted Currencies**: الريال السعودي (SAR) والريال اليمني (YER) مع تحويل فوري شفاف.
 - **Payment Methods**: تحويل مصرفي مباشر (الكريمي، التضامن، المحافظ الإلكترونية، ومصرف الراجحي للمغتربين بالسعودي) والدفع عند الاستلام.

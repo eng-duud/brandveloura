@@ -332,9 +332,54 @@ class Category(models.Model):
         return fallback
 
 
+class Brand(models.Model):
+    """الماركات والبراندات العالمية الفاخرة"""
+    name_ar = models.CharField(max_length=150, verbose_name='اسم الماركة بالعربي')
+    name_en = models.CharField(max_length=150, blank=True, verbose_name='اسم الماركة بالإنجليزي / Brand Name')
+    slug = models.SlugField(unique=True, allow_unicode=True, blank=True, verbose_name='الرابط الدائم (Slug)')
+    logo = models.ImageField(upload_to='brands/', null=True, blank=True, verbose_name='شعار الماركة (Logo)')
+    logo_url_fallback = models.URLField(blank=True, verbose_name='رابط صورة الشعار خارجي (في حال عدم رفع ملف)')
+    cover_image = models.ImageField(upload_to='brands/covers/', null=True, blank=True, verbose_name='صورة غلاف الماركة (اختياري)')
+    description = models.TextField(blank=True, verbose_name='نبذة وتاريخ الماركة')
+    website = models.URLField(blank=True, verbose_name='موقع الماركة الرسمي (اختياري)')
+    categories = models.ManyToManyField(Category, blank=True, related_name='brands', verbose_name='الأقسام المرتبطة')
+    display_order = models.PositiveIntegerField(default=0, verbose_name='ترتيب العرض')
+    is_featured = models.BooleanField(default=True, verbose_name='عرض في شريط الرئيسية')
+    is_active = models.BooleanField(default=True, verbose_name='نشط ومعروض بالمتجر')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإضافة')
+
+    class Meta:
+        verbose_name = 'ماركة / براند'
+        verbose_name_plural = 'الماركات والبراندات العالمية'
+        ordering = ['display_order', 'name_ar']
+
+    def __str__(self):
+        return f"{self.name_ar} ({self.name_en})" if self.name_en else self.name_ar
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.name_en or self.name_ar, allow_unicode=True)
+            self.slug = base if base else f"brand-{uuid.uuid4().hex[:6]}"
+        super().save(*args, **kwargs)
+
+    @property
+    def get_logo_url(self):
+        fallback = self.logo_url_fallback or 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=400&q=80'
+        if self.logo:
+            return sanitize_image_url(self.logo.url, fallback)
+        return fallback
+
+    @property
+    def get_cover_url(self):
+        if self.cover_image:
+            return sanitize_image_url(self.cover_image.url, '')
+        return ''
+
+
 class Product(models.Model):
     """المنتج الفاخر والمواصفات الذكية"""
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='products', verbose_name='القسم')
+    brand = models.ForeignKey('Brand', on_delete=models.SET_NULL, null=True, blank=True, related_name='products', verbose_name='الماركة / البراند')
     name_ar = models.CharField(max_length=250, verbose_name='اسم المنتج بالعربي')
     name_en = models.CharField(max_length=250, blank=True, verbose_name='اسم المنتج بالإنجليزي / الماركة العالمية')
     slug = models.SlugField(unique=True, allow_unicode=True, max_length=250, blank=True, verbose_name='الرابط الدائم')
@@ -406,6 +451,8 @@ class Product(models.Model):
         return f"{self.name_ar} ({self.brand_name})"
 
     def save(self, *args, **kwargs):
+        if self.brand and not self.brand_name:
+            self.brand_name = self.brand.name_en or self.brand.name_ar
         if self.has_grades:
             if self.price_original_yer and not self.price_yer:
                 self.price_yer = self.price_original_yer
@@ -417,6 +464,12 @@ class Product(models.Model):
                 base = f"prod-{uuid.uuid4().hex[:6]}"
             self.slug = f"{base}-{uuid.uuid4().hex[:4]}"
         super().save(*args, **kwargs)
+
+    @property
+    def effective_brand_name(self):
+        if self.brand:
+            return self.brand.name_ar or self.brand.name_en
+        return self.brand_name or ''
 
     @property
     def price_sar(self):

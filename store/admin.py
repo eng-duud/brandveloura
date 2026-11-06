@@ -21,7 +21,7 @@ admin.site.index_title = "لوحة التحكم — إدارة العطور، ا
 
 from .models import (
     StoreSettings, PaymentAccount, ShippingZone, 
-    Category, Product, ProductImage, 
+    Category, Brand, Product, ProductImage, 
     Order, OrderItem, HeroBanner, UserProfile, Notification,
     WebPushSubscription
 )
@@ -157,6 +157,58 @@ class CategoryAdmin(admin.ModelAdmin):
     products_count.short_description = 'المنتجات التابعة'
 
 
+@admin.register(Brand)
+class BrandAdmin(admin.ModelAdmin):
+    list_display = ['logo_preview', 'name_ar', 'name_en', 'products_count', 'is_featured', 'is_active', 'display_order']
+    list_filter = ['is_featured', 'is_active', 'categories']
+    search_fields = ['name_ar', 'name_en', 'description']
+    search_help_text = 'البحث باسم الماركة بالعربي أو الإنجليزي'
+    prepopulated_fields = {'slug': ('name_en',)}
+    list_editable = ['is_featured', 'is_active', 'display_order']
+    filter_horizontal = ['categories']
+    fieldsets = (
+        ('1. بيانات الماركة والبراند الفاخر', {
+            'description': 'أدخل اسم الماركة بالعربي والإنجليزي، وارفع الشعار الرسمي بدقة عالية.',
+            'fields': (
+                ('name_ar', 'name_en'),
+                'slug',
+                ('logo', 'logo_url_fallback'),
+                'cover_image',
+                'description',
+                'website',
+            )
+        }),
+        ('2. الأقسام المرتبطة وخيارات العرض', {
+            'description': 'حدد الأقسام التي تتبع لها منتجات هذه الماركة (عطور، ساعات، تجميل...) وتفعيل ظهورها في شريط الرئيسية.',
+            'fields': (
+                'categories',
+                ('is_featured', 'is_active', 'display_order'),
+            )
+        }),
+    )
+
+    def logo_preview(self, obj):
+        url = obj.get_logo_url
+        if url:
+            return format_html(
+                '<img src="{}" style="width: 36px; height: 36px; object-fit: contain; border-radius: 8px; border: 1px solid #fecdd3; background: #ffffff; padding: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);" />',
+                url
+            )
+        return format_html('<span style="color: #94a3b8; font-size: 11px;">—</span>')
+    logo_preview.short_description = 'الشعار'
+
+    def products_count(self, obj):
+        count = obj.products.count()
+        if count > 0:
+            url = reverse('admin:store_product_changelist') + f"?brand__id__exact={obj.id}"
+            return format_html(
+                '<a href="{}" style="font-weight: 700; color: #be123f; font-family: var(--bv-font-num); text-decoration: underline;" title="عرض منتجات هذا البراند">{} منتج ↗</a>',
+                url, count
+            )
+        return format_html('<span style="color: #94a3b8; font-size: 11px;">لا يوجد</span>')
+    products_count.short_description = 'المنتجات'
+
+
 # ==============================================================================
 # 3. إدارة صور ومنتجات المتجر الفاخرة (Products)
 # ==============================================================================
@@ -189,21 +241,21 @@ class ProductAdmin(admin.ModelAdmin):
     ]
     list_filter = [
         'is_active', 'is_featured', 'is_new', 'is_best_seller', 
-        'has_grades', 'category', 'brand_name'
+        'has_grades', 'category', 'brand'
     ]
-    search_fields = ['name_ar', 'name_en', 'brand_name', 'sku']
+    search_fields = ['name_ar', 'name_en', 'brand__name_ar', 'brand__name_en', 'brand_name', 'sku']
     search_help_text = 'البحث باسم المنتج بالعربي أو الإنجليزي، الماركة (Brand)، أو رمز SKU'
     date_hierarchy = 'created_at'
     list_per_page = 25
     list_editable = ['is_featured', 'is_new', 'is_active']
-    list_select_related = ['category']
-    autocomplete_fields = ['category']
+    list_select_related = ['category', 'brand']
+    autocomplete_fields = ['category', 'brand']
     prepopulated_fields = {'slug': ('name_ar',)}
     readonly_fields = ['currency_preview_info', 'created_at', 'updated_at']
     inlines = [ProductImageInline]
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('category').prefetch_related('images')
+        return super().get_queryset(request).select_related('category', 'brand').prefetch_related('images')
 
     actions = [
         'duplicate_products',
@@ -219,10 +271,11 @@ class ProductAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('1. القسم والماركة وهوية المنتج الفاخر', {
-            'description': 'حدد القسم الرئيسي للمنتج (مع بحث ذكي وسريع)، واكتب اسم الماركة والاسم التجاري المعروض للعملاء في واجهة المتجر.',
+            'description': 'حدد القسم الرئيسي للمنتج، واختر الماركة (البراند) من القائمة أو أضف ماركة جديدة بالضغط على علامة +، واكتب اسم المنتج.',
             'fields': (
-                ('category', 'brand_name'),
+                ('category', 'brand'),
                 ('name_ar', 'name_en'),
+                ('brand_name',),
                 'description',
             )
         }),
@@ -286,10 +339,11 @@ class ProductAdmin(admin.ModelAdmin):
             self.message_user(request, f"📢 تم إرسال الإشعار الترويجي لمنتج ({obj.name_ar}) بنجاح إلى {sent} من مشتركي التطبيق!")
 
     def brand_name_badge(self, obj):
-        if obj.brand_name:
+        name = obj.effective_brand_name
+        if name:
             return format_html(
                 '<span style="background: #fdf2f8; color: #be123f; border: 1px solid #fecdd3; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">{}</span>',
-                obj.brand_name
+                name
             )
         return format_html('<span style="color: #94a3b8; font-size: 11px;">—</span>')
     brand_name_badge.short_description = 'الماركة'
