@@ -1,5 +1,15 @@
-from django.urls import path
+from django.urls import path, register_converter
 from . import views
+
+class UnicodeSlugConverter:
+    """محول مسارات الروابط ليدعم الحروف العربية واليونيكود في الـ slugs بدون أخطاء NoReverseMatch"""
+    regex = r'[-\w]+'
+    def to_python(self, value):
+        return str(value)
+    def to_url(self, value):
+        return str(value)
+
+register_converter(UnicodeSlugConverter, 'slug')
 
 app_name = 'store'
 
