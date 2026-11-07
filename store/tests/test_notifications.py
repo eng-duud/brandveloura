@@ -279,3 +279,46 @@ class NotificationSystemTests(TestCase):
         self.assertIn('تخفيض حصري', notif.title)
         self.assertIn(self.product.name_ar, notif.title)
         self.assertEqual(notif.link, f"/product/{self.product.slug}/")
+
+    def test_pwa_notification_permission_prompt_persistence_and_events(self):
+        """اختبار ثبات كارت إذن الإشعارات واستماعه لأحداث التثبيت والوضع المستقل PWA"""
+        res = self.client.get(reverse('store:home'))
+        self.assertEqual(res.status_code, 200)
+        content = res.content.decode('utf-8')
+
+        # 1. كارت إذن الإشعارات موجود في الصفحة
+        self.assertIn('id="pwa-notif-card"', content)
+        self.assertIn('تفعيل إشعارات المتجر', content)
+        self.assertIn('requestPushPermission()', content)
+        self.assertIn('dismissNotifPrompt()', content)
+
+        # 2. الاستماع لحدث اكتمال التثبيت appinstalled
+        self.assertIn("window.addEventListener('appinstalled'", content)
+
+        # 3. التحقق من الوضع المستقل PWA standalone
+        self.assertIn("display-mode: standalone", content)
+        self.assertIn("checkStandaloneNotificationPrompt", content)
+
+        # 4. عدم استخدام إخفاء دائم لمدة 7 أيام بل مؤقت للجلسة sessionStorage
+        self.assertNotIn("7 * 24 * 60 * 60 * 1000", content)
+        self.assertIn("sessionStorage.setItem('bv_notif_dismissed', 'true')", content)
+        self.assertIn("sessionStorage.removeItem('bv_notif_dismissed')", content)
+
+        # 5. الإخفاء الدائم يتم فقط بعد الموافقة Notification.permission === 'granted'
+        self.assertIn("Notification.permission === 'granted'", content)
+        self.assertIn("localStorage.setItem('bv_notif_granted', 'true')", content)
+        self.assertIn("localStorage.getItem('bv_notif_granted')", content)
+        self.assertIn("scheduleNotifPrompt", content)
+
+    def test_push_subscribe_invalid_payload(self):
+        """اختبار رفض البيانات غير المكتملة في اشتراك إشعارات الويب 400"""
+        import json
+        res = self.client.post(
+            reverse('store:push_subscribe'),
+            data=json.dumps({'endpoint': ''}),
+            content_type='application/json'
+        )
+        self.assertEqual(res.status_code, 400)
+        data = res.json()
+        self.assertIn('error', data)
+

@@ -1260,6 +1260,16 @@
             }
         });
 
+        window.addEventListener('appinstalled', (evt) => {
+            if (installBanner) installBanner.classList.add('hidden');
+            deferredPrompt = null;
+            // After app installation, automatically prompt user to enable push notifications for the installed app
+            if ('Notification' in window && Notification.permission !== 'granted' && localStorage.getItem('bv_notif_granted') !== 'true') {
+                sessionStorage.removeItem('bv_notif_dismissed');
+                scheduleNotifPrompt(1200, true);
+            }
+        });
+
         if (installBtn) {
             installBtn.addEventListener('click', async () => {
                 if (deferredPrompt) {
@@ -1269,7 +1279,10 @@
                     if (installBanner) installBanner.classList.add('hidden');
                     if (outcome === 'accepted') {
                         // After successful install, prompt for push notifications!
-                        setTimeout(() => showNotifPromptCard(), 1500);
+                        if ('Notification' in window && Notification.permission !== 'granted' && localStorage.getItem('bv_notif_granted') !== 'true') {
+                            sessionStorage.removeItem('bv_notif_dismissed');
+                            scheduleNotifPrompt(1500, true);
+                        }
                     }
                 }
             });
@@ -1277,16 +1290,41 @@
 
         // Notification Prompt Card Controls
         const notifCard = document.getElementById('pwa-notif-card');
+        let notifPromptTimer = null;
+        let notifAnimTimer = null;
 
-        function showNotifPromptCard() {
+        // Clean up legacy 7-day suppression if present
+        try {
+            localStorage.removeItem('bv_notif_dismissed_until');
+        } catch (e) {}
+
+        function scheduleNotifPrompt(delay = 1200, force = false) {
+            if (notifPromptTimer) {
+                clearTimeout(notifPromptTimer);
+                notifPromptTimer = null;
+            }
+            notifPromptTimer = setTimeout(() => {
+                showNotifPromptCard(force);
+            }, delay);
+        }
+
+        function showNotifPromptCard(force = false) {
             if (!notifCard) return;
             if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
-            if (Notification.permission !== 'default') return;
-            const dismissedUntil = localStorage.getItem('bv_notif_dismissed_until');
-            if (dismissedUntil && Date.now() < parseInt(dismissedUntil, 10)) return;
+            // If already granted, do not prompt again
+            if (Notification.permission === 'granted' || localStorage.getItem('bv_notif_granted') === 'true') return;
+            // If dismissed in this session and not forced, wait until next session / visit
+            if (!force && sessionStorage.getItem('bv_notif_dismissed')) return;
+
+            if (notifAnimTimer) {
+                clearTimeout(notifAnimTimer);
+                notifAnimTimer = null;
+            }
+
+            if (!notifCard.classList.contains('hidden') && notifCard.classList.contains('opacity-100')) return;
 
             notifCard.classList.remove('hidden');
-            setTimeout(() => {
+            notifAnimTimer = setTimeout(() => {
                 notifCard.classList.remove('translate-y-4', 'opacity-0', 'pointer-events-none');
                 notifCard.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
                 if (window.lucide) lucide.createIcons();
@@ -1295,60 +1333,145 @@
 
         function hideNotifPromptCard() {
             if (!notifCard) return;
+            if (notifAnimTimer) {
+                clearTimeout(notifAnimTimer);
+                notifAnimTimer = null;
+            }
             notifCard.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
             notifCard.classList.add('translate-y-4', 'opacity-0', 'pointer-events-none');
-            setTimeout(() => notifCard.classList.add('hidden'), 300);
+            notifAnimTimer = setTimeout(() => {
+                notifCard.classList.add('hidden');
+            }, 300);
         }
 
         function dismissNotifPrompt() {
+            if (notifPromptTimer) {
+                clearTimeout(notifPromptTimer);
+                notifPromptTimer = null;
+            }
             hideNotifPromptCard();
-            // Don't prompt again for 7 days
-            localStorage.setItem('bv_notif_dismissed_until', (Date.now() + 7 * 24 * 60 * 60 * 1000).toString());
+            // Temporarily hide for current session only; will reappear on subsequent visits / app opens until permission is granted
+            sessionStorage.setItem('bv_notif_dismissed', 'true');
         }
 
         function checkAndPromptPushNotification(registration) {
             if (!('Notification' in window)) return;
-            if (Notification.permission === 'default') {
-                // Show after 3.5 seconds of browsing
-                setTimeout(() => showNotifPromptCard(), 3500);
+            // If not granted yet, show prompt
+            if (Notification.permission !== 'granted' && localStorage.getItem('bv_notif_granted') !== 'true') {
+                const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+                const delay = isStandalone ? 1200 : 3500;
+                scheduleNotifPrompt(delay);
+            }
+        }
+
+        // Automatic check for standalone PWA mode
+        function checkStandaloneNotificationPrompt() {
+            const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+            if (isStandalone && 'Notification' in window && Notification.permission !== 'granted' && localStorage.getItem('bv_notif_granted') !== 'true') {
+                if (!sessionStorage.getItem('bv_notif_dismissed')) {
+                    scheduleNotifPrompt(1200);
+                }
+            }
+        }
+
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            checkStandaloneNotificationPrompt();
+        } else {
+            window.addEventListener('DOMContentLoaded', checkStandaloneNotificationPrompt);
+        }
+
+        if (window.matchMedia) {
+            const standaloneQuery = window.matchMedia('(display-mode: standalone)');
+            const handleStandaloneChange = (e) => {
+                if (e.matches && 'Notification' in window && Notification.permission !== 'granted' && localStorage.getItem('bv_notif_granted') !== 'true') {
+                    sessionStorage.removeItem('bv_notif_dismissed');
+                    scheduleNotifPrompt(1000, true);
+                }
+            };
+            if (standaloneQuery.addEventListener) {
+                standaloneQuery.addEventListener('change', handleStandaloneChange);
+            } else if (standaloneQuery.addListener) {
+                standaloneQuery.addListener(handleStandaloneChange);
             }
         }
 
         async function requestPushPermission() {
-            hideNotifPromptCard();
+            if (notifPromptTimer) {
+                clearTimeout(notifPromptTimer);
+                notifPromptTimer = null;
+            }
+
             if (!('Notification' in window) || !('serviceWorker' in navigator)) {
                 showToast('المتصفح الحالي لا يدعم خاصية الإشعارات', 'error');
+                hideNotifPromptCard();
                 return;
+            }
+
+            if (Notification.permission === 'denied') {
+                showToast('تم رفض إذن الإشعارات مسبقاً. يرجى تفعيلها من إعدادات المتصفح أو جهازك للمتابعة.', 'error');
+                hideNotifPromptCard();
+                sessionStorage.setItem('bv_notif_dismissed', 'true');
+                return;
+            }
+
+            const notifActionBtn = document.querySelector('#pwa-notif-card button[onclick="requestPushPermission()"]');
+            const originalBtnHtml = notifActionBtn ? notifActionBtn.innerHTML : '';
+            if (notifActionBtn) {
+                notifActionBtn.disabled = true;
+                notifActionBtn.classList.add('opacity-75');
+                notifActionBtn.innerHTML = '<span>جاري التفعيل...</span>';
             }
 
             try {
                 const permission = await Notification.requestPermission();
                 if (permission === 'granted') {
-                    // Fetch VAPID public key
-                    const keyRes = await fetch('/api/push/vapid-key/');
-                    const keyData = await keyRes.json();
-                    
-                    if (keyData.publicKey) {
-                        const reg = await navigator.serviceWorker.ready;
-                        const subscription = await reg.pushManager.subscribe({
-                            userVisibleOnly: true,
-                            applicationServerKey: urlBase64ToUint8Array(keyData.publicKey)
-                        });
+                    // Subscribe to Web Push
+                    try {
+                        const keyRes = await fetch('/api/push/vapid-key/');
+                        const keyData = await keyRes.json();
+                        
+                        if (keyData.publicKey) {
+                            const reg = await navigator.serviceWorker.ready;
+                            const subscription = await reg.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: urlBase64ToUint8Array(keyData.publicKey)
+                            });
 
-                        // Save subscription to backend
-                        await fetch('/api/push/subscribe/', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(subscription)
-                        });
-
-                        showToast('تم تفعيل الإشعارات بنجاح ✨ ستصلك تحديثات طلباتك وعروضنا أولاً بأول.', 'success');
+                            // Save subscription to backend
+                            await fetch('/api/push/subscribe/', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(subscription)
+                            });
+                        }
+                    } catch (pushErr) {
+                        console.error('Push subscription failed:', pushErr);
                     }
+
+                    // Once granted and subscribed, hide prompt permanently
+                    localStorage.setItem('bv_notif_granted', 'true');
+                    sessionStorage.removeItem('bv_notif_dismissed');
+                    hideNotifPromptCard();
+                    showToast('تم تفعيل الإشعارات بنجاح ✨ ستصلك تحديثات طلباتك وعروضنا أولاً بأول.', 'success');
                 } else if (permission === 'denied') {
+                    hideNotifPromptCard();
+                    sessionStorage.setItem('bv_notif_dismissed', 'true');
                     showToast('تم رفض إذن الإشعارات من المتصفح.', 'error');
+                } else {
+                    hideNotifPromptCard();
+                    sessionStorage.setItem('bv_notif_dismissed', 'true');
                 }
             } catch (err) {
-                console.error('Push subscription failed:', err);
+                console.error('Push permission request failed:', err);
+                hideNotifPromptCard();
+                sessionStorage.setItem('bv_notif_dismissed', 'true');
+            } finally {
+                if (notifActionBtn) {
+                    notifActionBtn.disabled = false;
+                    notifActionBtn.classList.remove('opacity-75');
+                    notifActionBtn.innerHTML = originalBtnHtml;
+                    if (window.lucide) lucide.createIcons();
+                }
             }
         }
 
