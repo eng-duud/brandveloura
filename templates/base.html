@@ -503,7 +503,7 @@
                 {% if cat.subcategories.all %}
                 <!-- Main Category with Subcategories Dropdown -->
                 <div class="relative group/menu py-1">
-                    <a href="{% url 'store:product_list' %}?category={{ cat.slug }}" class="transition cursor-pointer flex items-center gap-1 {% if cat.slug in request.GET.category %}text-brand-600 font-extrabold{% else %}text-slate-700 hover:text-brand-600{% endif %}">
+                    <a href="{% url 'store:product_list' %}?category={{ cat.slug }}" class="transition cursor-pointer flex items-center gap-1 {% if cat.slug == request.GET.category %}text-brand-600 font-extrabold border-b-2 border-brand-500 pb-1{% else %}text-slate-700 hover:text-brand-600{% endif %}">
                         <span>{{ cat.name_ar }}</span>
                         <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 group-hover/menu:text-brand-600 group-hover/menu:rotate-180 transition-transform duration-200"></i>
                     </a>
@@ -514,7 +514,7 @@
                                 تصفح كل {{ cat.name_ar }} ↗
                             </a>
                             {% for sub in cat.subcategories.all %}
-                            <a href="{% url 'store:product_list' %}?category={{ sub.slug }}" class="block px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-pink-50 hover:text-slate-950 transition">
+                            <a href="{% url 'store:product_list' %}?category={{ cat.slug }}&subcategory={{ sub.slug }}" class="block px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-pink-50 hover:text-slate-950 transition">
                                 {{ sub.name_ar }}
                             </a>
                             {% endfor %}
@@ -522,7 +522,7 @@
                     </div>
                 </div>
                 {% else %}
-                <a href="{% if cat.category_type == 'perfumes' %}{% url 'store:perfumes_catalog' %}{% elif cat.category_type == 'watches' %}{% url 'store:watches_catalog' %}{% elif cat.category_type == 'cosmetics' %}{% url 'store:cosmetics_catalog' %}{% else %}{% url 'store:product_list' %}?category={{ cat.slug }}{% endif %}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if cat.slug in request.GET.category or cat.category_type in request.path %}text-brand-600 border-b-2 border-brand-500 pb-1{% else %}text-slate-700 hover:text-brand-600{% endif %}">
+                <a href="{% url 'store:product_list' %}?category={{ cat.slug }}" class="transition py-1 cursor-pointer flex items-center gap-1.5 {% if cat.slug == request.GET.category %}text-brand-600 border-b-2 border-brand-500 pb-1{% else %}text-slate-700 hover:text-brand-600{% endif %}">
                     <span>{{ cat.name_ar }}</span>
                 </a>
                 {% endif %}
@@ -872,37 +872,19 @@
                         </a>
 
                         {% for cat in main_categories %}
-                        {% if cat.subcategories.all %}
-                        <!-- Collapsible Category in Mobile -->
-                        <div class="rounded-xl border border-pink-100 overflow-hidden bg-white/60">
-                            <button 
-                                type="button" 
-                                onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.arrow-icon').classList.toggle('rotate-180');" 
-                                class="w-full flex items-center justify-between px-3 py-2.5 text-slate-800 hover:bg-pink-50 transition cursor-pointer"
-                            >
-                                <span class="flex items-center gap-2.5 font-bold">
-                                    <i data-lucide="folder" class="w-4 h-4 text-brand-500"></i>
-                                    <span>{{ cat.name_ar }}</span>
+                        <a href="{% url 'store:product_list' %}?category={{ cat.slug }}" onclick="closeMobileSidebar()" class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl transition {% if request.GET.category == cat.slug %}bg-slate-900 text-white font-bold shadow-xs{% else %}text-slate-800 hover:bg-pink-50 hover:text-slate-950 bg-white/70 border border-pink-100/60{% endif %}">
+                            <span class="flex items-center gap-2.5 font-bold">
+                                <span class="w-7 h-7 rounded-lg bg-pink-100/80 flex items-center justify-center text-brand-600 shrink-0 overflow-hidden">
+                                    {% if cat.image %}
+                                    <img src="{{ cat.get_image_url }}" alt="{{ cat.name_ar }}" class="w-full h-full object-cover">
+                                    {% else %}
+                                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                                    {% endif %}
                                 </span>
-                                <i data-lucide="chevron-down" class="arrow-icon w-3.5 h-3.5 text-slate-400 transition-transform"></i>
-                            </button>
-                            <div class="hidden bg-pink-50/50 px-3 py-2 space-y-1.5 border-t border-pink-100">
-                                <a href="{% url 'store:product_list' %}?category={{ cat.slug }}" onclick="closeMobileSidebar()" class="block py-1 text-[11px] font-bold text-brand-600 hover:underline">
-                                    كل منتجات {{ cat.name_ar }} ↗
-                                </a>
-                                {% for sub in cat.subcategories.all %}
-                                <a href="{% url 'store:product_list' %}?category={{ sub.slug }}" onclick="closeMobileSidebar()" class="block py-1 text-[11px] text-slate-700 hover:text-brand-600">
-                                    • {{ sub.name_ar }}
-                                </a>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% else %}
-                        <a href="{% if cat.category_type == 'perfumes' %}{% url 'store:perfumes_catalog' %}{% elif cat.category_type == 'watches' %}{% url 'store:watches_catalog' %}{% elif cat.category_type == 'cosmetics' %}{% url 'store:cosmetics_catalog' %}{% else %}{% url 'store:product_list' %}?category={{ cat.slug }}{% endif %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition text-slate-700 hover:bg-pink-50 hover:text-slate-900">
-                            <i data-lucide="sparkle" class="w-4 h-4 text-brand-500"></i>
-                            <span>{{ cat.name_ar }}</span>
+                                <span>{{ cat.name_ar }}</span>
+                            </span>
+                            <i data-lucide="chevron-left" class="w-4 h-4 text-slate-400"></i>
                         </a>
-                        {% endif %}
                         {% endfor %}
 
                         <a href="{% url 'store:brands_list' %}" onclick="closeMobileSidebar()" class="flex items-center justify-between px-3 py-2.5 rounded-xl transition {% if 'brands' in request.path %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-pink-50 hover:text-slate-900{% endif %}">

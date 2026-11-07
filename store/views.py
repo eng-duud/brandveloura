@@ -442,20 +442,47 @@ def brand_detail_view(request, slug):
 
 
 def product_list_view(request):
-    """كتالوج المنتجات مع الفلترة الذكية والبحث التفاعلي عبر HTMX"""
-    products = Product.objects.filter(is_active=True).select_related('category').prefetch_related('images')
+    """كتالوج المنتجات الديناميكي الشامل مع الفلترة الذكية وشريط التصنيفات الأفقي"""
+    products = Product.objects.filter(is_active=True).select_related('category', 'brand').prefetch_related('images')
     
-    category_slug = request.GET.get('category')
+    category_slug = request.GET.get('category', '').strip()
+    subcategory_slug = request.GET.get('subcategory', '').strip()
     search_query = request.GET.get('q', '').strip()
     sort_by = request.GET.get('sort', 'newest')
-    brand_filter = request.GET.get('brand', '')
+    brand_filter = request.GET.get('brand', '').strip()
+    grade_filter = request.GET.get('grade', '').strip()
+    min_price = request.GET.get('min_price', '').strip()
+    max_price = request.GET.get('max_price', '').strip()
     
     current_category = None
+    main_category = None
+    active_subcategory = None
+    category_subcategories = []
+
     if category_slug:
-        current_category = get_object_or_404(Category, slug=category_slug)
-        cat_ids = current_category.get_descendants_and_self_ids()
-        products = products.filter(category_id__in=cat_ids)
-        
+        current_category = get_object_or_404(Category, slug=category_slug, is_active=True)
+        if current_category.parent is None:
+            # هذا قسم رئيسي
+            main_category = current_category
+            category_subcategories = list(main_category.subcategories.filter(is_active=True).order_by('display_order', 'name_ar'))
+            if subcategory_slug:
+                active_subcategory = main_category.subcategories.filter(slug=subcategory_slug, is_active=True).first()
+                if active_subcategory:
+                    products = products.filter(category=active_subcategory)
+                else:
+                    products = products.filter(category_id__in=main_category.get_descendants_and_self_ids())
+            else:
+                products = products.filter(category_id__in=main_category.get_descendants_and_self_ids())
+        else:
+            # الرابط يشير مباشرة إلى تصنيف فرعي
+            active_subcategory = current_category
+            main_category = current_category.parent
+            category_subcategories = list(main_category.subcategories.filter(is_active=True).order_by('display_order', 'name_ar'))
+            products = products.filter(category=active_subcategory)
+    else:
+        # لم يتم تحديد قسم: شريط الأقسام يعرض الأقسام الرئيسية كاملة
+        category_subcategories = list(Category.objects.filter(is_active=True, parent__isnull=True).order_by('display_order', 'name_ar'))
+
     if search_query:
         products = products.filter(
             Q(name_ar__icontains=search_query) | 
@@ -466,6 +493,23 @@ def product_list_view(request):
         
     if brand_filter:
         products = products.filter(brand_name__iexact=brand_filter)
+
+    if grade_filter == 'original':
+        products = products.filter(has_grades=True, price_original_yer__isnull=False)
+    elif grade_filter == 'master':
+        products = products.filter(has_grades=True, price_master_yer__isnull=False)
+
+    if min_price:
+        try:
+            products = products.filter(price_yer__gte=Decimal(min_price))
+        except Exception:
+            pass
+
+    if max_price:
+        try:
+            products = products.filter(price_yer__lte=Decimal(max_price))
+        except Exception:
+            pass
         
     # خيارات الترتيب
     if sort_by == 'price_low':
@@ -477,17 +521,58 @@ def product_list_view(request):
     else: # newest
         products = products.order_by('-created_at')
         
-    # الماركات المتوفرة للفلترة
-    available_brands = Product.objects.filter(is_active=True).values_list('brand_name', flat=True).distinct()
-    available_brands = [b for b in available_brands if b]
+    # الماركات المتوفرة للفلترة في سياق هذا القسم
+    if main_category:
+        cat_ids = main_category.get_descendants_and_self_ids()
+        available_brands = list(
+            Product.objects.filter(category_id__in=cat_ids, is_active=True)
+            .exclude(brand_name='')
+            .values_list('brand_name', flat=True)
+            .distinct()
+        )
+    else:
+        available_brands = list(
+            Product.objects.filter(is_active=True)
+            .exclude(brand_name='')
+            .values_list('brand_name', flat=True)
+            .distinct()
+        )
+
+    # احتساب الفلاتر النشطة لعداد الأيقونة
+    active_filters_count = 0
+    if brand_filter:
+        active_filters_count += 1
+    if grade_filter:
+        active_filters_count += 1
+    if min_price or max_price:
+        active_filters_count += 1
+    if sort_by and sort_by != 'newest':
+        active_filters_count += 1
+
+    # رابط إعادة ضبط الفلاتر
+    if main_category:
+        catalog_reset_url = f"{reverse('store:product_list')}?category={main_category.slug}"
+        if active_subcategory:
+            catalog_reset_url += f"&subcategory={active_subcategory.slug}"
+    else:
+        catalog_reset_url = reverse('store:product_list')
 
     context = {
         'products': products,
         'current_category': current_category,
+        'main_category': main_category,
+        'active_subcategory': active_subcategory,
+        'category_subcategories': category_subcategories,
         'search_query': search_query,
         'sort_by': sort_by,
         'brand_filter': brand_filter,
+        'grade_filter': grade_filter,
+        'min_price': min_price,
+        'max_price': max_price,
         'available_brands': available_brands,
+        'active_filters_count': active_filters_count,
+        'catalog_reset_url': catalog_reset_url,
+        'total_count': products.count(),
     }
     
     # إذا كان الطلب من HTMX لاستبدال شبكة المنتجات فقط

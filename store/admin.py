@@ -97,6 +97,17 @@ except Exception:
 # 2. أقسام وفئات المتجر (Categories)
 # ==============================================================================
 
+class SubCategoryInline(admin.TabularInline):
+    """إمكانية إضافة وإدارة التصنيفات الفرعية (مثل: رجالي، نسائي، شرقي) مباشرة من صفحة القسم الرئيسي"""
+    model = Category
+    extra = 1
+    fk_name = 'parent'
+    fields = ['name_ar', 'image', 'is_featured', 'is_active', 'display_order']
+    verbose_name = 'تصنيف فرعي'
+    verbose_name_plural = 'التصنيفات الفرعية التابعة لهذا القسم'
+    show_change_link = True
+
+
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ['image_preview', 'name_ar', 'hierarchy_badge', 'category_type_badge', 'products_count', 'is_featured', 'is_active', 'display_order']
@@ -106,6 +117,16 @@ class CategoryAdmin(admin.ModelAdmin):
     autocomplete_fields = ['parent']
     prepopulated_fields = {'slug': ('name_ar',)}
     list_per_page = 25
+    inlines = [SubCategoryInline]
+
+    def get_inlines(self, request, obj=None):
+        # تفعيل الإضافة الفرعية فقط عند تعديل قسم رئيسي موجود مسبقاً
+        if obj is None or obj.parent:
+            return []
+        # إذا كان الطلب POST بدون حقول الـ formset للإضافات الفرعية (كالاختبارات الآلية أو الحفظ المباشر)، نتجاوز الـ inline
+        if request.method == 'POST' and 'subcategories-TOTAL_FORMS' not in request.POST:
+            return []
+        return self.inlines
 
     fieldsets = (
         ('معلومات القسم وتصنيفه الهرمي', {

@@ -1,193 +1,350 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    {% if current_category %}{{ current_category.name_ar }} | {% endif %}المنتجات — {{ store_settings.store_name }}
+    {% if active_subcategory %}{{ active_subcategory.name_ar }} — {{ main_category.name_ar }} | {% elif main_category %}{{ main_category.name_ar }} | {% endif %}المنتجات — {{ store_settings.store_name }}
 {% endblock %}
 
-{% block meta_description %}{% if current_category %}تصفح تشكيلة {{ current_category.name_ar }} في {{ store_settings.store_name }}. عطور، ساعات، ومستحضرات تجميل مع توصيل سريع.{% else %}تصفح منتجات Brand Veloura: عطور، ساعات، ومستحضرات تجميل معلنة بالريال السعودي واليمني.{% endif %}{% endblock %}
-{% block canonical %}{{ request.scheme }}://{{ request.get_host }}{% url 'store:product_list' %}{% if current_category %}?category={{ current_category.slug }}{% endif %}{% endblock %}
-{% block og_title %}{% if current_category %}{{ current_category.name_ar }} — {{ store_settings.store_name }}{% else %}منتجات Brand Veloura{% endif %}{% endblock %}
+{% block meta_description %}{% if main_category %}تصفح تشكيلة {{ main_category.name_ar }} في {{ store_settings.store_name }}. عطور، ساعات، ومستحضرات تجميل مع توصيل سريع.{% else %}تصفح منتجات Brand Veloura: عطور، ساعات، ومستحضرات تجميل معلنة بالريال السعودي واليمني.{% endif %}{% endblock %}
+{% block canonical %}{{ request.scheme }}://{{ request.get_host }}{% url 'store:product_list' %}{% if main_category %}?category={{ main_category.slug }}{% if active_subcategory %}&subcategory={{ active_subcategory.slug }}{% endif %}{% endif %}{% endblock %}
+{% block og_title %}{% if active_subcategory %}{{ active_subcategory.name_ar }} — {{ main_category.name_ar }}{% elif main_category %}{{ main_category.name_ar }} — {{ store_settings.store_name }}{% else %}منتجات Brand Veloura{% endif %}{% endblock %}
 {% block og_description %}تسوق العطور والساعات ومستحضرات العناية والتجميل.{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-5">
     
-    <!-- Breadcrumb & Page Title -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-pink-200">
+    <!-- Breadcrumb & Category Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-pink-200/80">
         <div>
-            <nav class="inline-flex items-center gap-2 text-xs sm:text-sm font-bold bg-white/90 backdrop-blur-md border border-pink-200/90 rounded-2xl px-4 py-2 shadow-2xs mb-3 text-slate-600">
+            <nav class="inline-flex items-center gap-2 text-xs sm:text-sm font-bold bg-white/90 backdrop-blur-md border border-pink-200/90 rounded-2xl px-4 py-2 shadow-2xs mb-2 text-slate-600">
                 <a href="{% url 'store:home' %}" class="flex items-center gap-1.5 text-slate-600 hover:text-brand-600 transition cursor-pointer">
                     <i data-lucide="home" class="w-4 h-4 text-brand-500"></i>
                     <span>الرئيسية</span>
                 </a>
                 <i data-lucide="chevron-left" class="w-4 h-4 text-brand-400"></i>
-                {% if current_category and current_category.parent %}
-                <a href="{% url 'store:product_list' %}?category={{ current_category.parent.slug }}" class="text-slate-600 hover:text-brand-600 transition">
-                    {{ current_category.parent.name_ar }}
+                {% if main_category %}
+                <a href="{% url 'store:product_list' %}?category={{ main_category.slug }}" class="text-slate-600 hover:text-brand-600 transition">
+                    {{ main_category.name_ar }}
                 </a>
+                {% if active_subcategory %}
                 <i data-lucide="chevron-left" class="w-4 h-4 text-brand-400"></i>
+                <span class="text-brand-600 font-extrabold">{{ active_subcategory.name_ar }}</span>
                 {% endif %}
-                <span class="text-brand-600 font-extrabold">
-                    {% if current_category %}{{ current_category.name_ar }}{% else %}كافة المنتجات{% endif %}
-                </span>
+                {% else %}
+                <span class="text-brand-600 font-extrabold">كافة المنتجات</span>
+                {% endif %}
             </nav>
             <h1 class="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
-                {% if current_category %}
-                    <span>{{ current_category.name_ar }}</span>
-                    {% if current_category.name_en %}<span class="text-xs font-normal text-slate-400 mr-2" dir="ltr">{{ current_category.name_en }}</span>{% endif %}
+                {% if active_subcategory %}
+                    <span>{{ active_subcategory.name_ar }}</span>
+                    <span class="text-xs font-semibold text-slate-400">({{ main_category.name_ar }})</span>
+                {% elif main_category %}
+                    <span>{{ main_category.name_ar }}</span>
+                    {% if main_category.name_en %}<span class="text-xs font-normal text-slate-400 mr-2" dir="ltr">{{ main_category.name_en }}</span>{% endif %}
                 {% else %}
-                    <span>تشكيلة المنتجات</span>
+                    <span>تشكيلة كافة المنتجات</span>
                 {% endif %}
             </h1>
         </div>
     </div>
 
-    <!-- 4-ICON FILTER BAR (SINGLE ROW - ZERO HORIZONTAL SCROLL) -->
-    <div class="bg-white rounded-2xl p-2.5 sm:p-3.5 border border-pink-200 shadow-2xs">
-        <form 
-            id="filter-controls-form" 
-            hx-get="{% url 'store:product_list' %}" 
-            hx-target="#product-grid" 
-            hx-swap="outerHTML"
-            hx-push-url="true"
-            class="space-y-2.5"
-        >
-            <!-- 1. Single Clean Row of 4 Distinct Expressive Icon Filter Buttons (Zero Scroll) -->
-            <div class="grid grid-cols-4 gap-1.5 sm:gap-2.5 w-full">
-                
-                <!-- Button 1: الأقسام (Category) -->
-                <div class="filter-btn relative flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-center cursor-pointer {% if current_category %}bg-slate-900 text-white border-slate-900 shadow-xs{% else %}bg-pink-50/40 hover:bg-pink-100/60 text-slate-700 border-pink-200/80{% endif %}">
-                    <span class="filter-dot w-1.5 h-1.5 rounded-full bg-pink-400 absolute top-1.5 right-1.5 {% if not current_category %}hidden{% endif %}"></span>
-                    <i data-lucide="layout-grid" class="w-4 h-4 {% if current_category %}text-pink-300{% else %}text-brand-600{% endif %} shrink-0"></i>
-                    <span class="filter-label text-[10px] sm:text-xs font-bold truncate max-w-full mt-1">
-                        {% if current_category %}{{ current_category.name_ar }}{% else %}الأقسام{% endif %}
-                    </span>
-                    <select 
-                        name="category" 
-                        hx-trigger="change"
-                        data-default-label="الأقسام"
-                        onchange="syncFilterBtn(this)"
-                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 text-base"
-                        title="تحديد القسم"
+    <!-- ======================================================================= -->
+    <!-- DYNAMIC HORIZONTAL SUBCATEGORIES BAR + SINGLE FILTER ICON AT FAR LEFT   -->
+    <!-- ======================================================================= -->
+    <div class="bg-white/90 backdrop-blur-md rounded-2xl p-2 sm:p-2.5 border border-pink-200/90 shadow-2xs">
+        <div class="flex items-center justify-between gap-2.5">
+            
+            <!-- 1. Right Side: Horizontal Scrollable Subcategories Pills -->
+            <div class="flex-1 overflow-x-auto no-scrollbar py-0.5" id="subcategories-scroll-container">
+                <div class="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
+                    
+                    {% if main_category %}
+                    <!-- "الكل" Pill for Main Category -->
+                    <a 
+                        href="{% url 'store:product_list' %}?category={{ main_category.slug }}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
+                        hx-get="{% url 'store:product_list' %}?category={{ main_category.slug }}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
+                        hx-target="#product-grid"
+                        hx-push-url="true"
+                        class="px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 {% if not active_subcategory %}bg-slate-900 text-white shadow-xs{% else %}bg-pink-50/70 hover:bg-pink-100 text-slate-700 border border-pink-200/60{% endif %}"
                     >
-                        <option value="">كافة الأقسام</option>
-                        {% for cat in global_categories %}
-                        <option value="{{ cat.slug }}" data-short="{{ cat.name_ar }}" {% if current_category and current_category.slug == cat.slug %}selected{% endif %}>
-                            {{ cat.name_ar }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
+                        الكل
+                    </a>
 
-                <!-- Button 2: الماركات (Brand) -->
-                <div class="filter-btn relative flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-center cursor-pointer {% if brand_filter %}bg-slate-900 text-white border-slate-900 shadow-xs{% else %}bg-pink-50/40 hover:bg-pink-100/60 text-slate-700 border-pink-200/80{% endif %}">
-                    <span class="filter-dot w-1.5 h-1.5 rounded-full bg-pink-400 absolute top-1.5 right-1.5 {% if not brand_filter %}hidden{% endif %}"></span>
-                    <i data-lucide="crown" class="w-4 h-4 {% if brand_filter %}text-pink-300{% else %}text-brand-600{% endif %} shrink-0"></i>
-                    <span class="filter-label text-[10px] sm:text-xs font-bold truncate max-w-full mt-1">
-                        {% if brand_filter %}{{ brand_filter }}{% else %}الماركات{% endif %}
-                    </span>
-                    <select 
-                        name="brand" 
-                        hx-trigger="change"
-                        data-default-label="الماركات"
-                        onchange="syncFilterBtn(this)"
-                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 text-base"
-                        title="تحديد الماركة"
+                    <!-- Subcategories inside Main Category -->
+                    {% for sub in category_subcategories %}
+                    <a 
+                        href="{% url 'store:product_list' %}?category={{ main_category.slug }}&subcategory={{ sub.slug }}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
+                        hx-get="{% url 'store:product_list' %}?category={{ main_category.slug }}&subcategory={{ sub.slug }}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
+                        hx-target="#product-grid"
+                        hx-push-url="true"
+                        class="px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 {% if active_subcategory and active_subcategory.slug == sub.slug %}bg-slate-900 text-white shadow-xs{% else %}bg-pink-50/70 hover:bg-pink-100 text-slate-700 border border-pink-200/60{% endif %}"
                     >
-                        <option value="">كافة الماركات</option>
-                        {% for b in available_brands %}
-                        <option value="{{ b }}" data-short="{{ b }}" {% if brand_filter == b %}selected{% endif %}>{{ b }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
+                        {{ sub.name_ar }}
+                    </a>
+                    {% endfor %}
 
-                <!-- Button 3: الترتيب (Sort) -->
-                <div class="filter-btn relative flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-center cursor-pointer {% if sort_by and sort_by != 'newest' %}bg-slate-900 text-white border-slate-900 shadow-xs{% else %}bg-pink-50/40 hover:bg-pink-100/60 text-slate-700 border-pink-200/80{% endif %}">
-                    <span class="filter-dot w-1.5 h-1.5 rounded-full bg-pink-400 absolute top-1.5 right-1.5 {% if not sort_by or sort_by == 'newest' %}hidden{% endif %}"></span>
-                    <i data-lucide="arrow-down-up" class="w-4 h-4 {% if sort_by and sort_by != 'newest' %}text-pink-300{% else %}text-brand-600{% endif %} shrink-0"></i>
-                    <span class="filter-label text-[10px] sm:text-xs font-bold truncate max-w-full mt-1">
-                        {% if sort_by == 'best_sellers' %}الأكثر طلباً{% elif sort_by == 'price_low' %}الأقل سعراً{% elif sort_by == 'price_high' %}الأعلى سعراً{% else %}الترتيب{% endif %}
-                    </span>
-                    <select 
-                        name="sort" 
-                        hx-trigger="change"
-                        data-default-label="الترتيب"
-                        onchange="syncFilterBtn(this)"
-                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 text-base"
-                        title="ترتيب المنتجات"
+                    {% else %}
+                    <!-- General Catalog: Main Categories Pills -->
+                    <a 
+                        href="{% url 'store:product_list' %}"
+                        hx-get="{% url 'store:product_list' %}"
+                        hx-target="#product-grid"
+                        hx-push-url="true"
+                        class="px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 {% if not current_category %}bg-slate-900 text-white shadow-xs{% else %}bg-pink-50/70 hover:bg-pink-100 text-slate-700 border border-pink-200/60{% endif %}"
                     >
-                        <option value="newest" data-short="الأحدث" {% if sort_by == 'newest' %}selected{% endif %}>وصل حديثاً</option>
-                        <option value="best_sellers" data-short="الأكثر طلباً" {% if sort_by == 'best_sellers' %}selected{% endif %}>الأكثر طلباً</option>
-                        <option value="price_low" data-short="الأقل سعراً" {% if sort_by == 'price_low' %}selected{% endif %}>السعر: الأقل أولاً</option>
-                        <option value="price_high" data-short="الأعلى سعراً" {% if sort_by == 'price_high' %}selected{% endif %}>السعر: الأعلى أولاً</option>
-                    </select>
-                </div>
+                        الكل
+                    </a>
+                    {% for cat in category_subcategories %}
+                    <a 
+                        href="{% url 'store:product_list' %}?category={{ cat.slug }}"
+                        hx-get="{% url 'store:product_list' %}?category={{ cat.slug }}"
+                        hx-target="#product-grid"
+                        hx-push-url="true"
+                        class="px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 {% if current_category and current_category.slug == cat.slug %}bg-slate-900 text-white shadow-xs{% else %}bg-pink-50/70 hover:bg-pink-100 text-slate-700 border border-pink-200/60{% endif %}"
+                    >
+                        {{ cat.name_ar }}
+                    </a>
+                    {% endfor %}
+                    {% endif %}
 
-                <!-- Button 4: البحث (Search Toggle Button) -->
+                </div>
+            </div>
+
+            <!-- 2. Far Left: Single Clean Filter Icon Button with Active Badge -->
+            <div class="shrink-0 pl-1 border-r border-pink-200/80 pr-2">
                 <button 
                     type="button" 
-                    onclick="toggleSearchInput(this)"
-                    class="search-toggle-btn filter-btn relative flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-center cursor-pointer {% if search_query %}bg-slate-900 text-white border-slate-900 shadow-xs{% else %}bg-pink-50/40 hover:bg-pink-100/60 text-slate-700 border-pink-200/80{% endif %}"
-                    title="البحث"
+                    onclick="openFilterDrawer()"
+                    class="relative flex items-center gap-1.5 px-3 py-2 rounded-xl bg-pink-50/90 hover:bg-brand-500 hover:text-white border border-pink-200 text-slate-800 transition-all font-bold text-xs cursor-pointer shadow-2xs group"
+                    title="تصفية وفلترة المنتجات"
+                    aria-label="تصفية وفلترة المنتجات"
                 >
-                    <span class="filter-dot w-1.5 h-1.5 rounded-full bg-pink-400 absolute top-1.5 right-1.5 {% if not search_query %}hidden{% endif %}"></span>
-                    <i data-lucide="search" class="w-4 h-4 {% if search_query %}text-pink-300{% else %}text-brand-600{% endif %} shrink-0"></i>
-                    <span class="filter-label text-[10px] sm:text-xs font-bold truncate max-w-full mt-1">
-                        {% if search_query %}{{ search_query|truncatechars:8 }}{% else %}البحث{% endif %}
+                    <i data-lucide="sliders-horizontal" class="w-4 h-4 text-brand-600 group-hover:text-white transition-colors"></i>
+                    <span class="hidden sm:inline">فلترة</span>
+                    {% if active_filters_count > 0 %}
+                    <span class="w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] font-extrabold flex items-center justify-center shadow-xs">
+                        {{ active_filters_count }}
                     </span>
+                    {% endif %}
                 </button>
-
             </div>
 
-            <!-- Expandable Search Input Row (Zero extra space when closed) -->
-            <div class="catalog-search-row {% if not search_query %}hidden{% endif %} pt-1 transition-all">
-                <div class="relative w-full">
-                    <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-                    <input 
-                        type="text" 
-                        name="q" 
-                        value="{{ search_query|default:'' }}"
-                        placeholder="ابحث بالاسم أو الماركة..." 
-                        hx-trigger="keyup changed delay:350ms, search"
-                        oninput="handleSearchInput(this)"
-                        onkeydown="if(event.key === 'Enter'){ event.preventDefault(); if(window.htmx){ htmx.trigger(this, 'search'); } } else if(event.key === 'Escape'){ if(this.value){ clearSearchInput(this.parentElement.querySelector('.search-clear-btn') || this); } else { toggleSearchInput(this); } }"
-                        class="w-full h-9 bg-pink-50/50 border border-pink-200 focus:border-brand-500 focus:bg-white focus:outline-none rounded-xl py-1.5 pr-9 pl-8 text-xs text-slate-900 transition placeholder-slate-400 shadow-2xs"
-                    >
+        </div>
+
+        <!-- Active Filter Tags Strip (Shown only when extra filters applied) -->
+        {% if brand_filter or grade_filter or search_query or min_price or max_price or sort_by != 'newest' %}
+        <div class="flex items-center justify-between pt-2 mt-2 border-t border-pink-100 text-xs">
+            <div class="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-600">
+                <span class="text-slate-400 font-semibold">تصفية نشطة:</span>
+                {% if brand_filter %}
+                <span class="px-2 py-0.5 rounded-lg bg-pink-100/80 text-brand-700 font-bold flex items-center gap-1">
+                    ماركة: {{ brand_filter }}
+                </span>
+                {% endif %}
+                {% if grade_filter == 'original' %}
+                <span class="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                    أصلي 100%
+                </span>
+                {% elif grade_filter == 'master' %}
+                <span class="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
+                    ماستر كواليتي
+                </span>
+                {% endif %}
+                {% if min_price or max_price %}
+                <span class="px-2 py-0.5 rounded-lg bg-pink-100/80 text-brand-700 font-bold">
+                    السعر: {{ min_price|default:'0' }} - {{ max_price|default:'الأعلى' }}
+                </span>
+                {% endif %}
+                {% if search_query %}
+                <span class="px-2 py-0.5 rounded-lg bg-pink-100/80 text-brand-700 font-bold">
+                    "{{ search_query }}"
+                </span>
+                {% endif %}
+            </div>
+            <a 
+                href="{{ catalog_reset_url }}" 
+                hx-get="{{ catalog_reset_url }}" 
+                hx-target="#product-grid" 
+                hx-push-url="true"
+                class="inline-flex items-center gap-1 text-rose-600 hover:text-rose-700 font-bold transition text-[11px] py-1 px-2 rounded-lg hover:bg-rose-50 cursor-pointer"
+            >
+                <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                <span>مسح الفلاتر</span>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- FILTER SLIDE-OVER DRAWER (OPENS FROM SINGLE FILTER ICON)                -->
+    <!-- ======================================================================= -->
+    <div id="filter-drawer-modal" class="fixed inset-0 z-50 pointer-events-none transition-all duration-300">
+        <!-- Backdrop -->
+        <div id="filter-drawer-backdrop" onclick="closeFilterDrawer()" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs opacity-0 transition-opacity duration-300 pointer-events-none"></div>
+
+        <!-- Panel -->
+        <div id="filter-drawer-panel" class="fixed top-0 bottom-0 left-0 w-full sm:w-[380px] bg-white shadow-2xl z-10 flex flex-col -translate-x-full transition-transform duration-300 ease-out border-r border-pink-200">
+            <!-- Drawer Header -->
+            <div class="p-4 border-b border-pink-100 flex items-center justify-between bg-pink-50/40">
+                <div class="flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-xl bg-pink-100 text-brand-600 flex items-center justify-center">
+                        <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+                    </span>
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-sm">تصفية وفلترة المنتجات</h3>
+                        <p class="text-[11px] text-slate-400">حدد المعايير لتخصيص نتائج العرض</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeFilterDrawer()" class="w-8 h-8 rounded-xl border border-pink-200 text-slate-500 hover:text-slate-800 hover:bg-pink-100/60 flex items-center justify-center transition cursor-pointer">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Drawer Form Body -->
+            <form 
+                id="filter-drawer-form" 
+                hx-get="{% url 'store:product_list' %}" 
+                hx-target="#product-grid" 
+                hx-swap="outerHTML"
+                hx-push-url="true"
+                onsubmit="closeFilterDrawer()"
+                class="flex-1 overflow-y-auto p-4 space-y-5 text-xs"
+            >
+                <!-- Retain Category & Subcategory -->
+                {% if main_category %}<input type="hidden" name="category" value="{{ main_category.slug }}">{% endif %}
+                {% if active_subcategory %}<input type="hidden" name="subcategory" value="{{ active_subcategory.slug }}">{% endif %}
+
+                <!-- 1. Search Box -->
+                <div class="space-y-1.5">
+                    <label class="block font-bold text-slate-800">البحث بالاسم أو الوصف</label>
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            name="q" 
+                            value="{{ search_query|default:'' }}" 
+                            placeholder="ابحث عن منتج، عطر، ساعة..." 
+                            class="w-full h-10 bg-pink-50/40 border border-pink-200 focus:border-brand-500 focus:bg-white rounded-xl pr-9 pl-3 text-xs text-slate-900 focus:outline-none transition"
+                        >
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                    </div>
+                </div>
+
+                <!-- 2. Sort By -->
+                <div class="space-y-1.5">
+                    <label class="block font-bold text-slate-800">ترتيب العرض</label>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="sort" value="newest" class="peer sr-only" {% if not sort_by or sort_by == 'newest' %}checked{% endif %}>
+                            <div class="p-2.5 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900 transition">
+                                وصل حديثاً
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="sort" value="best_sellers" class="peer sr-only" {% if sort_by == 'best_sellers' %}checked{% endif %}>
+                            <div class="p-2.5 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900 transition">
+                                الأكثر طلباً
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="sort" value="price_low" class="peer sr-only" {% if sort_by == 'price_low' %}checked{% endif %}>
+                            <div class="p-2.5 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900 transition">
+                                السعر: من الأقل
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="sort" value="price_high" class="peer sr-only" {% if sort_by == 'price_high' %}checked{% endif %}>
+                            <div class="p-2.5 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900 transition">
+                                السعر: من الأعلى
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 3. Quality Grade Filter -->
+                <div class="space-y-1.5">
+                    <label class="block font-bold text-slate-800">درجة الجودة</label>
+                    <div class="grid grid-cols-3 gap-1.5">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="grade" value="" class="peer sr-only" {% if not grade_filter %}checked{% endif %}>
+                            <div class="p-2 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900 transition">
+                                الكل
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="grade" value="original" class="peer sr-only" {% if grade_filter == 'original' %}checked{% endif %}>
+                            <div class="p-2 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:border-emerald-600 transition">
+                                أصلي 100%
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="grade" value="master" class="peer sr-only" {% if grade_filter == 'master' %}checked{% endif %}>
+                            <div class="p-2 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600 transition">
+                                ماستر كواليتي
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 4. Brands -->
+                {% if available_brands %}
+                <div class="space-y-1.5">
+                    <label class="block font-bold text-slate-800">الماركة / البراند</label>
+                    <select name="brand" class="w-full h-10 bg-pink-50/40 border border-pink-200 focus:border-brand-500 focus:bg-white rounded-xl px-3 text-xs text-slate-800 focus:outline-none transition">
+                        <option value="">كافة الماركات المتوفرة</option>
+                        {% for b in available_brands %}
+                        <option value="{{ b }}" {% if brand_filter == b %}selected{% endif %}>{{ b }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
+                <!-- 5. Price Range (YER) -->
+                <div class="space-y-1.5">
+                    <label class="block font-bold text-slate-800">نطاق السعر (ريال يمني)</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-1">الحد الأدنى:</span>
+                            <input 
+                                type="number" 
+                                name="min_price" 
+                                value="{{ min_price|default:'' }}" 
+                                placeholder="0" 
+                                class="w-full h-9 bg-pink-50/40 border border-pink-200 rounded-xl px-3 text-xs text-slate-800 focus:border-brand-500 focus:bg-white focus:outline-none transition"
+                            >
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-1">الحد الأقصى:</span>
+                            <input 
+                                type="number" 
+                                name="max_price" 
+                                value="{{ max_price|default:'' }}" 
+                                placeholder="100,000" 
+                                class="w-full h-9 bg-pink-50/40 border border-pink-200 rounded-xl px-3 text-xs text-slate-800 focus:border-brand-500 focus:bg-white focus:outline-none transition"
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Drawer Actions -->
+                <div class="pt-4 border-t border-pink-100 flex items-center gap-2">
                     <button 
-                        type="button" 
-                        onclick="clearSearchInput(this)"
-                        class="search-clear-btn {% if not search_query %}hidden{% endif %} absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full cursor-pointer"
-                        title="مسح البحث"
+                        type="submit" 
+                        class="flex-1 py-3 px-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs transition cursor-pointer shadow-xs text-center"
                     >
-                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        تطبيق الفلترة
                     </button>
+                    <a 
+                        href="{{ catalog_reset_url }}" 
+                        hx-get="{{ catalog_reset_url }}" 
+                        hx-target="#product-grid" 
+                        hx-push-url="true"
+                        onclick="closeFilterDrawer()"
+                        class="py-3 px-4 rounded-xl border border-pink-200 text-slate-700 hover:bg-pink-50 font-bold text-xs transition cursor-pointer text-center"
+                    >
+                        إعادة ضبط
+                    </a>
                 </div>
-            </div>
-
-            <!-- Active Filters Indicator & Reset Link -->
-            <div class="active-filters-bar flex items-center justify-between pt-1.5 border-t border-pink-100 text-xs {% if not current_category and not brand_filter and not search_query and sort_by == 'newest' %}hidden{% endif %}">
-                <div class="active-filter-chips flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
-                    <span>تصفية نشطة:</span>
-                    {% if current_category %}<span class="px-2 py-0.5 rounded-md bg-pink-100 text-brand-700 font-medium">{{ current_category.name_ar }}</span>{% endif %}
-                    {% if brand_filter %}<span class="px-2 py-0.5 rounded-md bg-pink-100 text-brand-700 font-medium">{{ brand_filter }}</span>{% endif %}
-                    {% if search_query %}<span class="px-2 py-0.5 rounded-md bg-pink-100 text-brand-700 font-medium">"{{ search_query }}"</span>{% endif %}
-                </div>
-                <a 
-                    href="{% url 'store:product_list' %}" 
-                    hx-get="{% url 'store:product_list' %}" 
-                    hx-target="#product-grid" 
-                    hx-swap="outerHTML"
-                    hx-push-url="true"
-                    onclick="resetCatalogFilterForm(this)"
-                    class="shrink-0 inline-flex items-center gap-1 text-rose-600 hover:text-rose-700 font-bold transition text-[11px] py-1 px-2 rounded-lg hover:bg-rose-50 cursor-pointer"
-                    title="إعادة ضبط كافة الفلاتر"
-                >
-                    <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
-                    <span>إلغاء الفلترة</span>
-                </a>
-            </div>
-
-        </form>
+            </form>
+        </div>
     </div>
 
     <!-- Full-Width Products Grid Area (Loaded & Swapped by HTMX) -->
@@ -196,4 +353,35 @@
     </main>
 
 </div>
+
+<script>
+    function openFilterDrawer() {
+        const modal = document.getElementById('filter-drawer-modal');
+        const backdrop = document.getElementById('filter-drawer-backdrop');
+        const panel = document.getElementById('filter-drawer-panel');
+        if (!modal || !panel || !backdrop) return;
+        
+        modal.classList.remove('pointer-events-none');
+        backdrop.classList.remove('pointer-events-none', 'opacity-0');
+        backdrop.classList.add('opacity-100');
+        panel.classList.remove('-translate-x-full');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeFilterDrawer() {
+        const modal = document.getElementById('filter-drawer-modal');
+        const backdrop = document.getElementById('filter-drawer-backdrop');
+        const panel = document.getElementById('filter-drawer-panel');
+        if (!modal || !panel || !backdrop) return;
+        
+        backdrop.classList.remove('opacity-100');
+        backdrop.classList.add('opacity-0');
+        panel.classList.add('-translate-x-full');
+        document.body.style.overflow = '';
+        setTimeout(() => {
+            modal.classList.add('pointer-events-none');
+            backdrop.classList.add('pointer-events-none');
+        }, 300);
+    }
+</script>
 {% endblock %}

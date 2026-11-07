@@ -695,17 +695,13 @@ class UserRoutesAndOperationsTests(TestCase):
         self.assertContains(res_cosmetics, 'data-short="تجميل"')
         self.assertNotContains(res_cosmetics, 'overflow-x-auto no-scrollbar flex-nowrap')
 
-        # 4. Global Product list
+        # 4. Global Dynamic Product list with horizontal category strip and single far-left filter
         res_products = self.client.get(reverse('store:product_list'))
         self.assertEqual(res_products.status_code, 200)
-        self.assertContains(res_products, 'id="filter-controls-form"')
-        self.assertContains(res_products, 'grid grid-cols-4')
-        self.assertContains(res_products, 'data-lucide="layout-grid"')
-        self.assertContains(res_products, 'data-lucide="crown"')
-        self.assertContains(res_products, 'data-lucide="arrow-down-up"')
-        self.assertContains(res_products, 'data-lucide="rotate-ccw"')
-        self.assertContains(res_products, 'resetCatalogFilterForm')
-        self.assertNotContains(res_products, 'overflow-x-auto no-scrollbar flex-nowrap')
+        self.assertContains(res_products, 'subcategories-scroll-container')
+        self.assertContains(res_products, 'openFilterDrawer')
+        self.assertContains(res_products, 'data-lucide="sliders-horizontal"')
+        self.assertContains(res_products, 'filter-drawer-modal')
 
     def test_account_page_2x2_mobile_grid_metrics(self):
         """فحص تنظيم إحصائيات حساب العميل في شبكة 2*2 للجوال مع البيانات الأربعة وإمكانية الوصول"""
