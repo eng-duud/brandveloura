@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 from store.models import (
     StoreSettings, PaymentAccount, ShippingZone,
-    Category, Product, Order, OrderItem, UserProfile
+    Category, Product, Order, OrderItem, UserProfile, Brand
 )
 
 
@@ -726,6 +726,39 @@ class UserRoutesAndOperationsTests(TestCase):
         self.assertContains(res, 'tabindex="0"')
         self.assertContains(res, "switchTab('orders')")
         self.assertContains(res, "switchTab('notifications')")
+
+    def test_catalog_search_icon_and_concise_product_count(self):
+        """فحص إزالة العبارات الإنشائية واعتماد العداد الموجز 'X منتج' وزر أيقونة البحث المدمج"""
+        catalogs = [
+            reverse('store:product_list'),
+            reverse('store:perfumes_catalog'),
+            reverse('store:watches_catalog'),
+            reverse('store:cosmetics_catalog'),
+        ]
+
+        for url in catalogs:
+            res = self.client.get(url)
+            self.assertEqual(res.status_code, 200)
+            # Concise count format
+            self.assertContains(res, 'منتج</span>')
+            # Absence of verbose filler texts in header
+            self.assertNotContains(res, 'تم العثور على <span')
+            self.assertNotContains(res, 'الأسعار بالريال السعودي والمعادل بالريال اليمني')
+            # Search toggle icon button present
+            self.assertContains(res, 'search-toggle-btn')
+            self.assertContains(res, 'catalog-search-row')
+            self.assertContains(res, 'data-lucide="search"')
+
+        # Brand detail page
+        brand = Brand.objects.create(name_ar="شانيل", name_en="Chanel", slug="chanel")
+        res_brand = self.client.get(reverse('store:brand_detail', kwargs={'slug': brand.slug}))
+        self.assertEqual(res_brand.status_code, 200)
+        self.assertContains(res_brand, 'منتج</span>')
+        self.assertNotContains(res_brand, 'تم العثور على <span')
+        self.assertNotContains(res_brand, 'الأسعار بالريال السعودي والمعادل بالريال اليمني')
+        self.assertContains(res_brand, 'search-toggle-btn')
+        self.assertContains(res_brand, 'catalog-search-row')
+
 
 
 

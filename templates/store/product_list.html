@@ -31,12 +31,6 @@
                 {% endif %}
             </h1>
         </div>
-
-        <!-- Global Currency Notice -->
-        <div class="inline-flex items-center gap-2 text-xs font-medium text-slate-700 bg-pink-50/50 border border-pink-200 px-3 py-1.5 rounded-xl self-start md:self-auto shadow-2xs">
-            <span class="w-2 h-2 rounded-full bg-brand-500"></span>
-            <span>الأسعار بالريال السعودي والمعادل بالريال اليمني</span>
-        </div>
     </div>
 
     <!-- 4-ICON FILTER BAR (SINGLE ROW - ZERO HORIZONTAL SCROLL) -->
@@ -45,23 +39,11 @@
             id="filter-controls-form" 
             hx-get="{% url 'store:product_list' %}" 
             hx-target="#product-grid" 
+            hx-swap="outerHTML"
             hx-push-url="true"
             class="space-y-2.5"
         >
-            <!-- 1. Full-Width Search Input -->
-            <div class="relative w-full">
-                <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-                <input 
-                    type="text" 
-                    name="q" 
-                    value="{{ search_query }}"
-                    placeholder="ابحث بالاسم أو الماركة..." 
-                    hx-trigger="keyup changed delay:300ms, search"
-                    class="w-full h-10 bg-pink-50/40 border border-pink-200 focus:border-brand-500 focus:bg-white focus:outline-none rounded-xl py-2 pr-9 pl-3 text-xs text-slate-900 transition placeholder-slate-400 shadow-2xs"
-                >
-            </div>
-
-            <!-- 2. Single Clean Row of 4 Distinct Expressive Icon Filter Buttons (Zero Scroll) -->
+            <!-- 1. Single Clean Row of 4 Distinct Expressive Icon Filter Buttons (Zero Scroll) -->
             <div class="grid grid-cols-4 gap-1.5 sm:gap-2.5 w-full">
                 
                 <!-- Button 1: الأقسام (Category) -->
@@ -132,34 +114,69 @@
                     </select>
                 </div>
 
-                <!-- Button 4: إعادة الضبط (Reset) -->
-                <a 
-                    href="{% url 'store:product_list' %}" 
-                    hx-get="{% url 'store:product_list' %}"
-                    hx-target="#product-grid"
-                    hx-push-url="true"
-                    onclick="resetCatalogFilterForm(this)"
-                    class="filter-btn relative flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-center cursor-pointer {% if current_category or brand_filter or search_query or sort_by != 'newest' %}bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 shadow-2xs{% else %}bg-pink-50/40 text-slate-500 border-pink-200/80 hover:bg-pink-100/60 hover:text-slate-700{% endif %}"
-                    title="إعادة ضبط كافة الفلاتر"
+                <!-- Button 4: البحث (Search Toggle Button) -->
+                <button 
+                    type="button" 
+                    onclick="toggleSearchInput(this)"
+                    class="search-toggle-btn filter-btn relative flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-center cursor-pointer {% if search_query %}bg-slate-900 text-white border-slate-900 shadow-xs{% else %}bg-pink-50/40 hover:bg-pink-100/60 text-slate-700 border-pink-200/80{% endif %}"
+                    title="البحث"
                 >
-                    <i data-lucide="rotate-ccw" class="w-4 h-4 {% if current_category or brand_filter or search_query or sort_by != 'newest' %}text-rose-600{% else %}text-brand-600{% endif %} shrink-0"></i>
+                    <span class="filter-dot w-1.5 h-1.5 rounded-full bg-pink-400 absolute top-1.5 right-1.5 {% if not search_query %}hidden{% endif %}"></span>
+                    <i data-lucide="search" class="w-4 h-4 {% if search_query %}text-pink-300{% else %}text-brand-600{% endif %} shrink-0"></i>
                     <span class="filter-label text-[10px] sm:text-xs font-bold truncate max-w-full mt-1">
-                        إلغاء الفلترة
+                        {% if search_query %}{{ search_query|truncatechars:8 }}{% else %}البحث{% endif %}
                     </span>
-                </a>
+                </button>
 
             </div>
 
-            <!-- Active Filters Indicator -->
-            {% if current_category or brand_filter or search_query or sort_by != 'newest' %}
-            <div class="active-filters-bar flex items-center justify-between pt-1.5 border-t border-pink-100 text-xs">
-                <div class="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+            <!-- Expandable Search Input Row (Zero extra space when closed) -->
+            <div class="catalog-search-row {% if not search_query %}hidden{% endif %} pt-1 transition-all">
+                <div class="relative w-full">
+                    <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                    <input 
+                        type="text" 
+                        name="q" 
+                        value="{{ search_query|default:'' }}"
+                        placeholder="ابحث بالاسم أو الماركة..." 
+                        hx-trigger="keyup changed delay:350ms, search"
+                        oninput="handleSearchInput(this)"
+                        onkeydown="if(event.key === 'Enter'){ event.preventDefault(); if(window.htmx){ htmx.trigger(this, 'search'); } } else if(event.key === 'Escape'){ if(this.value){ clearSearchInput(this.parentElement.querySelector('.search-clear-btn') || this); } else { toggleSearchInput(this); } }"
+                        class="w-full h-9 bg-pink-50/50 border border-pink-200 focus:border-brand-500 focus:bg-white focus:outline-none rounded-xl py-1.5 pr-9 pl-8 text-xs text-slate-900 transition placeholder-slate-400 shadow-2xs"
+                    >
+                    <button 
+                        type="button" 
+                        onclick="clearSearchInput(this)"
+                        class="search-clear-btn {% if not search_query %}hidden{% endif %} absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full cursor-pointer"
+                        title="مسح البحث"
+                    >
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Active Filters Indicator & Reset Link -->
+            <div class="active-filters-bar flex items-center justify-between pt-1.5 border-t border-pink-100 text-xs {% if not current_category and not brand_filter and not search_query and sort_by == 'newest' %}hidden{% endif %}">
+                <div class="active-filter-chips flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
                     <span>تصفية نشطة:</span>
                     {% if current_category %}<span class="px-2 py-0.5 rounded-md bg-pink-100 text-brand-700 font-medium">{{ current_category.name_ar }}</span>{% endif %}
                     {% if brand_filter %}<span class="px-2 py-0.5 rounded-md bg-pink-100 text-brand-700 font-medium">{{ brand_filter }}</span>{% endif %}
+                    {% if search_query %}<span class="px-2 py-0.5 rounded-md bg-pink-100 text-brand-700 font-medium">"{{ search_query }}"</span>{% endif %}
                 </div>
+                <a 
+                    href="{% url 'store:product_list' %}" 
+                    hx-get="{% url 'store:product_list' %}" 
+                    hx-target="#product-grid" 
+                    hx-swap="outerHTML"
+                    hx-push-url="true"
+                    onclick="resetCatalogFilterForm(this)"
+                    class="shrink-0 inline-flex items-center gap-1 text-rose-600 hover:text-rose-700 font-bold transition text-[11px] py-1 px-2 rounded-lg hover:bg-rose-50 cursor-pointer"
+                    title="إعادة ضبط كافة الفلاتر"
+                >
+                    <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                    <span>إلغاء الفلترة</span>
+                </a>
             </div>
-            {% endif %}
 
         </form>
     </div>

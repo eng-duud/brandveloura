@@ -948,6 +948,54 @@
             }
         }
         document.body.addEventListener('cartUpdated', syncCartBadges);
+        function updateActiveFiltersBar(form) {
+            if (!form) return;
+            const activeBar = form.querySelector('.active-filters-bar');
+            if (!activeBar) return;
+            
+            const qInput = form.querySelector('input[name="q"]');
+            const searchVal = qInput ? qInput.value.trim() : '';
+            
+            const activeChips = [];
+            if (searchVal) {
+                activeChips.push(`"${searchVal}"`);
+            }
+            
+            const selects = form.querySelectorAll('select');
+            selects.forEach(s => {
+                if (s.name === 'sort') {
+                    if (s.value && s.value !== 'newest') {
+                        const opt = s.options[s.selectedIndex];
+                        if (opt) activeChips.push(opt.text);
+                    }
+                } else {
+                    if (s.value && s.value !== '') {
+                        const opt = s.options[s.selectedIndex];
+                        if (opt) activeChips.push(opt.dataset.short || opt.text);
+                    }
+                }
+            });
+            
+            if (activeChips.length > 0) {
+                activeBar.classList.remove('hidden');
+                const chipsContainer = activeBar.querySelector('.active-filter-chips') || activeBar.querySelector('div:first-child');
+                if (chipsContainer) {
+                    chipsContainer.innerHTML = '';
+                    const titleSpan = document.createElement('span');
+                    titleSpan.textContent = 'تصفية نشطة:';
+                    chipsContainer.appendChild(titleSpan);
+                    activeChips.forEach(c => {
+                        const chipSpan = document.createElement('span');
+                        chipSpan.className = 'px-2 py-0.5 rounded-md bg-pink-100 text-brand-700 font-medium inline-block';
+                        chipSpan.textContent = c;
+                        chipsContainer.appendChild(chipSpan);
+                    });
+                }
+            } else {
+                activeBar.classList.add('hidden');
+            }
+        }
+
         function syncFilterBtn(select) {
             const btn = select.closest('.filter-btn');
             if (!btn) return;
@@ -980,15 +1028,128 @@
                 }
                 if (dot) dot.classList.remove('hidden');
             }
+            updateActiveFiltersBar(select.closest('form'));
+        }
+
+        function toggleSearchInput(btn) {
+            const form = btn.closest('form');
+            if (!form) return;
+            const searchRow = form.querySelector('.catalog-search-row') || form.querySelector('#search-input-row');
+            if (!searchRow) return;
+            
+            const isHidden = searchRow.classList.contains('hidden');
+            if (isHidden) {
+                searchRow.classList.remove('hidden');
+                const input = searchRow.querySelector('input[name="q"]');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            } else {
+                const input = searchRow.querySelector('input[name="q"]');
+                if (input && input.value.trim() !== '') {
+                    if (window.htmx) {
+                        htmx.trigger(input, 'search');
+                    }
+                } else {
+                    searchRow.classList.add('hidden');
+                }
+            }
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+        }
+
+        function handleSearchInput(input) {
+            const form = input.closest('form');
+            const clearBtn = form ? form.querySelector('.search-clear-btn') : input.parentElement.querySelector('.search-clear-btn');
+            if (clearBtn) {
+                if (input.value && input.value.trim().length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                }
+            }
+            if (form) {
+                const searchBtn = form.querySelector('.search-toggle-btn') || form.querySelector('#search-toggle-btn');
+                if (searchBtn) {
+                    const label = searchBtn.querySelector('.filter-label');
+                    const dot = searchBtn.querySelector('.filter-dot');
+                    const icon = searchBtn.querySelector('i, svg');
+                    const val = input.value.trim();
+                    const isFiveButtons = searchBtn.closest('.grid-cols-5') || (searchBtn.parentElement && searchBtn.parentElement.classList.contains('flex'));
+                    const maxLen = isFiveButtons ? 6 : 8;
+                    if (val) {
+                        if (label) label.textContent = val.length > maxLen ? val.substring(0, maxLen) + '...' : val;
+                        if (dot) dot.classList.remove('hidden');
+                        searchBtn.classList.add('bg-slate-900', 'text-white', 'border-slate-900', 'shadow-xs');
+                        searchBtn.classList.remove('bg-pink-50/40', 'hover:bg-pink-100/60', 'text-slate-700', 'border-pink-200/80');
+                        if (icon) {
+                            icon.classList.add('text-pink-300');
+                            icon.classList.remove('text-brand-600');
+                        }
+                    } else {
+                        if (label) label.textContent = 'البحث';
+                        if (dot) dot.classList.add('hidden');
+                        searchBtn.classList.remove('bg-slate-900', 'text-white', 'border-slate-900', 'shadow-xs');
+                        searchBtn.classList.add('bg-pink-50/40', 'hover:bg-pink-100/60', 'text-slate-700', 'border-pink-200/80');
+                        if (icon) {
+                            icon.classList.remove('text-pink-300');
+                            icon.classList.add('text-brand-600');
+                        }
+                    }
+                }
+                updateActiveFiltersBar(form);
+            }
+        }
+
+        function clearSearchInput(btnOrEl) {
+            const form = btnOrEl.closest('form');
+            if (!form) return;
+            const input = form.querySelector('input[name="q"]');
+            if (!input) return;
+            input.value = '';
+            const clearBtn = form.querySelector('.search-clear-btn');
+            if (clearBtn) clearBtn.classList.add('hidden');
+            handleSearchInput(input);
+            updateActiveFiltersBar(form);
+            input.focus();
+            if (window.htmx) {
+                htmx.trigger(input, 'search');
+            }
         }
 
         function resetCatalogFilterForm(el) {
-            const form = (el && el.closest('form')) || document.querySelector('#perfumes-filter-form, #watches-filter-form, #cosmetics-filter-form, #filter-controls-form');
+            const form = (el && el.closest('form')) || document.querySelector('#perfumes-filter-form, #watches-filter-form, #cosmetics-filter-form, #filter-controls-form, #brand-filter-form');
             if (!form) return;
             
             // Clear search input
             const qInput = form.querySelector('input[name="q"]');
-            if (qInput) qInput.value = '';
+            if (qInput) {
+                qInput.value = '';
+                const clearBtn = qInput.parentElement.querySelector('.search-clear-btn');
+                if (clearBtn) clearBtn.classList.add('hidden');
+            }
+            
+            // Hide search row
+            const searchRow = form.querySelector('.catalog-search-row') || form.querySelector('#search-input-row');
+            if (searchRow) searchRow.classList.add('hidden');
+            
+            // Reset search button state
+            const searchBtn = form.querySelector('.search-toggle-btn') || form.querySelector('#search-toggle-btn');
+            if (searchBtn) {
+                const label = searchBtn.querySelector('.filter-label');
+                if (label) label.textContent = 'البحث';
+                const dot = searchBtn.querySelector('.filter-dot');
+                if (dot) dot.classList.add('hidden');
+                searchBtn.classList.remove('bg-slate-900', 'text-white', 'border-slate-900', 'shadow-xs');
+                searchBtn.classList.add('bg-pink-50/40', 'hover:bg-pink-100/60', 'text-slate-700', 'border-pink-200/80');
+                const icon = searchBtn.querySelector('i, svg');
+                if (icon) {
+                    icon.classList.remove('text-pink-300');
+                    icon.classList.add('text-brand-600');
+                }
+            }
             
             // Reset all selects to default
             const selects = form.querySelectorAll('select');

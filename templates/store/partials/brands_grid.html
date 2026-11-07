@@ -1,14 +1,9 @@
 <div id="brands-grid" class="space-y-6">
     <!-- Results Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 pb-3 border-b border-pink-200 gap-2">
-        <div class="font-medium">
-            تم العثور على <span class="font-bold text-slate-900 font-num">{{ brands|length }}</span> ماركة عالمية
-            {% if search_query %}
-            لكلمة البحث: <span class="font-bold text-slate-900">"{{ search_query }}"</span>
-            {% endif %}
-        </div>
-        <div class="text-[11px] font-medium text-slate-700 bg-pink-50/50 px-3 py-1 rounded-xl border border-pink-200 self-start sm:self-auto shadow-2xs">
-            منتجات وماركات أصلية مختارة بعناية
+    <div class="flex items-center justify-between text-xs text-slate-500 pb-3 border-b border-pink-200">
+        <div class="font-semibold text-slate-800 flex items-center gap-1.5 text-xs sm:text-sm">
+            <span class="font-bold text-slate-900 font-num">{{ brands|length }}</span>
+            <span>ماركة</span>
         </div>
     </div>
 
