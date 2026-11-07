@@ -181,10 +181,20 @@
             background-size: 0.95rem;
             padding-left: 2.2rem !important;
         }
-        /* Official Logo Font — Matched with Brand Veloura Logo Artwork */
+        /* Official Brand Veloura Logo Font — Milkshake */
+        @font-face {
+            font-family: 'Milkshake';
+            src: url("{% static 'fonts/Milkshake.woff2' %}") format('woff2'),
+                 url("{% static 'fonts/Milkshake.woff' %}") format('woff'),
+                 url("https://db.onlinewebfonts.com/t/13dbbd029d70f10549374a111e88aee0.woff2") format('woff2');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+
         .font-brand-logo {
-            font-family: 'Shrikhand', 'Lobster Two', 'Pacifico', cursive !important;
-            letter-spacing: 0.01em;
+            font-family: 'Milkshake', 'Shrikhand', 'Lobster Two', 'Pacifico', cursive !important;
+            letter-spacing: 0.02em;
             transform: translateY(-0.5px);
         }
         /* Accessible Focus States (ui-ux-pro-max: WCAG AA) */
@@ -232,7 +242,10 @@
         <div class="flex items-center gap-3">
             <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-8 h-8 rounded-xl object-cover shadow-xs border border-[#fec2f5]/40 shrink-0">
             <div>
-                <p class="font-bold tracking-wide text-white">تطبيق {{ store_settings.store_name }}</p>
+                <p class="tracking-wide text-white flex items-center gap-1.5">
+                    <span class="text-xs font-bold text-slate-300">تطبيق</span>
+                    <span class="font-brand-logo text-base sm:text-lg text-[#fec2f5] tracking-wide">Brand Veloura</span>
+                </p>
                 <p class="text-slate-300 text-[11px]">تصفح أسرع، بدون استهلاك للإنترنت، ومتابعة فورية لطلباتك</p>
             </div>
         </div>

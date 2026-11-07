@@ -1,9 +1,19 @@
 /* Brand Veloura - Bespoke Luxury Admin Theme */
 @import url('https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Pacifico&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Readex+Pro:wght@300;400;500;600;700;800&display=swap');
 
+@font-face {
+    font-family: 'Milkshake';
+    src: url('../fonts/Milkshake.woff2') format('woff2'),
+         url('../fonts/Milkshake.woff') format('woff'),
+         url('https://db.onlinewebfonts.com/t/13dbbd029d70f10549374a111e88aee0.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 :root {
     --bv-font-sans: 'Readex Pro', 'Almarai', -apple-system, BlinkMacSystemFont, sans-serif;
-    --bv-font-logo: 'Pacifico', cursive;
+    --bv-font-logo: 'Milkshake', 'Pacifico', cursive;
     --bv-font-num: 'Plus Jakarta Sans', sans-serif;
 
     --bv-primary: #be123f;
