@@ -1,356 +1,364 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    {% if active_subcategory %}{{ active_subcategory.name_ar }} — {{ main_category.name_ar }} | {% elif main_category %}{{ main_category.name_ar }} | {% endif %}المنتجات — {{ store_settings.store_name }}
+    {% if active_subcategory %}{{ active_subcategory.name_ar }} — {{ main_category.name_ar }} | {% elif main_category %}{{ main_category.name_ar }} | {% endif %}الأقسام والمنتجات — {{ store_settings.store_name }}
 {% endblock %}
 
-{% block meta_description %}{% if main_category %}تصفح تشكيلة {{ main_category.name_ar }} في {{ store_settings.store_name }}. عطور، ساعات، ومستحضرات تجميل مع توصيل سريع.{% else %}تصفح منتجات Brand Veloura: عطور، ساعات، ومستحضرات تجميل معلنة بالريال السعودي واليمني.{% endif %}{% endblock %}
+{% block meta_description %}{% if main_category %}تصفح تشكيلة {{ main_category.name_ar }} في {{ store_settings.store_name }}. عطور، ساعات، ومستحضرات عناية وتجميل مع توصيل سريع لكافة المحافظات.{% else %}تصفح أقسام ومنتجات Brand Veloura: عطور، ساعات، ومستحضرات تجميل معلنة بالريال السعودي واليمني.{% endif %}{% endblock %}
 {% block canonical %}{{ request.scheme }}://{{ request.get_host }}{% url 'store:product_list' %}{% if main_category %}?category={{ main_category.slug }}{% if active_subcategory %}&subcategory={{ active_subcategory.slug }}{% endif %}{% endif %}{% endblock %}
-{% block og_title %}{% if active_subcategory %}{{ active_subcategory.name_ar }} — {{ main_category.name_ar }}{% elif main_category %}{{ main_category.name_ar }} — {{ store_settings.store_name }}{% else %}منتجات Brand Veloura{% endif %}{% endblock %}
-{% block og_description %}تسوق العطور والساعات ومستحضرات العناية والتجميل.{% endblock %}
+{% block og_title %}{% if active_subcategory %}{{ active_subcategory.name_ar }} — {{ main_category.name_ar }}{% elif main_category %}{{ main_category.name_ar }} — {{ store_settings.store_name }}{% else %}أقسام ومنتجات Brand Veloura{% endif %}{% endblock %}
+{% block og_description %}تسوق العطور والساعات ومستحضرات العناية والتجميل بأعلى درجات الفخامة والجودة.{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-5">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-4">
     
-    <!-- Breadcrumb & Category Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-pink-200/80">
+    <!-- 1. Breadcrumbs Navigation (واضح وكبير وأنيق) -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-pink-200/80">
         <div>
-            <nav class="inline-flex items-center gap-2 text-xs sm:text-sm font-bold bg-white/90 backdrop-blur-md border border-pink-200/90 rounded-2xl px-4 py-2 shadow-2xs mb-2 text-slate-600">
+            <nav class="inline-flex items-center gap-2 text-xs sm:text-sm font-bold bg-white/95 backdrop-blur-md border border-pink-200/90 rounded-2xl px-4 py-2 shadow-2xs text-slate-600">
                 <a href="{% url 'store:home' %}" class="flex items-center gap-1.5 text-slate-600 hover:text-brand-600 transition cursor-pointer">
                     <i data-lucide="home" class="w-4 h-4 text-brand-500"></i>
                     <span>الرئيسية</span>
                 </a>
                 <i data-lucide="chevron-left" class="w-4 h-4 text-brand-400"></i>
+                <a href="{% url 'store:product_list' %}" class="text-slate-600 hover:text-brand-600 transition">
+                    الأقسام
+                </a>
                 {% if main_category %}
-                <a href="{% url 'store:product_list' %}?category={{ main_category.slug }}" class="text-slate-600 hover:text-brand-600 transition">
+                <i data-lucide="chevron-left" class="w-4 h-4 text-brand-400"></i>
+                <a href="{% url 'store:product_list' %}?category={{ main_category.slug }}" class="text-slate-700 hover:text-brand-600 transition {% if not active_subcategory %}text-brand-600 font-extrabold{% endif %}">
                     {{ main_category.name_ar }}
                 </a>
+                {% endif %}
                 {% if active_subcategory %}
                 <i data-lucide="chevron-left" class="w-4 h-4 text-brand-400"></i>
                 <span class="text-brand-600 font-extrabold">{{ active_subcategory.name_ar }}</span>
                 {% endif %}
-                {% else %}
-                <span class="text-brand-600 font-extrabold">كافة المنتجات</span>
-                {% endif %}
             </nav>
-            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
-                {% if active_subcategory %}
-                    <span>{{ active_subcategory.name_ar }}</span>
-                    <span class="text-xs font-semibold text-slate-400">({{ main_category.name_ar }})</span>
-                {% elif main_category %}
-                    <span>{{ main_category.name_ar }}</span>
-                    {% if main_category.name_en %}<span class="text-xs font-normal text-slate-400 mr-2" dir="ltr">{{ main_category.name_en }}</span>{% endif %}
-                {% else %}
-                    <span>تشكيلة كافة المنتجات</span>
-                {% endif %}
-            </h1>
+        </div>
+        <div class="text-xs text-slate-500 font-medium">
+            <span>إجمالي المعروض:</span>
+            <strong class="text-slate-900 font-bold font-num mr-1">{{ total_count }}</strong> منتج
         </div>
     </div>
 
     <!-- ======================================================================= -->
-    <!-- DYNAMIC HORIZONTAL SUBCATEGORIES BAR + SINGLE FILTER ICON AT FAR LEFT   -->
+    <!-- TIER 1: MAIN CATEGORIES HORIZONTAL STRIP (الأقسام الرئيسية الكبيرة)       -->
     <!-- ======================================================================= -->
-    <div class="bg-white/90 backdrop-blur-md rounded-2xl p-2 sm:p-2.5 border border-pink-200/90 shadow-2xs">
-        <div class="flex items-center justify-between gap-2.5">
-            
-            <!-- 1. Right Side: Horizontal Scrollable Subcategories Pills -->
-            <div class="flex-1 overflow-x-auto no-scrollbar py-0.5" id="subcategories-scroll-container">
-                <div class="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
-                    
-                    {% if main_category %}
-                    <!-- "الكل" Pill for Main Category -->
-                    <a 
-                        href="{% url 'store:product_list' %}?category={{ main_category.slug }}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
-                        hx-get="{% url 'store:product_list' %}?category={{ main_category.slug }}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
-                        hx-target="#product-grid"
-                        hx-push-url="true"
-                        class="px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 {% if not active_subcategory %}bg-slate-900 text-white shadow-xs{% else %}bg-pink-50/70 hover:bg-pink-100 text-slate-700 border border-pink-200/60{% endif %}"
-                    >
-                        الكل
-                    </a>
-
-                    <!-- Subcategories inside Main Category -->
-                    {% for sub in category_subcategories %}
-                    <a 
-                        href="{% url 'store:product_list' %}?category={{ main_category.slug }}&subcategory={{ sub.slug }}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
-                        hx-get="{% url 'store:product_list' %}?category={{ main_category.slug }}&subcategory={{ sub.slug }}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
-                        hx-target="#product-grid"
-                        hx-push-url="true"
-                        class="px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 {% if active_subcategory and active_subcategory.slug == sub.slug %}bg-slate-900 text-white shadow-xs{% else %}bg-pink-50/70 hover:bg-pink-100 text-slate-700 border border-pink-200/60{% endif %}"
-                    >
-                        {{ sub.name_ar }}
-                    </a>
-                    {% endfor %}
-
-                    {% else %}
-                    <!-- General Catalog: Main Categories Pills -->
-                    <a 
-                        href="{% url 'store:product_list' %}"
-                        hx-get="{% url 'store:product_list' %}"
-                        hx-target="#product-grid"
-                        hx-push-url="true"
-                        class="px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 {% if not current_category %}bg-slate-900 text-white shadow-xs{% else %}bg-pink-50/70 hover:bg-pink-100 text-slate-700 border border-pink-200/60{% endif %}"
-                    >
-                        الكل
-                    </a>
-                    {% for cat in category_subcategories %}
-                    <a 
-                        href="{% url 'store:product_list' %}?category={{ cat.slug }}"
-                        hx-get="{% url 'store:product_list' %}?category={{ cat.slug }}"
-                        hx-target="#product-grid"
-                        hx-push-url="true"
-                        class="px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 {% if current_category and current_category.slug == cat.slug %}bg-slate-900 text-white shadow-xs{% else %}bg-pink-50/70 hover:bg-pink-100 text-slate-700 border border-pink-200/60{% endif %}"
-                    >
-                        {{ cat.name_ar }}
-                    </a>
-                    {% endfor %}
-                    {% endif %}
-
-                </div>
-            </div>
-
-            <!-- 2. Far Left: Single Clean Filter Icon Button with Active Badge -->
-            <div class="shrink-0 pl-1 border-r border-pink-200/80 pr-2">
-                <button 
-                    type="button" 
-                    onclick="openFilterDrawer()"
-                    class="relative flex items-center gap-1.5 px-3 py-2 rounded-xl bg-pink-50/90 hover:bg-brand-500 hover:text-white border border-pink-200 text-slate-800 transition-all font-bold text-xs cursor-pointer shadow-2xs group"
-                    title="تصفية وفلترة المنتجات"
-                    aria-label="تصفية وفلترة المنتجات"
-                >
-                    <i data-lucide="sliders-horizontal" class="w-4 h-4 text-brand-600 group-hover:text-white transition-colors"></i>
-                    <span class="hidden sm:inline">فلترة</span>
-                    {% if active_filters_count > 0 %}
-                    <span class="w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] font-extrabold flex items-center justify-center shadow-xs">
-                        {{ active_filters_count }}
-                    </span>
-                    {% endif %}
-                </button>
-            </div>
-
-        </div>
-
-        <!-- Active Filter Tags Strip (Shown only when extra filters applied) -->
-        {% if brand_filter or grade_filter or search_query or min_price or max_price or sort_by != 'newest' %}
-        <div class="flex items-center justify-between pt-2 mt-2 border-t border-pink-100 text-xs">
-            <div class="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-600">
-                <span class="text-slate-400 font-semibold">تصفية نشطة:</span>
-                {% if brand_filter %}
-                <span class="px-2 py-0.5 rounded-lg bg-pink-100/80 text-brand-700 font-bold flex items-center gap-1">
-                    ماركة: {{ brand_filter }}
-                </span>
-                {% endif %}
-                {% if grade_filter == 'original' %}
-                <span class="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
-                    أصلي 100%
-                </span>
-                {% elif grade_filter == 'master' %}
-                <span class="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
-                    ماستر كواليتي
-                </span>
-                {% endif %}
-                {% if min_price or max_price %}
-                <span class="px-2 py-0.5 rounded-lg bg-pink-100/80 text-brand-700 font-bold">
-                    السعر: {{ min_price|default:'0' }} - {{ max_price|default:'الأعلى' }}
-                </span>
-                {% endif %}
-                {% if search_query %}
-                <span class="px-2 py-0.5 rounded-lg bg-pink-100/80 text-brand-700 font-bold">
-                    "{{ search_query }}"
-                </span>
-                {% endif %}
-            </div>
+    <div class="bg-white/95 backdrop-blur-md rounded-2xl p-2 sm:p-2.5 border border-pink-200/90 shadow-2xs">
+        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5" id="main-categories-scroll-container">
+            {% for cat in all_main_categories %}
             <a 
-                href="{{ catalog_reset_url }}" 
-                hx-get="{{ catalog_reset_url }}" 
-                hx-target="#product-grid" 
-                hx-push-url="true"
-                class="inline-flex items-center gap-1 text-rose-600 hover:text-rose-700 font-bold transition text-[11px] py-1 px-2 rounded-lg hover:bg-rose-50 cursor-pointer"
+                href="{% url 'store:product_list' %}?category={{ cat.slug }}"
+                class="px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 flex items-center gap-2 {% if main_category and main_category.slug == cat.slug %}bg-slate-900 text-white shadow-xs{% else %}bg-pink-50/70 hover:bg-pink-100 text-slate-700 border border-pink-200/60{% endif %}"
             >
-                <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
-                <span>مسح الفلاتر</span>
+                {% if cat.image %}
+                <img src="{{ cat.get_image_url }}" alt="{{ cat.name_ar }}" class="w-5 h-5 rounded-full object-cover shrink-0">
+                {% else %}
+                <span class="w-2 h-2 rounded-full {% if main_category and main_category.slug == cat.slug %}bg-brand-400{% else %}bg-pink-300{% endif %}"></span>
+                {% endif %}
+                <span>{{ cat.name_ar }}</span>
             </a>
+            {% endfor %}
         </div>
-        {% endif %}
     </div>
 
     <!-- ======================================================================= -->
-    <!-- FILTER SLIDE-OVER DRAWER (OPENS FROM SINGLE FILTER ICON)                -->
+    <!-- TIER 2: SUBCATEGORIES STRIP + SINGLE FAR-LEFT FILTER BUTTON            -->
     <!-- ======================================================================= -->
-    <div id="filter-drawer-modal" class="fixed inset-0 z-50 pointer-events-none transition-all duration-300">
-        <!-- Backdrop -->
-        <div id="filter-drawer-backdrop" onclick="closeFilterDrawer()" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs opacity-0 transition-opacity duration-300 pointer-events-none"></div>
+    <div id="catalog-content-zone" class="space-y-4">
+        
+        <div class="bg-white/90 backdrop-blur-md rounded-2xl p-2 sm:p-2.5 border border-pink-200/90 shadow-2xs">
+            <div class="flex items-center justify-between gap-2.5">
+                
+                <!-- 1. Right Side: Horizontal Scrollable Subcategories Pills -->
+                <div class="flex-1 overflow-x-auto no-scrollbar py-0.5" id="subcategories-scroll-container">
+                    <div class="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
+                        
+                        {% if main_category %}
+                        <!-- "الكل" Pill for Main Category -->
+                        <a 
+                            href="{% url 'store:product_list' %}?category={{ main_category.slug }}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
+                            hx-get="{% url 'store:product_list' %}?category={{ main_category.slug }}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
+                            hx-target="#product-grid"
+                            hx-push-url="true"
+                            class="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 {% if not active_subcategory %}bg-slate-900 text-white shadow-xs{% else %}bg-pink-50/70 hover:bg-pink-100 text-slate-700 border border-pink-200/60{% endif %}"
+                        >
+                            الكل
+                        </a>
 
-        <!-- Panel -->
-        <div id="filter-drawer-panel" class="fixed top-0 bottom-0 left-0 w-full sm:w-[380px] bg-white shadow-2xl z-10 flex flex-col -translate-x-full transition-transform duration-300 ease-out border-r border-pink-200">
-            <!-- Drawer Header -->
-            <div class="p-4 border-b border-pink-100 flex items-center justify-between bg-pink-50/40">
-                <div class="flex items-center gap-2">
-                    <span class="w-8 h-8 rounded-xl bg-pink-100 text-brand-600 flex items-center justify-center">
-                        <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
-                    </span>
-                    <div>
-                        <h3 class="font-bold text-slate-900 text-sm">تصفية وفلترة المنتجات</h3>
-                        <p class="text-[11px] text-slate-400">حدد المعايير لتخصيص نتائج العرض</p>
+                        <!-- Subcategories inside Main Category -->
+                        {% for sub in category_subcategories %}
+                        <a 
+                            href="{% url 'store:product_list' %}?category={{ main_category.slug }}&subcategory={{ sub.slug }}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
+                            hx-get="{% url 'store:product_list' %}?category={{ main_category.slug }}&subcategory={{ sub.slug }}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
+                            hx-target="#product-grid"
+                            hx-push-url="true"
+                            class="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 {% if active_subcategory and active_subcategory.slug == sub.slug %}bg-slate-900 text-white shadow-xs{% else %}bg-pink-50/70 hover:bg-pink-100 text-slate-700 border border-pink-200/60{% endif %}"
+                        >
+                            {{ sub.name_ar }}
+                        </a>
+                        {% endfor %}
+
+                        {% else %}
+                        <a 
+                            href="{% url 'store:product_list' %}"
+                            hx-get="{% url 'store:product_list' %}"
+                            hx-target="#product-grid"
+                            hx-push-url="true"
+                            class="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 bg-slate-900 text-white shadow-xs"
+                        >
+                            الكل
+                        </a>
+                        {% endif %}
+
                     </div>
                 </div>
-                <button type="button" onclick="closeFilterDrawer()" class="w-8 h-8 rounded-xl border border-pink-200 text-slate-500 hover:text-slate-800 hover:bg-pink-100/60 flex items-center justify-center transition cursor-pointer">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
+
+                <!-- 2. Far Left: Single Clean Filter Icon Button with Active Badge -->
+                <div class="shrink-0 pl-1 border-r border-pink-200/80 pr-2">
+                    <button 
+                        type="button" 
+                        onclick="openFilterDrawer()"
+                        class="relative flex items-center gap-1.5 px-3 py-2 rounded-xl bg-pink-50/90 hover:bg-brand-500 hover:text-white border border-pink-200 text-slate-800 transition-all font-bold text-xs cursor-pointer shadow-2xs group"
+                        title="تصفية وفلترة المنتجات"
+                        aria-label="تصفية وفلترة المنتجات"
+                    >
+                        <i data-lucide="sliders-horizontal" class="w-4 h-4 text-brand-600 group-hover:text-white transition-colors"></i>
+                        <span class="hidden sm:inline">فلترة</span>
+                        {% if active_filters_count > 0 %}
+                        <span class="w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] font-extrabold flex items-center justify-center shadow-xs">
+                            {{ active_filters_count }}
+                        </span>
+                        {% endif %}
+                    </button>
+                </div>
+
             </div>
 
-            <!-- Drawer Form Body -->
-            <form 
-                id="filter-drawer-form" 
-                hx-get="{% url 'store:product_list' %}" 
-                hx-target="#product-grid" 
-                hx-swap="outerHTML"
-                hx-push-url="true"
-                onsubmit="closeFilterDrawer()"
-                class="flex-1 overflow-y-auto p-4 space-y-5 text-xs"
-            >
-                <!-- Retain Category & Subcategory -->
-                {% if main_category %}<input type="hidden" name="category" value="{{ main_category.slug }}">{% endif %}
-                {% if active_subcategory %}<input type="hidden" name="subcategory" value="{{ active_subcategory.slug }}">{% endif %}
-
-                <!-- 1. Search Box -->
-                <div class="space-y-1.5">
-                    <label class="block font-bold text-slate-800">البحث بالاسم أو الوصف</label>
-                    <div class="relative">
-                        <input 
-                            type="text" 
-                            name="q" 
-                            value="{{ search_query|default:'' }}" 
-                            placeholder="ابحث عن منتج، عطر، ساعة..." 
-                            class="w-full h-10 bg-pink-50/40 border border-pink-200 focus:border-brand-500 focus:bg-white rounded-xl pr-9 pl-3 text-xs text-slate-900 focus:outline-none transition"
-                        >
-                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-                    </div>
+            <!-- Active Filter Tags Strip (Shown only when extra filters applied) -->
+            {% if brand_filter or grade_filter or search_query or min_price or max_price or sort_by != 'newest' %}
+            <div class="flex items-center justify-between pt-2 mt-2 border-t border-pink-100 text-xs">
+                <div class="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-600">
+                    <span class="text-slate-400 font-semibold">تصفية نشطة:</span>
+                    {% if brand_filter %}
+                    <span class="px-2 py-0.5 rounded-lg bg-pink-100/80 text-brand-700 font-bold flex items-center gap-1">
+                        ماركة: {{ brand_filter }}
+                    </span>
+                    {% endif %}
+                    {% if grade_filter == 'original' %}
+                    <span class="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                        أصلي 100%
+                    </span>
+                    {% elif grade_filter == 'master' %}
+                    <span class="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
+                        ماستر كواليتي
+                    </span>
+                    {% endif %}
+                    {% if min_price or max_price %}
+                    <span class="px-2 py-0.5 rounded-lg bg-pink-100/80 text-brand-700 font-bold">
+                        السعر: {{ min_price|default:'0' }} - {{ max_price|default:'الأعلى' }}
+                    </span>
+                    {% endif %}
+                    {% if search_query %}
+                    <span class="px-2 py-0.5 rounded-lg bg-pink-100/80 text-brand-700 font-bold">
+                        "{{ search_query }}"
+                    </span>
+                    {% endif %}
                 </div>
-
-                <!-- 2. Sort By -->
-                <div class="space-y-1.5">
-                    <label class="block font-bold text-slate-800">ترتيب العرض</label>
-                    <div class="grid grid-cols-2 gap-1.5">
-                        <label class="cursor-pointer">
-                            <input type="radio" name="sort" value="newest" class="peer sr-only" {% if not sort_by or sort_by == 'newest' %}checked{% endif %}>
-                            <div class="p-2.5 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900 transition">
-                                وصل حديثاً
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="sort" value="best_sellers" class="peer sr-only" {% if sort_by == 'best_sellers' %}checked{% endif %}>
-                            <div class="p-2.5 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900 transition">
-                                الأكثر طلباً
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="sort" value="price_low" class="peer sr-only" {% if sort_by == 'price_low' %}checked{% endif %}>
-                            <div class="p-2.5 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900 transition">
-                                السعر: من الأقل
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="sort" value="price_high" class="peer sr-only" {% if sort_by == 'price_high' %}checked{% endif %}>
-                            <div class="p-2.5 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900 transition">
-                                السعر: من الأعلى
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- 3. Quality Grade Filter -->
-                <div class="space-y-1.5">
-                    <label class="block font-bold text-slate-800">درجة الجودة</label>
-                    <div class="grid grid-cols-3 gap-1.5">
-                        <label class="cursor-pointer">
-                            <input type="radio" name="grade" value="" class="peer sr-only" {% if not grade_filter %}checked{% endif %}>
-                            <div class="p-2 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900 transition">
-                                الكل
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="grade" value="original" class="peer sr-only" {% if grade_filter == 'original' %}checked{% endif %}>
-                            <div class="p-2 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:border-emerald-600 transition">
-                                أصلي 100%
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="grade" value="master" class="peer sr-only" {% if grade_filter == 'master' %}checked{% endif %}>
-                            <div class="p-2 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600 transition">
-                                ماستر كواليتي
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- 4. Brands -->
-                {% if available_brands %}
-                <div class="space-y-1.5">
-                    <label class="block font-bold text-slate-800">الماركة / البراند</label>
-                    <select name="brand" class="w-full h-10 bg-pink-50/40 border border-pink-200 focus:border-brand-500 focus:bg-white rounded-xl px-3 text-xs text-slate-800 focus:outline-none transition">
-                        <option value="">كافة الماركات المتوفرة</option>
-                        {% for b in available_brands %}
-                        <option value="{{ b }}" {% if brand_filter == b %}selected{% endif %}>{{ b }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                {% endif %}
-
-                <!-- 5. Price Range (YER) -->
-                <div class="space-y-1.5">
-                    <label class="block font-bold text-slate-800">نطاق السعر (ريال يمني)</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <span class="text-[10px] text-slate-400 block mb-1">الحد الأدنى:</span>
-                            <input 
-                                type="number" 
-                                name="min_price" 
-                                value="{{ min_price|default:'' }}" 
-                                placeholder="0" 
-                                class="w-full h-9 bg-pink-50/40 border border-pink-200 rounded-xl px-3 text-xs text-slate-800 focus:border-brand-500 focus:bg-white focus:outline-none transition"
-                            >
-                        </div>
-                        <div>
-                            <span class="text-[10px] text-slate-400 block mb-1">الحد الأقصى:</span>
-                            <input 
-                                type="number" 
-                                name="max_price" 
-                                value="{{ max_price|default:'' }}" 
-                                placeholder="100,000" 
-                                class="w-full h-9 bg-pink-50/40 border border-pink-200 rounded-xl px-3 text-xs text-slate-800 focus:border-brand-500 focus:bg-white focus:outline-none transition"
-                            >
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Drawer Actions -->
-                <div class="pt-4 border-t border-pink-100 flex items-center gap-2">
-                    <button 
-                        type="submit" 
-                        class="flex-1 py-3 px-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs transition cursor-pointer shadow-xs text-center"
-                    >
-                        تطبيق الفلترة
-                    </button>
-                    <a 
-                        href="{{ catalog_reset_url }}" 
-                        hx-get="{{ catalog_reset_url }}" 
-                        hx-target="#product-grid" 
-                        hx-push-url="true"
-                        onclick="closeFilterDrawer()"
-                        class="py-3 px-4 rounded-xl border border-pink-200 text-slate-700 hover:bg-pink-50 font-bold text-xs transition cursor-pointer text-center"
-                    >
-                        إعادة ضبط
-                    </a>
-                </div>
-            </form>
+                <a 
+                    href="{{ catalog_reset_url }}" 
+                    hx-get="{{ catalog_reset_url }}" 
+                    hx-target="#product-grid" 
+                    hx-push-url="true"
+                    class="inline-flex items-center gap-1 text-rose-600 hover:text-rose-700 font-bold transition text-[11px] py-1 px-2 rounded-lg hover:bg-rose-50 cursor-pointer"
+                >
+                    <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                    <span>مسح الفلاتر</span>
+                </a>
+            </div>
+            {% endif %}
         </div>
-    </div>
 
-    <!-- Full-Width Products Grid Area (Loaded & Swapped by HTMX) -->
-    <main class="w-full">
-        {% include 'store/partials/product_grid.html' %}
-    </main>
+        <!-- ======================================================================= -->
+        <!-- FILTER SLIDE-OVER DRAWER (OPENS FROM SINGLE FILTER ICON)                -->
+        <!-- ======================================================================= -->
+        <div id="filter-drawer-modal" class="fixed inset-0 z-50 pointer-events-none transition-all duration-300">
+            <!-- Backdrop -->
+            <div id="filter-drawer-backdrop" onclick="closeFilterDrawer()" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs opacity-0 transition-opacity duration-300 pointer-events-none"></div>
+
+            <!-- Panel -->
+            <div id="filter-drawer-panel" class="fixed top-0 bottom-0 left-0 w-full sm:w-[380px] bg-white shadow-2xl z-10 flex flex-col -translate-x-full transition-transform duration-300 ease-out border-r border-pink-200">
+                <!-- Drawer Header -->
+                <div class="p-4 border-b border-pink-100 flex items-center justify-between bg-pink-50/40">
+                    <div class="flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-xl bg-pink-100 text-brand-600 flex items-center justify-center">
+                            <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+                        </span>
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-sm">تصفية وفلترة المنتجات</h3>
+                            <p class="text-[11px] text-slate-400">حدد المعايير لتخصيص نتائج العرض</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="closeFilterDrawer()" class="w-8 h-8 rounded-xl border border-pink-200 text-slate-500 hover:text-slate-800 hover:bg-pink-100/60 flex items-center justify-center transition cursor-pointer">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <!-- Drawer Form Body -->
+                <form 
+                    id="filter-drawer-form" 
+                    hx-get="{% url 'store:product_list' %}" 
+                    hx-target="#product-grid" 
+                    hx-swap="outerHTML"
+                    hx-push-url="true"
+                    onsubmit="closeFilterDrawer()"
+                    class="flex-1 overflow-y-auto p-4 space-y-5 text-xs"
+                >
+                    <!-- Retain Category & Subcategory -->
+                    {% if main_category %}<input type="hidden" name="category" value="{{ main_category.slug }}">{% endif %}
+                    {% if active_subcategory %}<input type="hidden" name="subcategory" value="{{ active_subcategory.slug }}">{% endif %}
+
+                    <!-- 1. Search Box -->
+                    <div class="space-y-1.5">
+                        <label class="block font-bold text-slate-800">البحث بالاسم أو الوصف</label>
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                name="q" 
+                                value="{{ search_query|default:'' }}" 
+                                placeholder="ابحث عن منتج، عطر، ساعة..." 
+                                class="w-full h-10 bg-pink-50/40 border border-pink-200 focus:border-brand-500 focus:bg-white rounded-xl pr-9 pl-3 text-xs text-slate-900 focus:outline-none transition"
+                            >
+                            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                        </div>
+                    </div>
+
+                    <!-- 2. Sort By -->
+                    <div class="space-y-1.5">
+                        <label class="block font-bold text-slate-800">ترتيب العرض</label>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="sort" value="newest" class="peer sr-only" {% if not sort_by or sort_by == 'newest' %}checked{% endif %}>
+                                <div class="p-2.5 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900 transition">
+                                    وصل حديثاً
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="sort" value="best_sellers" class="peer sr-only" {% if sort_by == 'best_sellers' %}checked{% endif %}>
+                                <div class="p-2.5 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900 transition">
+                                    الأكثر طلباً
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="sort" value="price_low" class="peer sr-only" {% if sort_by == 'price_low' %}checked{% endif %}>
+                                <div class="p-2.5 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900 transition">
+                                    السعر: من الأقل
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="sort" value="price_high" class="peer sr-only" {% if sort_by == 'price_high' %}checked{% endif %}>
+                                <div class="p-2.5 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900 transition">
+                                    السعر: من الأعلى
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 3. Quality Grade Filter -->
+                    <div class="space-y-1.5">
+                        <label class="block font-bold text-slate-800">درجة الجودة</label>
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="grade" value="" class="peer sr-only" {% if not grade_filter %}checked{% endif %}>
+                                <div class="p-2 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900 transition">
+                                    الكل
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="grade" value="original" class="peer sr-only" {% if grade_filter == 'original' %}checked{% endif %}>
+                                <div class="p-2 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:border-emerald-600 transition">
+                                    أصلي 100%
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="grade" value="master" class="peer sr-only" {% if grade_filter == 'master' %}checked{% endif %}>
+                                <div class="p-2 rounded-xl border border-pink-200/80 text-center font-bold text-[11px] text-slate-700 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600 transition">
+                                    ماستر كواليتي
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 4. Brands -->
+                    {% if available_brands %}
+                    <div class="space-y-1.5">
+                        <label class="block font-bold text-slate-800">الماركة / البراند</label>
+                        <select name="brand" class="w-full h-10 bg-pink-50/40 border border-pink-200 focus:border-brand-500 focus:bg-white rounded-xl px-3 text-xs text-slate-800 focus:outline-none transition">
+                            <option value="">كافة الماركات المتوفرة</option>
+                            {% for b in available_brands %}
+                            <option value="{{ b }}" {% if brand_filter == b %}selected{% endif %}>{{ b }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    <!-- 5. Price Range (YER) -->
+                    <div class="space-y-1.5">
+                        <label class="block font-bold text-slate-800">نطاق السعر (ريال يمني)</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <span class="text-[10px] text-slate-400 block mb-1">الحد الأدنى:</span>
+                                <input 
+                                    type="number" 
+                                    name="min_price" 
+                                    value="{{ min_price|default:'' }}" 
+                                    placeholder="0" 
+                                    class="w-full h-9 bg-pink-50/40 border border-pink-200 rounded-xl px-3 text-xs text-slate-800 focus:border-brand-500 focus:bg-white focus:outline-none transition"
+                                >
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-slate-400 block mb-1">الحد الأقصى:</span>
+                                <input 
+                                    type="number" 
+                                    name="max_price" 
+                                    value="{{ max_price|default:'' }}" 
+                                    placeholder="100,000" 
+                                    class="w-full h-9 bg-pink-50/40 border border-pink-200 rounded-xl px-3 text-xs text-slate-800 focus:border-brand-500 focus:bg-white focus:outline-none transition"
+                                >
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Drawer Actions -->
+                    <div class="pt-4 border-t border-pink-100 flex items-center gap-2">
+                        <button 
+                            type="submit" 
+                            class="flex-1 py-3 px-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs transition cursor-pointer shadow-xs text-center"
+                        >
+                            تطبيق الفلترة
+                        </button>
+                        <a 
+                            href="{{ catalog_reset_url }}" 
+                            hx-get="{{ catalog_reset_url }}" 
+                            hx-target="#product-grid" 
+                            hx-push-url="true"
+                            onclick="closeFilterDrawer()"
+                            class="py-3 px-4 rounded-xl border border-pink-200 text-slate-700 hover:bg-pink-50 font-bold text-xs transition cursor-pointer text-center"
+                        >
+                            إعادة ضبط
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Full-Width Products Grid Area (Loaded & Swapped by HTMX) -->
+        <main class="w-full">
+            {% include 'store/partials/product_grid.html' %}
+        </main>
+
+    </div>
 
 </div>
 

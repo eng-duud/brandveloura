@@ -140,190 +140,24 @@ def home_view(request):
 
 
 def perfumes_catalog_view(request):
-    """الصفحة المخصصة للعطور الملكية مع فلاتر النوع (رجالي/نسائي/للجنسين) والدرجة (أصلي/ماستر) والبراند"""
-    products = Product.objects.filter(
-        category__category_type='perfumes', is_active=True
-    ).select_related('category').prefetch_related('images')
-    
-    gender_filter = request.GET.get('gender', '').strip() # men, women, unisex
-    grade_filter = request.GET.get('grade', '').strip()   # original, master
-    brand_filter = request.GET.get('brand', '').strip()
-    search_query = request.GET.get('q', '').strip()
-    sort_by = request.GET.get('sort', 'newest')
-    
-    if gender_filter:
-        products = products.filter(
-            Q(specifications__gender=gender_filter) |
-            Q(description__icontains=gender_filter) |
-            Q(name_ar__icontains='رجالي' if gender_filter == 'men' else ('نسائي' if gender_filter == 'women' else 'للجنسين'))
-        )
-        
-    if grade_filter == 'original':
-        products = products.filter(
-            Q(price_original_yer__isnull=False) |
-            Q(specifications__grade='original')
-        )
-    elif grade_filter == 'master':
-        products = products.filter(
-            Q(has_grades=True) |
-            Q(price_master_yer__isnull=False) |
-            Q(specifications__grade='master')
-        )
-        
-    if brand_filter:
-        products = products.filter(brand_name__iexact=brand_filter)
-        
-    if search_query:
-        products = products.filter(
-            Q(name_ar__icontains=search_query) |
-            Q(name_en__icontains=search_query) |
-            Q(brand_name__icontains=search_query) |
-            Q(description__icontains=search_query)
-        )
-        
-    if sort_by == 'price_low':
-        products = products.order_by('price_yer')
-    elif sort_by == 'price_high':
-        products = products.order_by('-price_yer')
-    elif sort_by == 'best_sellers':
-        products = products.order_by('-is_best_seller', '-created_at')
-    else:
-        products = products.order_by('-created_at')
-        
-    available_brands = Product.objects.filter(
-        category__category_type='perfumes', is_active=True
-    ).exclude(brand_name='').values_list('brand_name', flat=True).distinct()
-
-    context = {
-        'products': products,
-        'gender_filter': gender_filter,
-        'grade_filter': grade_filter,
-        'brand_filter': brand_filter,
-        'search_query': search_query,
-        'sort_by': sort_by,
-        'available_brands': available_brands,
-        'total_count': products.count(),
-    }
-    
-    if request.headers.get('HX-Request') and not request.GET.get('full_page'):
-        return render(request, 'store/partials/product_grid.html', context)
-        
-    return render(request, 'store/perfumes_list.html', context)
+    """إعادة توجيه ذكية لكتالوج العطور في صفحة الأقسام الموحدة لمنع تكرار الهيدر والفلاتر"""
+    params = request.GET.copy()
+    params['category'] = 'perfumes'
+    return redirect(f"{reverse('store:product_list')}?{params.urlencode()}", permanent=False)
 
 
 def watches_catalog_view(request):
-    """الصفحة المخصصة للساعات الفاخرة مع فلاتر الحركة ومقاومة الماء والماركة"""
-    products = Product.objects.filter(
-        category__category_type='watches', is_active=True
-    ).select_related('category').prefetch_related('images')
-    
-    brand_filter = request.GET.get('brand', '').strip()
-    movement_filter = request.GET.get('movement', '').strip()
-    gender_filter = request.GET.get('gender', '').strip()
-    search_query = request.GET.get('q', '').strip()
-    sort_by = request.GET.get('sort', 'newest')
-    
-    if brand_filter:
-        products = products.filter(brand_name__iexact=brand_filter)
-    if movement_filter:
-        products = products.filter(
-            Q(specifications__movement__icontains=movement_filter) |
-            Q(description__icontains=movement_filter)
-        )
-    if gender_filter:
-        products = products.filter(
-            Q(specifications__gender=gender_filter) |
-            Q(description__icontains=gender_filter) |
-            Q(name_ar__icontains='رجالية' if gender_filter == 'men' else 'نسائية')
-        )
-    if search_query:
-        products = products.filter(
-            Q(name_ar__icontains=search_query) |
-            Q(name_en__icontains=search_query) |
-            Q(brand_name__icontains=search_query) |
-            Q(description__icontains=search_query)
-        )
-        
-    if sort_by == 'price_low':
-        products = products.order_by('price_yer')
-    elif sort_by == 'price_high':
-        products = products.order_by('-price_yer')
-    elif sort_by == 'best_sellers':
-        products = products.order_by('-is_best_seller', '-created_at')
-    else:
-        products = products.order_by('-created_at')
-        
-    available_brands = Product.objects.filter(
-        category__category_type='watches', is_active=True
-    ).exclude(brand_name='').values_list('brand_name', flat=True).distinct()
-
-    context = {
-        'products': products,
-        'brand_filter': brand_filter,
-        'movement_filter': movement_filter,
-        'gender_filter': gender_filter,
-        'search_query': search_query,
-        'sort_by': sort_by,
-        'available_brands': available_brands,
-        'total_count': products.count(),
-    }
-    
-    if request.headers.get('HX-Request') and not request.GET.get('full_page'):
-        return render(request, 'store/partials/product_grid.html', context)
-        
-    return render(request, 'store/watches_list.html', context)
+    """إعادة توجيه ذكية لكتالوج الساعات في صفحة الأقسام الموحدة لمنع تكرار الهيدر والفلاتر"""
+    params = request.GET.copy()
+    params['category'] = 'watches'
+    return redirect(f"{reverse('store:product_list')}?{params.urlencode()}", permanent=False)
 
 
 def cosmetics_catalog_view(request):
-    """الصفحة المخصصة لمستحضرات التجميل والعناية بالبشرة مع فلاتر الماركة والتصنيف"""
-    products = Product.objects.filter(
-        category__category_type__in=['cosmetics', 'care'], is_active=True
-    ).select_related('category').prefetch_related('images')
-    
-    subcat_filter = request.GET.get('subcat', '').strip()
-    brand_filter = request.GET.get('brand', '').strip()
-    search_query = request.GET.get('q', '').strip()
-    sort_by = request.GET.get('sort', 'newest')
-    
-    if subcat_filter:
-        products = products.filter(category__category_type=subcat_filter)
-    if brand_filter:
-        products = products.filter(brand_name__iexact=brand_filter)
-    if search_query:
-        products = products.filter(
-            Q(name_ar__icontains=search_query) |
-            Q(name_en__icontains=search_query) |
-            Q(brand_name__icontains=search_query) |
-            Q(description__icontains=search_query)
-        )
-        
-    if sort_by == 'price_low':
-        products = products.order_by('price_yer')
-    elif sort_by == 'price_high':
-        products = products.order_by('-price_yer')
-    elif sort_by == 'best_sellers':
-        products = products.order_by('-is_best_seller', '-created_at')
-    else:
-        products = products.order_by('-created_at')
-        
-    available_brands = Product.objects.filter(
-        category__category_type__in=['cosmetics', 'care'], is_active=True
-    ).exclude(brand_name='').values_list('brand_name', flat=True).distinct()
-
-    context = {
-        'products': products,
-        'subcat_filter': subcat_filter,
-        'brand_filter': brand_filter,
-        'search_query': search_query,
-        'sort_by': sort_by,
-        'available_brands': available_brands,
-        'total_count': products.count(),
-    }
-    
-    if request.headers.get('HX-Request') and not request.GET.get('full_page'):
-        return render(request, 'store/partials/product_grid.html', context)
-        
-    return render(request, 'store/cosmetics_list.html', context)
+    """إعادة توجيه ذكية لكتالوج مستحضرات التجميل والعناية في صفحة الأقسام الموحدة لمنع تكرار الهيدر والفلاتر"""
+    params = request.GET.copy()
+    params['category'] = 'cosmetics'
+    return redirect(f"{reverse('store:product_list')}?{params.urlencode()}", permanent=False)
 
 
 def brands_list_view(request):
@@ -442,7 +276,7 @@ def brand_detail_view(request, slug):
 
 
 def product_list_view(request):
-    """كتالوج المنتجات الديناميكي الشامل مع الفلترة الذكية وشريط التصنيفات الأفقي"""
+    """كتالوج المنتجات الديناميكي الشامل بهيكلية ثنائية الشريط (شريط الأقسام الرئيسية + شريط التصنيفات الفرعية وأيقونة الفلترة الواحدة)"""
     products = Product.objects.filter(is_active=True).select_related('category', 'brand').prefetch_related('images')
     
     category_slug = request.GET.get('category', '').strip()
@@ -451,8 +285,12 @@ def product_list_view(request):
     sort_by = request.GET.get('sort', 'newest')
     brand_filter = request.GET.get('brand', '').strip()
     grade_filter = request.GET.get('grade', '').strip()
+    gender_filter = request.GET.get('gender', '').strip()
     min_price = request.GET.get('min_price', '').strip()
     max_price = request.GET.get('max_price', '').strip()
+    
+    # جلب كافة الأقسام الرئيسية الفعالة للشريط العلوي
+    all_main_categories = list(Category.objects.filter(is_active=True, parent__isnull=True).order_by('display_order', 'id'))
     
     current_category = None
     main_category = None
@@ -460,28 +298,34 @@ def product_list_view(request):
     category_subcategories = []
 
     if category_slug:
-        current_category = get_object_or_404(Category, slug=category_slug, is_active=True)
-        if current_category.parent is None:
-            # هذا قسم رئيسي
-            main_category = current_category
-            category_subcategories = list(main_category.subcategories.filter(is_active=True).order_by('display_order', 'name_ar'))
-            if subcategory_slug:
-                active_subcategory = main_category.subcategories.filter(slug=subcategory_slug, is_active=True).first()
-                if active_subcategory:
-                    products = products.filter(category=active_subcategory)
+        current_category = Category.objects.filter(slug=category_slug, is_active=True).first()
+        if current_category:
+            if current_category.parent is None:
+                # هذا قسم رئيسي
+                main_category = current_category
+                category_subcategories = list(main_category.subcategories.filter(is_active=True).order_by('display_order', 'name_ar'))
+                if subcategory_slug:
+                    active_subcategory = main_category.subcategories.filter(slug=subcategory_slug, is_active=True).first()
+                    if active_subcategory:
+                        products = products.filter(category=active_subcategory)
+                    else:
+                        products = products.filter(category_id__in=main_category.get_descendants_and_self_ids())
                 else:
                     products = products.filter(category_id__in=main_category.get_descendants_and_self_ids())
             else:
-                products = products.filter(category_id__in=main_category.get_descendants_and_self_ids())
-        else:
-            # الرابط يشير مباشرة إلى تصنيف فرعي
-            active_subcategory = current_category
-            main_category = current_category.parent
-            category_subcategories = list(main_category.subcategories.filter(is_active=True).order_by('display_order', 'name_ar'))
-            products = products.filter(category=active_subcategory)
-    else:
-        # لم يتم تحديد قسم: شريط الأقسام يعرض الأقسام الرئيسية كاملة
-        category_subcategories = list(Category.objects.filter(is_active=True, parent__isnull=True).order_by('display_order', 'name_ar'))
+                # الرابط يشير مباشرة إلى تصنيف فرعي
+                active_subcategory = current_category
+                main_category = current_category.parent
+                category_subcategories = list(main_category.subcategories.filter(is_active=True).order_by('display_order', 'name_ar'))
+                products = products.filter(category=active_subcategory)
+
+    # إذا لم يتم تحديد قسم، نعتمد قسم 'العطور' كافتراضي أو أول قسم رئيسي متوفر
+    if not main_category and all_main_categories:
+        perfumes_cat = next((c for c in all_main_categories if c.slug == 'perfumes' or 'عطور' in c.name_ar), None)
+        main_category = perfumes_cat or all_main_categories[0]
+        current_category = main_category
+        category_subcategories = list(main_category.subcategories.filter(is_active=True).order_by('display_order', 'name_ar'))
+        products = products.filter(category_id__in=main_category.get_descendants_and_self_ids())
 
     if search_query:
         products = products.filter(
@@ -495,9 +339,24 @@ def product_list_view(request):
         products = products.filter(brand_name__iexact=brand_filter)
 
     if grade_filter == 'original':
-        products = products.filter(has_grades=True, price_original_yer__isnull=False)
+        products = products.filter(
+            Q(has_grades=True, price_original_yer__isnull=False) |
+            Q(specifications__grade='original')
+        )
     elif grade_filter == 'master':
-        products = products.filter(has_grades=True, price_master_yer__isnull=False)
+        products = products.filter(
+            Q(has_grades=True) |
+            Q(price_master_yer__isnull=False) |
+            Q(specifications__grade='master')
+        )
+
+    if gender_filter:
+        products = products.filter(
+            Q(specifications__gender=gender_filter) |
+            Q(description__icontains=gender_filter) |
+            Q(name_ar__icontains='رجالي' if gender_filter == 'men' else ('نسائي' if gender_filter == 'women' else 'للجنسين')) |
+            Q(name_ar__icontains='رجالية' if gender_filter == 'men' else 'نسائية')
+        )
 
     if min_price:
         try:
@@ -559,6 +418,7 @@ def product_list_view(request):
 
     context = {
         'products': products,
+        'all_main_categories': all_main_categories,
         'current_category': current_category,
         'main_category': main_category,
         'active_subcategory': active_subcategory,

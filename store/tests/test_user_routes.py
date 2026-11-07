@@ -107,24 +107,24 @@ class UserRoutesAndOperationsTests(TestCase):
         self.assertContains(res, 'عطر عود ملكي')
 
     def test_perfumes_catalog_with_filters(self):
-        """فحص كتالوج العطور مع فلترة الدرجة والماركة والترتيب"""
+        """فحص كتالوج العطور مع فلترة الدرجة والماركة والترتيب وتوجيهه للكتالوج الموحد"""
         res = self.client.get(reverse('store:perfumes_catalog'), {
             'brand': 'Roja',
             'grade': 'master',
             'sort': 'price_low'
-        })
+        }, follow=True)
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, 'عطر عود ملكي')
 
     def test_watches_catalog(self):
-        """فحص كتالوج الساعات مع الفلاتر"""
-        res = self.client.get(reverse('store:watches_catalog'), {'gender': 'men'})
+        """فحص كتالوج الساعات مع الفلاتر وتوجيهه للكتالوج الموحد"""
+        res = self.client.get(reverse('store:watches_catalog'), {'gender': 'men'}, follow=True)
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, 'ساعة رولكس')
 
     def test_cosmetics_catalog(self):
-        """فحص كتالوج مستحضرات التجميل"""
-        res = self.client.get(reverse('store:cosmetics_catalog'))
+        """فحص كتالوج مستحضرات التجميل وتوجيهه للكتالوج الموحد"""
+        res = self.client.get(reverse('store:cosmetics_catalog'), follow=True)
         self.assertEqual(res.status_code, 200)
 
     def test_product_detail_page(self):
@@ -647,57 +647,34 @@ class UserRoutesAndOperationsTests(TestCase):
         self.assertEqual(res_z.status_code, 200)
 
     def test_catalog_4_icon_filters_and_mobile_ergonomics(self):
-        """فحص أن صفحات العطور والساعات ومستحضرات التجميل والكتالوج تعرض الفلتر في صف واحد بـ 4 أيقونات دون سكرول أفقي"""
-        # 1. Perfumes catalog
+        """فحص توحيد الكتالوجات وإعادة توجيه المسارات القديمة إلى صفحة الأقسام الموحدة ذات الشريطيين والفلتر الواحد"""
+        # 1. Perfumes catalog redirect to unified products with category=perfumes
         res_perfumes = self.client.get(reverse('store:perfumes_catalog'))
-        self.assertEqual(res_perfumes.status_code, 200)
-        self.assertContains(res_perfumes, 'id="perfumes-filter-form"')
-        self.assertContains(res_perfumes, 'grid grid-cols-4')
-        self.assertContains(res_perfumes, 'data-lucide="users"')
-        self.assertContains(res_perfumes, 'data-lucide="sparkles"')
-        self.assertContains(res_perfumes, 'data-lucide="crown"')
-        self.assertContains(res_perfumes, 'data-lucide="arrow-down-up"')
-        self.assertContains(res_perfumes, 'filter-dot')
-        self.assertContains(res_perfumes, 'data-short="الأقل سعراً"')
-        self.assertContains(res_perfumes, 'data-short="رجالي"')
-        self.assertContains(res_perfumes, 'text-base')
-        self.assertNotContains(res_perfumes, 'overflow-x-auto no-scrollbar flex-nowrap')
+        self.assertEqual(res_perfumes.status_code, 302)
+        self.assertIn('category=perfumes', res_perfumes.url)
+        
+        # Follow redirect to unified view
+        res_perfumes_followed = self.client.get(reverse('store:perfumes_catalog'), follow=True)
+        self.assertEqual(res_perfumes_followed.status_code, 200)
+        self.assertContains(res_perfumes_followed, 'subcategories-scroll-container')
+        self.assertContains(res_perfumes_followed, 'openFilterDrawer')
+        self.assertContains(res_perfumes_followed, 'data-lucide="sliders-horizontal"')
+        self.assertContains(res_perfumes_followed, 'filter-drawer-modal')
 
-        # 1b. Perfumes with active filter
-        res_perf_active = self.client.get(reverse('store:perfumes_catalog') + '?gender=men&sort=price_low')
-        self.assertEqual(res_perf_active.status_code, 200)
-        self.assertContains(res_perf_active, 'active-filters-bar')
-        self.assertContains(res_perf_active, 'resetCatalogFilterForm')
-
-        # 2. Watches catalog
+        # 2. Watches catalog redirect to unified products with category=watches
         res_watches = self.client.get(reverse('store:watches_catalog'))
-        self.assertEqual(res_watches.status_code, 200)
-        self.assertContains(res_watches, 'id="watches-filter-form"')
-        self.assertContains(res_watches, 'grid grid-cols-4')
-        self.assertContains(res_watches, 'data-lucide="users"')
-        self.assertContains(res_watches, 'data-lucide="watch"')
-        self.assertContains(res_watches, 'data-lucide="crown"')
-        self.assertContains(res_watches, 'data-lucide="arrow-down-up"')
-        self.assertContains(res_watches, 'filter-dot')
-        self.assertContains(res_watches, 'data-short="أوتوماتيك"')
-        self.assertNotContains(res_watches, 'overflow-x-auto no-scrollbar flex-nowrap')
+        self.assertEqual(res_watches.status_code, 302)
+        self.assertIn('category=watches', res_watches.url)
 
-        # 3. Cosmetics catalog
+        # 3. Cosmetics catalog redirect to unified products with category=cosmetics
         res_cosmetics = self.client.get(reverse('store:cosmetics_catalog'))
-        self.assertEqual(res_cosmetics.status_code, 200)
-        self.assertContains(res_cosmetics, 'id="cosmetics-filter-form"')
-        self.assertContains(res_cosmetics, 'grid grid-cols-4')
-        self.assertContains(res_cosmetics, 'data-lucide="sparkles"')
-        self.assertContains(res_cosmetics, 'data-lucide="crown"')
-        self.assertContains(res_cosmetics, 'data-lucide="arrow-down-up"')
-        self.assertContains(res_cosmetics, 'data-lucide="rotate-ccw"')
-        self.assertContains(res_cosmetics, 'resetCatalogFilterForm')
-        self.assertContains(res_cosmetics, 'data-short="تجميل"')
-        self.assertNotContains(res_cosmetics, 'overflow-x-auto no-scrollbar flex-nowrap')
+        self.assertEqual(res_cosmetics.status_code, 302)
+        self.assertIn('category=cosmetics', res_cosmetics.url)
 
-        # 4. Global Dynamic Product list with horizontal category strip and single far-left filter
+        # 4. Global Dynamic Product list with dual-tier horizontal category strips and single far-left filter
         res_products = self.client.get(reverse('store:product_list'))
         self.assertEqual(res_products.status_code, 200)
+        self.assertContains(res_products, 'main-categories-scroll-container')
         self.assertContains(res_products, 'subcategories-scroll-container')
         self.assertContains(res_products, 'openFilterDrawer')
         self.assertContains(res_products, 'data-lucide="sliders-horizontal"')
@@ -725,25 +702,13 @@ class UserRoutesAndOperationsTests(TestCase):
 
     def test_catalog_search_icon_and_concise_product_count(self):
         """فحص إزالة العبارات الإنشائية واعتماد العداد الموجز 'X منتج' وزر أيقونة البحث المدمج"""
-        catalogs = [
-            reverse('store:product_list'),
-            reverse('store:perfumes_catalog'),
-            reverse('store:watches_catalog'),
-            reverse('store:cosmetics_catalog'),
-        ]
-
-        for url in catalogs:
-            res = self.client.get(url)
-            self.assertEqual(res.status_code, 200)
-            # Concise count format
-            self.assertContains(res, 'منتج</span>')
-            # Absence of verbose filler texts in header
-            self.assertNotContains(res, 'تم العثور على <span')
-            self.assertNotContains(res, 'الأسعار بالريال السعودي والمعادل بالريال اليمني')
-            # Search toggle icon button present
-            self.assertContains(res, 'search-toggle-btn')
-            self.assertContains(res, 'catalog-search-row')
-            self.assertContains(res, 'data-lucide="search"')
+        # 1. فحص صفحة الكتالوج الموحد
+        res_list = self.client.get(reverse('store:product_list'))
+        self.assertEqual(res_list.status_code, 200)
+        self.assertContains(res_list, 'منتج')
+        self.assertNotContains(res_list, 'تم العثور على <span')
+        self.assertNotContains(res_list, 'الأسعار بالريال السعودي والمعادل بالريال اليمني')
+        self.assertContains(res_list, 'data-lucide="search"')
 
         # Brand detail page
         brand = Brand.objects.create(name_ar="شانيل", name_en="Chanel", slug="chanel")
