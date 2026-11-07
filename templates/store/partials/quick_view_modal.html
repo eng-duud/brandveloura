@@ -158,42 +158,7 @@
             </div>
             {% endif %}
 
-            <!-- Specifications Mini-Block -->
-            {% if specifications %}
-            <div class="p-3 rounded-xl bg-white border border-pink-200 text-xs space-y-1.5 shadow-2xs">
-                <span class="text-[10px] font-bold text-brand-600 uppercase tracking-wider block">المواصفات الفنية</span>
 
-                <!-- Perfume Notes -->
-                {% if specifications.top_notes %}
-                <div class="text-[10px] text-slate-700 leading-tight">
-                    <span class="font-bold text-slate-900">المكونات:</span>
-                    <span>{{ specifications.top_notes|join:"، " }}</span>
-                </div>
-                {% endif %}
-
-                <!-- Watch Specs -->
-                {% if specifications.dial_size_mm %}
-                <div class="grid grid-cols-2 gap-1.5 text-[10px] pt-0.5">
-                    <div><span class="text-slate-400">الميناء:</span> <strong class="text-slate-900 font-num">{{ specifications.dial_size_mm }} ملم</strong></div>
-                    <div><span class="text-slate-400">الحركة:</span> <strong class="text-slate-900">{{ specifications.movement }}</strong></div>
-                    <div><span class="text-slate-400">مقاومة الماء:</span> <strong class="text-slate-900">{{ specifications.water_resistance }}</strong></div>
-                    <div><span class="text-slate-400">الضمان:</span> <strong class="text-slate-900 font-num">{{ specifications.warranty_years }} سنوات</strong></div>
-                </div>
-                {% endif %}
-
-                <!-- Beauty/Care Swatches -->
-                {% if specifications.shade_name %}
-                <div class="flex items-center gap-1.5 pt-0.5 text-[10px]">
-                    <span class="text-slate-400">الدرجة:</span>
-                    {% if specifications.shade_code %}
-                    <span class="w-3.5 h-3.5 rounded-full border border-pink-200 inline-block shrink-0"
-                        style="background-color: {{ specifications.shade_code }};"></span>
-                    {% endif %}
-                    <strong class="text-slate-900">{{ specifications.shade_name }}</strong>
-                </div>
-                {% endif %}
-            </div>
-            {% endif %}
 
             <!-- Description -->
             {% if product.description %}

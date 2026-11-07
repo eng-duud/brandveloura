@@ -279,16 +279,22 @@ class Category(models.Model):
     CATEGORY_TYPES = [
         ('perfumes', 'عطور فاخرة (Perfumes)'),
         ('watches', 'ساعات راقية (Watches)'),
+        ('general', 'عام / أقسام أخرى (General)'),
+    ]
+
+    ALL_CATEGORY_TYPES = [
+        ('perfumes', 'عطور فاخرة (Perfumes)'),
+        ('watches', 'ساعات راقية (Watches)'),
+        ('general', 'عام / أقسام أخرى (General)'),
         ('cosmetics', 'مستحضرات تجميل (Cosmetics)'),
         ('care', 'عناية بالبشرة والجسم (Skincare & Care)'),
         ('bundles', 'باقات الهدايا والمناسبات (Gift Bundles)'),
-        ('general', 'عام (General)'),
     ]
 
     name_ar = models.CharField(max_length=150, verbose_name='اسم القسم بالعربي')
     name_en = models.CharField(max_length=150, blank=True, verbose_name='اسم القسم بالإنجليزي')
     slug = models.SlugField(unique=True, allow_unicode=True, blank=True, verbose_name='الرابط الدائم (Slug)')
-    category_type = models.CharField(max_length=20, choices=CATEGORY_TYPES, default='general', verbose_name='نوع القسم والمواصفات')
+    category_type = models.CharField(max_length=20, choices=ALL_CATEGORY_TYPES, default='general', verbose_name='نوع القسم والمواصفات')
     description = models.TextField(blank=True, verbose_name='وصف القسم')
     image = models.ImageField(upload_to='categories/', null=True, blank=True, verbose_name='صورة القسم')
     image_url_fallback = models.URLField(blank=True, verbose_name='رابط صورة خارجي')
@@ -451,8 +457,8 @@ class Product(models.Model):
         return f"{self.name_ar} ({self.brand_name})"
 
     def save(self, *args, **kwargs):
-        if self.brand and not self.brand_name:
-            self.brand_name = self.brand.name_en or self.brand.name_ar
+        if self.brand:
+            self.brand_name = self.brand.name_ar or self.brand.name_en
         if self.has_grades:
             if self.price_original_yer and not self.price_yer:
                 self.price_yer = self.price_original_yer

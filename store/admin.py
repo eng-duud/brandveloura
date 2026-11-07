@@ -118,6 +118,23 @@ class CategoryAdmin(admin.ModelAdmin):
         }),
     )
 
+    def get_form(self, request, obj=None, **kwargs):
+        form_class = super().get_form(request, obj, **kwargs)
+
+        class CustomCategoryAdminForm(form_class):
+            def __init__(self, *args, **form_kwargs):
+                super().__init__(*args, **form_kwargs)
+                if 'category_type' in self.fields:
+                    target_obj = obj or getattr(self, 'instance', None)
+                    if target_obj and getattr(target_obj, 'pk', None) and target_obj.category_type and target_obj.category_type not in [c[0] for c in Category.CATEGORY_TYPES]:
+                        legacy_dict = dict(getattr(Category, 'ALL_CATEGORY_TYPES', []))
+                        legacy_label = legacy_dict.get(target_obj.category_type, target_obj.category_type)
+                        self.fields['category_type'].choices = list(Category.CATEGORY_TYPES) + [(target_obj.category_type, f"{legacy_label} (سابق)")]
+                    else:
+                        self.fields['category_type'].choices = list(Category.CATEGORY_TYPES)
+
+        return CustomCategoryAdminForm
+
     def image_preview(self, obj):
         return format_html(
             '<img src="{}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 8px; border: 1.5px solid #fecdd3;" />',
@@ -129,12 +146,12 @@ class CategoryAdmin(admin.ModelAdmin):
         types_map = {
             'perfumes': ('عطور فاخرة', '#be185d', '#fdf2f8'),
             'watches': ('ساعات راقية', '#0369a1', '#f0f9ff'),
+            'general': ('عام / أقسام أخرى', '#475569', '#f8fafc'),
             'cosmetics': ('مستحضرات تجميل', '#b45309', '#fffbeb'),
             'care': ('عناية بالبشرة', '#047857', '#ecfdf5'),
             'bundles': ('باقات هدايا', '#6d28d9', '#f5f3ff'),
-            'general': ('عام', '#475569', '#f8fafc'),
         }
-        title, color, bg = types_map.get(obj.category_type, ('عام', '#475569', '#f8fafc'))
+        title, color, bg = types_map.get(obj.category_type, ('عام / أقسام أخرى', '#475569', '#f8fafc'))
         return format_html(
             '<span style="background-color: {}; color: {}; border: 1px solid {}; padding: 2px 9px; border-radius: 6px; font-weight: 700; font-size: 11px;">{}</span>',
             bg, color, color + '33', title
@@ -275,7 +292,6 @@ class ProductAdmin(admin.ModelAdmin):
             'fields': (
                 ('category', 'brand'),
                 ('name_ar', 'name_en'),
-                ('brand_name',),
                 'description',
             )
         }),
@@ -309,14 +325,7 @@ class ProductAdmin(admin.ModelAdmin):
                 ('sku', 'slug'),
             )
         }),
-        ('6. المواصفات الفنية التفصيلية (JSON Specifications)', {
-            'classes': ('collapse',),
-            'description': 'مواصفات إضافية كالهرم العطري أو مقاس الساعة. يمكنك تركها أو كتابة كائن JSON مثل: {"حجم العبوة": "100 مل", "التركيز": "Eau de Parfum", "الجنس": "للجنسين"}',
-            'fields': (
-                'specifications',
-            )
-        }),
-        ('7. إرسال إشعار ترويجي فوري لهواتف العملاء (Web Push Broadcast)', {
+        ('6. إرسال إشعار ترويجي فوري لهواتف العملاء (Web Push Broadcast)', {
             'classes': ('collapse',),
             'description': 'عند تفعيل خيار الإرسال والضغط على حفظ، سيتم إرسال إشعار فوري لهواتف جميع مشتركي التطبيق بالتخفيض أو بالمنتج الجديد مع تحويلهم مباشرة لصفحة المنتج عند النقر.',
             'fields': (

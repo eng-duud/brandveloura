@@ -335,39 +335,15 @@
                     <summary class="flex items-center justify-between p-3 font-bold text-slate-900 cursor-pointer select-none">
                         <span class="flex items-center gap-2">
                             <i data-lucide="file-text" class="w-4 h-4 text-brand-600"></i>
-                            <span>الوصف والمواصفات</span>
+                            <span>وصف المنتج</span>
                         </span>
                         <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform"></i>
                     </summary>
-                    <div class="px-3.5 pb-3.5 pt-1 border-t border-pink-100 text-slate-600 leading-relaxed space-y-2.5">
+                    <div class="px-3.5 pb-3.5 pt-1 border-t border-pink-100 text-slate-600 leading-relaxed">
                         {% if product.description %}
                         <p class="whitespace-pre-line">{{ product.description }}</p>
                         {% else %}
                         <p>منتج ذو جودة عالية مطابق للمواصفات المعلنة.</p>
-                        {% endif %}
-
-                        <!-- Specifications Grid if present -->
-                        {% if product.specifications %}
-                        <div class="pt-1.5 grid grid-cols-2 gap-2 text-[11px]">
-                            {% if product.specifications.concentration %}
-                            <div class="p-2 rounded-xl bg-pink-50/40 border border-pink-100">
-                                <span class="text-slate-400 block text-[10px]">التركيز</span>
-                                <span class="font-bold text-slate-800">{{ product.specifications.concentration }}</span>
-                            </div>
-                            {% endif %}
-                            {% if product.specifications.volume_ml %}
-                            <div class="p-2 rounded-xl bg-pink-50/40 border border-pink-100">
-                                <span class="text-slate-400 block text-[10px]">الحجم</span>
-                                <span class="font-bold text-slate-800 font-num">{{ product.specifications.volume_ml }} مل</span>
-                            </div>
-                            {% endif %}
-                            {% if product.specifications.top_notes %}
-                            <div class="col-span-2 p-2 rounded-xl bg-pink-50/40 border border-pink-100">
-                                <span class="text-slate-400 block text-[10px]">المكونات العطرية</span>
-                                <span class="text-slate-700">{{ product.specifications.top_notes|join:"، " }}</span>
-                            </div>
-                            {% endif %}
-                        </div>
                         {% endif %}
                     </div>
                 </details>
