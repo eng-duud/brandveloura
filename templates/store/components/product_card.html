@@ -5,6 +5,14 @@
     <span class="absolute top-2.5 right-2.5 z-10 px-2 py-0.5 rounded-full bg-slate-900 text-white text-[9px] font-bold shadow-xs">
         نفد
     </span>
+    {% elif product.has_grades and product.discount_percentage_original > 0 %}
+    <span class="absolute top-2.5 right-2.5 z-10 px-2 py-0.5 rounded-full bg-brand-500 text-white text-[9px] font-bold shadow-xs">
+        -{{ product.discount_percentage_original }}%
+    </span>
+    {% elif product.has_grades and product.discount_percentage_master > 0 %}
+    <span class="absolute top-2.5 right-2.5 z-10 px-2 py-0.5 rounded-full bg-brand-500 text-white text-[9px] font-bold shadow-xs">
+        -{{ product.discount_percentage_master }}%
+    </span>
     {% elif product.discount_percentage > 0 %}
     <span class="absolute top-2.5 right-2.5 z-10 px-2 py-0.5 rounded-full bg-brand-500 text-white text-[9px] font-bold shadow-xs">
         -{{ product.discount_percentage }}%

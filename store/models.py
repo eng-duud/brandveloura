@@ -294,6 +294,14 @@ class Category(models.Model):
     name_ar = models.CharField(max_length=150, verbose_name='اسم القسم بالعربي')
     name_en = models.CharField(max_length=150, blank=True, verbose_name='اسم القسم بالإنجليزي')
     slug = models.SlugField(unique=True, allow_unicode=True, blank=True, verbose_name='الرابط الدائم (Slug)')
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='subcategories',
+        verbose_name='القسم الرئيسي (اتركه فارغاً إذا كان هذا قسماً رئيسياً)'
+    )
     category_type = models.CharField(max_length=20, choices=ALL_CATEGORY_TYPES, default='general', verbose_name='نوع القسم والمواصفات')
     description = models.TextField(blank=True, verbose_name='وصف القسم')
     image = models.ImageField(upload_to='categories/', null=True, blank=True, verbose_name='صورة القسم')
@@ -308,7 +316,19 @@ class Category(models.Model):
         ordering = ['display_order', 'id']
 
     def __str__(self):
+        if self.parent:
+            return f"{self.parent.name_ar} » {self.name_ar}"
         return self.name_ar
+
+    @property
+    def is_main_category(self):
+        return self.parent is None
+
+    def get_descendants_and_self_ids(self):
+        """إرجاع قائمة بمعرفات هذا القسم وكافة تصنيفاته الفرعية"""
+        ids = [self.id]
+        ids.extend(self.subcategories.values_list('id', flat=True))
+        return ids
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -404,11 +424,19 @@ class Product(models.Model):
     )
     price_original_yer = models.DecimalField(
         max_digits=12, decimal_places=2, null=True, blank=True, 
-        verbose_name='سعر الأصلي 100% (ريال يمني)'
+        verbose_name='سعر الأصلي 100% الحالي (ريال يمني)'
+    )
+    compare_at_price_original_yer = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True, 
+        verbose_name='سعر الأصلي قبل الخصم (ريال يمني - اختياري)'
     )
     price_master_yer = models.DecimalField(
         max_digits=12, decimal_places=2, null=True, blank=True, 
-        verbose_name='سعر الماستر / طبق الأصل (ريال يمني)'
+        verbose_name='سعر الماستر / طبق الأصل الحالي (ريال يمني)'
+    )
+    compare_at_price_master_yer = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True, 
+        verbose_name='سعر الماستر قبل الخصم (ريال يمني - اختياري)'
     )
     
     stock_quantity = models.PositiveIntegerField(default=10, verbose_name='الكمية المتوفرة بالمخزون')
@@ -505,6 +533,42 @@ class Product(models.Model):
         if rate and rate > 0:
             return round(self.price_master_yer / rate, 1)
         return None
+
+    @property
+    def compare_at_price_original_sar(self):
+        """سعر الأصلي قبل الخصم بالريال السعودي"""
+        if not self.compare_at_price_original_yer:
+            return None
+        rate = StoreSettings.get_exchange_rate()
+        if rate and rate > 0:
+            return round(self.compare_at_price_original_yer / rate, 1)
+        return None
+
+    @property
+    def compare_at_price_master_sar(self):
+        """سعر الماستر قبل الخصم بالريال السعودي"""
+        if not self.compare_at_price_master_yer:
+            return None
+        rate = StoreSettings.get_exchange_rate()
+        if rate and rate > 0:
+            return round(self.compare_at_price_master_yer / rate, 1)
+        return None
+
+    @property
+    def discount_percentage_original(self):
+        """نسبة خصم الأصلي إن وجدت"""
+        if self.compare_at_price_original_yer and self.price_original_yer and self.compare_at_price_original_yer > self.price_original_yer:
+            diff = self.compare_at_price_original_yer - self.price_original_yer
+            return int((diff / self.compare_at_price_original_yer) * 100)
+        return 0
+
+    @property
+    def discount_percentage_master(self):
+        """نسبة خصم الماستر إن وجدت"""
+        if self.compare_at_price_master_yer and self.price_master_yer and self.compare_at_price_master_yer > self.price_master_yer:
+            diff = self.compare_at_price_master_yer - self.price_master_yer
+            return int((diff / self.compare_at_price_master_yer) * 100)
+        return 0
 
     @property
     def compare_at_price_sar(self):

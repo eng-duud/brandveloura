@@ -78,13 +78,13 @@ class SimplifiedUserAdmin(DefaultUserAdmin):
         }),
     )
 
+    @admin.display(description='نوع الحساب')
     def is_staff_badge(self, obj):
         if obj.is_superuser:
             return format_html('<span style="background: #be123f; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">مدير رئيسي</span>')
         elif obj.is_staff:
             return format_html('<span style="background: #0284c7; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">مشرف متجر</span>')
         return format_html('<span style="color: #64748b; font-size: 11px;">عميل مسجل</span>')
-    is_staff_badge.short_description = 'نوع الحساب'
 
 try:
     admin.site.unregister(User)
@@ -99,17 +99,18 @@ except Exception:
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['image_preview', 'name_ar', 'category_type_badge', 'products_count', 'is_featured', 'is_active', 'display_order']
+    list_display = ['image_preview', 'name_ar', 'hierarchy_badge', 'category_type_badge', 'products_count', 'is_featured', 'is_active', 'display_order']
     list_editable = ['is_featured', 'is_active', 'display_order']
     search_fields = ['name_ar', 'name_en']
-    list_filter = ['category_type', 'is_featured', 'is_active']
+    list_filter = ['parent', 'category_type', 'is_featured', 'is_active']
+    autocomplete_fields = ['parent']
     prepopulated_fields = {'slug': ('name_ar',)}
     list_per_page = 25
 
     fieldsets = (
-        ('معلومات القسم الأساسية', {
-            'description': 'أدخل اسم وتصنيف القسم وصورته المعروضة في شريط الأقسام والصفحة الرئيسية',
-            'fields': (('name_ar', 'category_type'), 'image', ('is_featured', 'is_active', 'display_order'))
+        ('معلومات القسم وتصنيفه الهرمي', {
+            'description': 'حدد اسم القسم. إن كان قسماً رئيسياً كـ (العطور أو البخور) اترك حقل القسم الرئيسي فارغاً. وإن كان صنفاً فرعياً (مثل: بخور عدني) اختر القسم الرئيسي التابع له.',
+            'fields': (('name_ar', 'parent'), ('category_type', 'image'), ('is_featured', 'is_active', 'display_order'))
         }),
         ('بيانات إضافية ورابط SEO (اختياري)', {
             'classes': ('collapse',),
@@ -117,6 +118,17 @@ class CategoryAdmin(admin.ModelAdmin):
             'fields': (('name_en', 'slug'), 'description', 'image_url_fallback')
         }),
     )
+
+    @admin.display(description='المستوى')
+    def hierarchy_badge(self, obj):
+        if obj.parent:
+            return format_html(
+                '<span style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 6px; font-size: 11px;">فرعي من: <strong style="color: #0f172a;">{}</strong></span>',
+                obj.parent.name_ar
+            )
+        return format_html(
+            '<span style="background-color: #fdf2f8; color: #be123f; border: 1px solid #fecdd3; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">⭐ قسم رئيسي</span>'
+        )
 
     def get_form(self, request, obj=None, **kwargs):
         form_class = super().get_form(request, obj, **kwargs)
@@ -135,13 +147,14 @@ class CategoryAdmin(admin.ModelAdmin):
 
         return CustomCategoryAdminForm
 
+    @admin.display(description='الصورة')
     def image_preview(self, obj):
         return format_html(
             '<img src="{}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 8px; border: 1.5px solid #fecdd3;" />',
             obj.get_image_url
         )
-    image_preview.short_description = 'الصورة'
 
+    @admin.display(description='نوع القسم')
     def category_type_badge(self, obj):
         types_map = {
             'perfumes': ('عطور فاخرة', '#be185d', '#fdf2f8'),
@@ -156,12 +169,12 @@ class CategoryAdmin(admin.ModelAdmin):
             '<span style="background-color: {}; color: {}; border: 1px solid {}; padding: 2px 9px; border-radius: 6px; font-weight: 700; font-size: 11px;">{}</span>',
             bg, color, color + '33', title
         )
-    category_type_badge.short_description = 'نوع القسم'
 
     def get_queryset(self, request):
         from django.db.models import Count
         return super().get_queryset(request).annotate(total_products=Count('products'))
 
+    @admin.display(description='المنتجات التابعة')
     def products_count(self, obj):
         count = getattr(obj, 'total_products', None)
         if count is None:
@@ -171,7 +184,6 @@ class CategoryAdmin(admin.ModelAdmin):
             '<a href="{}" style="font-weight: 700; color: #be123f; text-decoration: underline;" title="عرض منتجات هذا القسم">{} منتج ↗</a>',
             url, count
         )
-    products_count.short_description = 'المنتجات التابعة'
 
 
 @admin.register(Brand)
@@ -204,6 +216,7 @@ class BrandAdmin(admin.ModelAdmin):
         }),
     )
 
+    @admin.display(description='الشعار')
     def logo_preview(self, obj):
         url = obj.get_logo_url
         if url:
@@ -212,8 +225,8 @@ class BrandAdmin(admin.ModelAdmin):
                 url
             )
         return format_html('<span style="color: #94a3b8; font-size: 11px;">—</span>')
-    logo_preview.short_description = 'الشعار'
 
+    @admin.display(description='المنتجات')
     def products_count(self, obj):
         count = obj.products.count()
         if count > 0:
@@ -223,7 +236,6 @@ class BrandAdmin(admin.ModelAdmin):
                 url, count
             )
         return format_html('<span style="color: #94a3b8; font-size: 11px;">لا يوجد</span>')
-    products_count.short_description = 'المنتجات'
 
 
 # ==============================================================================
@@ -237,6 +249,7 @@ class ProductImageInline(admin.TabularInline):
     fields = ['image', 'image_url_fallback', 'is_primary', 'preview', 'display_order']
     readonly_fields = ['preview']
 
+    @admin.display(description='معاينة')
     def preview(self, instance):
         if instance and instance.pk and instance.get_image_url:
             badge = '<span style="display:block; font-size:10px; color:#be123f; font-weight:700; margin-top:2px;">⭐ رئيسية</span>' if instance.is_primary else ''
@@ -246,7 +259,6 @@ class ProductImageInline(admin.TabularInline):
                 format_html(badge)
             )
         return '—'
-    preview.short_description = 'معاينة'
 
 
 @admin.register(Product)
@@ -303,12 +315,13 @@ class ProductAdmin(admin.ModelAdmin):
                 'currency_preview_info',
             )
         }),
-        ('3. خيارات درجات العطور (أصلي 100% وماستر طبق الأصل - اختياري)', {
+        ('3. خيارات درجات العطور والمنتجات (أصلي 100% وماستر طبق الأصل مع التخفيضات)', {
             'classes': ('collapse',),
-            'description': 'خاص بالعطور الفاخرة: إذا كان المنتج يتوفر بخياري (أصلي 100% وماستر كواليتي طبق الأصل)، فعّل هذا الخيار وحدد سعر كل درجة لتمكين العميل من الاختيار بينهما في صفحة المنتج.',
+            'description': 'إذا كان المنتج يتوفر بخياري (أصلي 100% وماستر كواليتي طبق الأصل)، فعّل هذا الخيار وحدد السعر الحالي وسعر ما قبل التخفيض (اختياري) لكل درجة لتمكين العميل من الاختيار ومشاهدة الخصم.',
             'fields': (
                 'has_grades',
-                ('price_original_yer', 'price_master_yer'),
+                ('price_original_yer', 'compare_at_price_original_yer'),
+                ('price_master_yer', 'compare_at_price_master_yer'),
             )
         }),
         ('4. إعدادات العرض والترويج والشارات في المتجر', {
@@ -347,6 +360,7 @@ class ProductAdmin(admin.ModelAdmin):
             sent = send_product_promotion_push(obj, custom_title=custom_title, custom_body=custom_body)
             self.message_user(request, f"📢 تم إرسال الإشعار الترويجي لمنتج ({obj.name_ar}) بنجاح إلى {sent} من مشتركي التطبيق!")
 
+    @admin.display(description='الماركة', ordering='brand_name')
     def brand_name_badge(self, obj):
         name = obj.effective_brand_name
         if name:
@@ -355,46 +369,45 @@ class ProductAdmin(admin.ModelAdmin):
                 name
             )
         return format_html('<span style="color: #94a3b8; font-size: 11px;">—</span>')
-    brand_name_badge.short_description = 'الماركة'
-    brand_name_badge.admin_order_field = 'brand_name'
 
+    @admin.display(description='المخزون', ordering='stock_quantity')
     def stock_badge(self, obj):
         if obj.stock_quantity <= 0:
             return format_html('<span style="background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">نفد من المخزون ⚠️</span>')
         elif obj.stock_quantity <= 3:
             return format_html('<span style="background-color: #fef3c7; color: #d97706; border: 1px solid #fcd34d; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">متبقي {} فقط!</span>', obj.stock_quantity)
         return format_html('<span style="color: #059669; font-weight: bold; font-size: 11px;">{} قطعة</span>', obj.stock_quantity)
-    stock_badge.short_description = 'المخزون'
-    stock_badge.admin_order_field = 'stock_quantity'
 
+    @admin.display(description='أصلي / ماستر')
     def grades_badge(self, obj):
         if obj.has_grades:
             orig = f"{obj.price_original_yer:,.0f}" if obj.price_original_yer else "—"
             mast = f"{obj.price_master_yer:,.0f}" if obj.price_master_yer else "—"
+            orig_disc = f" (-{obj.discount_percentage_original}%)" if obj.discount_percentage_original > 0 else ""
+            mast_disc = f" (-{obj.discount_percentage_master}%)" if obj.discount_percentage_master > 0 else ""
             return format_html(
-                '<span style="background-color: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: bold;">أصلي: {} | ماستر: {}</span>',
-                orig, mast
+                '<span style="background-color: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: bold;">أصلي: {}{} | ماستر: {}{}</span>',
+                orig, orig_disc, mast, mast_disc
             )
         return format_html('<span style="color: #94a3b8; font-size: 11px;">—</span>')
-    grades_badge.short_description = 'أصلي / ماستر'
 
+    @admin.display(description='الصورة')
     def image_preview(self, obj):
         url = obj.primary_image_url
         return format_html(
             '<img src="{}" style="width: 46px; height: 46px; object-fit: cover; border-radius: 8px; border: 1.5px solid #fecdd3; box-shadow: 0 2px 5px rgba(0,0,0,0.05);" />',
             url
         )
-    image_preview.short_description = 'الصورة'
 
+    @admin.display(description='السعر (يمني)', ordering='price_yer')
     def formatted_price_yer(self, obj):
         return format_html('<span style="font-weight: 700; color: #0f172a;">{}</span>', f"{obj.price_yer:,.0f} ر.ي")
-    formatted_price_yer.short_description = 'السعر (يمني)'
-    formatted_price_yer.admin_order_field = 'price_yer'
 
+    @admin.display(description='المعادل (سعودي)')
     def formatted_price_sar(self, obj):
         return format_html('<span style="color: #be123f; font-weight: 700;">{} ر.س</span>', obj.price_sar)
-    formatted_price_sar.short_description = 'المعادل (سعودي)'
 
+    @admin.display(description='ملخص التسعير وسعر الصرف المباشر')
     def currency_preview_info(self, obj):
         if not obj or not obj.pk or not obj.price_yer:
             return "احفظ المنتج لحساب المعادل بالريال السعودي ونسب الخصم آلياً."
@@ -427,21 +440,30 @@ class ProductAdmin(admin.ModelAdmin):
         if obj.has_grades:
             orig_yer = f"{obj.price_original_yer:,.0f}" if obj.price_original_yer else "—"
             orig_sar = f"{obj.price_original_sar}" if obj.price_original_sar else "—"
+            orig_comp_yer = f"{obj.compare_at_price_original_yer:,.0f} ر.ي" if obj.compare_at_price_original_yer else ""
+            orig_disc = f'<span style="background:#be123f;color:#fff;padding:1px 6px;border-radius:4px;font-size:10px;margin-right:4px;">خصم {obj.discount_percentage_original}%</span>' if obj.discount_percentage_original > 0 else ""
+
             mast_yer = f"{obj.price_master_yer:,.0f}" if obj.price_master_yer else "—"
             mast_sar = f"{obj.price_master_sar}" if obj.price_master_sar else "—"
+            mast_comp_yer = f"{obj.compare_at_price_master_yer:,.0f} ر.ي" if obj.compare_at_price_master_yer else ""
+            mast_disc = f'<span style="background:#be123f;color:#fff;padding:1px 6px;border-radius:4px;font-size:10px;margin-right:4px;">خصم {obj.discount_percentage_master}%</span>' if obj.discount_percentage_master > 0 else ""
+
             html += f"""
-                <div style="width: 100%; border-top: 1px dashed #fecdd3; padding-top: 8px; margin-top: 4px; display: flex; gap: 20px;">
+                <div style="width: 100%; border-top: 1px dashed #fecdd3; padding-top: 8px; margin-top: 4px; display: flex; gap: 24px; flex-wrap: wrap;">
                     <div>
                         <strong style="color: #be123f;">الأصلي 100%:</strong> {orig_yer} ر.ي ({orig_sar} ر.س)
+                        {orig_disc}
+                        {f'<span style="color:#64748b;font-size:11px;text-decoration:line-through;margin-right:4px;">({orig_comp_yer})</span>' if orig_comp_yer else ''}
                     </div>
                     <div>
                         <strong style="color: #831843;">ماستر كواليتي:</strong> {mast_yer} ر.ي ({mast_sar} ر.س)
+                        {mast_disc}
+                        {f'<span style="color:#64748b;font-size:11px;text-decoration:line-through;margin-right:4px;">({mast_comp_yer})</span>' if mast_comp_yer else ''}
                     </div>
                 </div>
             """
         html += "</div></div>"
         return format_html(html)
-    currency_preview_info.short_description = 'ملخص التسعير وسعر الصرف المباشر'
 
     @admin.action(description='📋 تكرار المنتج المحدد (عمل نسخة للمنتجات المشابهة)')
     def duplicate_products(self, request, queryset):
@@ -523,6 +545,7 @@ class OrderItemInline(admin.TabularInline):
     readonly_fields = ['product_image_preview', 'product_name', 'variant_info', 'unit_price_yer', 'quantity', 'total_price_yer']
     fields = ['product_image_preview', 'product_name', 'variant_info', 'unit_price_yer', 'quantity', 'total_price_yer']
 
+    @admin.display(description='المنتج')
     def product_image_preview(self, instance):
         if instance and instance.product_image_url:
             return format_html(
@@ -530,7 +553,6 @@ class OrderItemInline(admin.TabularInline):
                 instance.product_image_url
             )
         return '—'
-    product_image_preview.short_description = 'المنتج'
 
 
 @admin.register(Order)
@@ -586,6 +608,7 @@ class OrderAdmin(admin.ModelAdmin):
         }),
     )
 
+    @admin.display(description='مراسلة العميل')
     def customer_whatsapp_link(self, obj):
         if not obj or not obj.customer_phone:
             return '—'
@@ -598,16 +621,16 @@ class OrderAdmin(admin.ModelAdmin):
             '</a>',
             url, obj.customer_phone
         )
-    customer_whatsapp_link.short_description = 'مراسلة العميل'
 
+    @admin.display(description='مجموع المنتجات الفرعي')
     def formatted_subtotal(self, obj):
         return f"{obj.subtotal_yer:,.0f} ر.ي" if obj.subtotal_yer else "0 ر.ي"
-    formatted_subtotal.short_description = 'مجموع المنتجات الفرعي'
 
+    @admin.display(description='رسوم التوصيل')
     def formatted_shipping_fee(self, obj):
         return f"{obj.shipping_fee_yer:,.0f} ر.ي" if obj.shipping_fee_yer else "0 ر.ي"
-    formatted_shipping_fee.short_description = 'رسوم التوصيل'
 
+    @admin.display(description='النوع')
     def gift_badge(self, obj):
         if obj.is_gift:
             wrap = " + تغليف" if obj.is_luxury_gift_wrapping else ""
@@ -616,8 +639,8 @@ class OrderAdmin(admin.ModelAdmin):
                 wrap
             )
         return '—'
-    gift_badge.short_description = 'النوع'
 
+    @admin.display(description='المستحق')
     def currency_due_badge(self, obj):
         if obj.payment_currency_selected == 'SAR':
             return format_html(
@@ -629,8 +652,8 @@ class OrderAdmin(admin.ModelAdmin):
             '<span style="color: #475569; font-weight: bold; font-size: 11px;">🇾🇪 {} ر.ي</span>',
             formatted_yer
         )
-    currency_due_badge.short_description = 'المستحق'
 
+    @admin.display(description='تواصل')
     def customer_whatsapp_btn(self, obj):
         if not obj or not obj.customer_phone:
             return '—'
@@ -641,16 +664,16 @@ class OrderAdmin(admin.ModelAdmin):
             '<a href="{}" target="_blank" style="background-color: #25D366; color: white; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 3px;">واتساب</a>',
             url
         )
-    customer_whatsapp_btn.short_description = 'تواصل'
 
+    @admin.display(description='الإجمالي (يمني)')
     def formatted_total_yer(self, obj):
         return f"{obj.total_yer:,.0f} ر.ي" if obj.total_yer else "0 ر.ي"
-    formatted_total_yer.short_description = 'الإجمالي (يمني)'
 
+    @admin.display(description='الإجمالي (سعودي)')
     def formatted_total_sar(self, obj):
         return f"{obj.total_sar:,.1f} ر.س" if obj.total_sar else "0 ر.س"
-    formatted_total_sar.short_description = 'الإجمالي (سعودي)'
 
+    @admin.display(description='حالة الطلب')
     def status_badge(self, obj):
         colors = {
             'pending_verification': '#f59e0b',
@@ -666,8 +689,8 @@ class OrderAdmin(admin.ModelAdmin):
             color,
             obj.get_status_display()
         )
-    status_badge.short_description = 'حالة الطلب'
 
+    @admin.display(description='إشعار التحويل')
     def receipt_preview(self, obj):
         url = obj.get_receipt_url
         if url:
@@ -678,8 +701,8 @@ class OrderAdmin(admin.ModelAdmin):
                 url, url
             )
         return format_html('<span style="color: #9ca3af; font-size: 12px;">بدون إشعار</span>')
-    receipt_preview.short_description = 'إشعار التحويل'
 
+    @admin.display(description='فحص السند مكبراً')
     def receipt_large_view(self, obj):
         url = obj.get_receipt_url
         if url:
@@ -694,7 +717,6 @@ class OrderAdmin(admin.ModelAdmin):
                 url, url
             )
         return 'لا يوجد سند تحويل مرفوع لهذا الطلب بعد.'
-    receipt_large_view.short_description = 'فحص السند مكبراً'
 
     @admin.action(description='اعتماد الدفع للطلبات المحددة (تم التحقق)')
     def mark_as_verified(self, request, queryset):
@@ -801,19 +823,19 @@ class PaymentAccountAdmin(admin.ModelAdmin):
         }),
     )
 
+    @admin.display(description='العملة')
     def currency_badge(self, obj):
         if obj.currency == 'SAR':
             return format_html('<span style="background-color: #ecfdf5; color: #047857; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">🇸🇦 ريال سعودي فقط</span>')
         elif obj.currency == 'YER':
             return format_html('<span style="background-color: #f8fafc; color: #475569; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">🇾🇪 ريال يمني فقط</span>')
         return format_html('<span style="background-color: #fdf2f8; color: #be185d; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">يقبل الريالين</span>')
-    currency_badge.short_description = 'العملة'
 
+    @admin.display(description='الدولة')
     def country_badge(self, obj):
         if obj.bank_country == 'SA':
             return '🇸🇦 السعودية (مغتربين)'
         return '🇾🇪 اليمن (محلي)'
-    country_badge.short_description = 'الدولة'
 
 
 # ==============================================================================
@@ -833,9 +855,9 @@ class ShippingZoneAdmin(admin.ModelAdmin):
         }),
     )
 
+    @admin.display(description='رسوم التوصيل')
     def formatted_fee(self, obj):
         return f"{obj.delivery_fee_yer:,.0f} ر.ي"
-    formatted_fee.short_description = 'رسوم التوصيل'
 
 
 # ==============================================================================
@@ -859,12 +881,12 @@ class HeroBannerAdmin(admin.ModelAdmin):
         }),
     )
 
+    @admin.display(description='المعاينة')
     def banner_preview(self, obj):
         return format_html(
             '<img src="{}" style="width: 70px; height: 35px; object-fit: cover; border-radius: 4px;" />',
             obj.get_image_url
         )
-    banner_preview.short_description = 'المعاينة'
 
 
 # ==============================================================================
@@ -879,14 +901,15 @@ class NotificationAdmin(admin.ModelAdmin):
     list_per_page = 30
     actions = ['mark_as_read', 'mark_as_unread', 'broadcast_push']
 
+    @admin.display(description='الجهة')
     def target_badge(self, obj):
         if obj.for_admin:
             return format_html('<span style="background: #be123f; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">إدارة المتجر</span>')
         if obj.recipient:
             return format_html('<span style="background: #0284c7; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">{}</span>', obj.recipient.username)
         return format_html('<span style="background: #64748b; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px;">عام</span>')
-    target_badge.short_description = 'الجهة'
 
+    @admin.display(description='النوع')
     def notification_type_badge(self, obj):
         colors = {
             'order_created': '#d97706',
@@ -900,19 +923,18 @@ class NotificationAdmin(admin.ModelAdmin):
         }
         color = colors.get(obj.notification_type, '#64748b')
         return format_html('<span style="background: {}; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">{}</span>', color, obj.get_notification_type_display())
-    notification_type_badge.short_description = 'النوع'
 
+    @admin.display(description='الحالة')
     def is_read_badge(self, obj):
         if obj.is_read:
             return format_html('<span style="color: #10b981; font-weight: bold;">✓ مقروء</span>')
         return format_html('<span style="background: #f43f5e; color: #fff; padding: 1px 7px; border-radius: 10px; font-size: 11px; font-weight: bold;">● جديد</span>')
-    is_read_badge.short_description = 'الحالة'
 
+    @admin.display(description='الرابط')
     def link_action(self, obj):
         if obj.link:
             return format_html('<a href="{}" style="color: #e11d48; font-weight: bold; text-decoration: underline;">فتح الرابط ↗</a>', obj.link)
         return '-'
-    link_action.short_description = 'الرابط'
 
     @admin.action(description='تحديد كمقروء')
     def mark_as_read(self, request, queryset):
@@ -948,13 +970,13 @@ class UserProfileAdmin(admin.ModelAdmin):
     search_fields = ['user__username', 'user__first_name', 'user__last_name', 'user__email', 'phone', 'preferred_city']
     readonly_fields = ['created_at', 'updated_at']
 
+    @admin.display(description='اسم العميل')
     def user_name(self, obj):
         return obj.user.get_full_name() or obj.user.username
-    user_name.short_description = 'اسم العميل'
 
+    @admin.display(description='البريد الإلكتروني')
     def user_email(self, obj):
         return obj.user.email or '—'
-    user_email.short_description = 'البريد الإلكتروني'
 
 
 # ==============================================================================
@@ -969,6 +991,7 @@ class WebPushSubscriptionAdmin(admin.ModelAdmin):
     readonly_fields = ['created_at', 'updated_at', 'endpoint', 'p256dh', 'auth', 'user_agent']
     actions = ['send_test_push']
 
+    @admin.display(description='المشترك')
     def subscriber_label(self, obj):
         if obj.user:
             return format_html(
@@ -976,11 +999,10 @@ class WebPushSubscriptionAdmin(admin.ModelAdmin):
                 obj.user.get_full_name() or obj.user.username
             )
         return format_html('<span style="color: #64748b;">📱 زائر مجهول (هاتف)</span>')
-    subscriber_label.short_description = 'المشترك'
 
+    @admin.display(description='الجهاز / المتصفح')
     def user_agent_short(self, obj):
         return obj.user_agent[:50] + ('...' if len(obj.user_agent) > 50 else '') if obj.user_agent else '—'
-    user_agent_short.short_description = 'الجهاز / المتصفح'
 
     @admin.action(description='🔔 إرسال إشعار تجريبي مباشر للأجهزة المحددة')
     def send_test_push(self, request, queryset):

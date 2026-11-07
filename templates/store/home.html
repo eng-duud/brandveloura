@@ -481,24 +481,6 @@
     </div>
 </section>
 
-<!-- 6. Customer Support Assistance Box -->
-<section class="py-10 bg-transparent">
-    <div class="max-w-2xl mx-auto px-4 sm:px-6 text-center">
-        <div class="rounded-3xl bg-white border border-pink-200 p-6 sm:p-8 space-y-3 shadow-xs">
-            <h3 class="text-base sm:text-lg font-bold text-slate-900">خدمة العملاء</h3>
-            <p class="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-                فريق خدمة العملاء متاح للرد على استفساراتكم ومتابعة طلباتكم.
-            </p>
-            <div class="pt-1">
-                <a href="https://wa.me/{{ store_settings.contact_whatsapp }}" target="_blank" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition cursor-pointer">
-                    <i data-lucide="message-circle" class="w-4 h-4"></i>
-                    <span>تواصل عبر واتساب</span>
-                </a>
-            </div>
-        </div>
-    </div>
-</section>
-
 <!-- Slider & Strip Scrolling Scripts -->
 <script>
     // 1. Auto Slider Running Every 2 Seconds (2000ms)
@@ -569,13 +551,62 @@
         });
     }
 
-    // 2. Horizontal Strip Scrolling Function
+    // 2. Horizontal Strip Scrolling Functions & Smooth Auto-Ticker (Moderate Speed "نص نص")
     function scrollContainer(containerId, distance) {
         const el = document.getElementById(containerId);
         if (el) {
             el.scrollBy({ left: distance, behavior: 'smooth' });
         }
     }
+
+    // Auto-scroll loop with pause on hover/touch and seamless wrapping
+    function setupSmoothAutoScroll(stripId, stepPixels = 1, intervalMs = 30) {
+        const el = document.getElementById(stripId);
+        if (!el) return;
+
+        let isInteracting = false;
+
+        el.addEventListener('mouseenter', () => { isInteracting = true; });
+        el.addEventListener('mouseleave', () => { isInteracting = false; });
+        el.addEventListener('touchstart', () => { isInteracting = true; }, { passive: true });
+        el.addEventListener('touchend', () => { isInteracting = false; }, { passive: true });
+
+        // Auto-detect browser RTL scroll direction (positive or negative)
+        let scrollDirection = -1;
+        try {
+            const initial = el.scrollLeft;
+            el.scrollLeft += 2;
+            if (el.scrollLeft !== initial) {
+                scrollDirection = 1;
+            } else {
+                el.scrollLeft -= 2;
+                if (el.scrollLeft !== initial) {
+                    scrollDirection = -1;
+                }
+            }
+            el.scrollLeft = initial;
+        } catch (e) {
+            scrollDirection = -1;
+        }
+
+        setInterval(() => {
+            if (isInteracting) return;
+            const before = el.scrollLeft;
+            el.scrollLeft += (scrollDirection * stepPixels);
+
+            // If reached the end and stopped moving, loop back seamlessly
+            if (el.scrollLeft === before) {
+                el.scrollLeft = 0;
+            }
+        }, intervalMs);
+    }
+
+    // Initialize auto-scroll on categories, brands, and featured products
+    document.addEventListener('DOMContentLoaded', () => {
+        setupSmoothAutoScroll('categories-scroll', 1, 32);
+        setupSmoothAutoScroll('brands-scroll', 1, 30);
+        setupSmoothAutoScroll('featured-scroll', 1, 35);
+    });
 </script>
 
 {% endblock %}

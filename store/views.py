@@ -2,7 +2,7 @@ import os
 import uuid
 import logging
 from decimal import Decimal
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote
 import requests
 
 from django.shortcuts import render, get_object_or_404, redirect
@@ -21,7 +21,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 
 from .models import (
     StoreSettings, PaymentAccount, ShippingZone, 
-    Category, Brand, Product, ProductImage, 
+    Category, Brand, Product, 
     Order, OrderItem, HeroBanner, UserProfile, Notification,
     WebPushSubscription
 )
@@ -453,7 +453,8 @@ def product_list_view(request):
     current_category = None
     if category_slug:
         current_category = get_object_or_404(Category, slug=category_slug)
-        products = products.filter(category=current_category)
+        cat_ids = current_category.get_descendants_and_self_ids()
+        products = products.filter(category_id__in=cat_ids)
         
     if search_query:
         products = products.filter(
@@ -1311,8 +1312,7 @@ def order_success_view(request, order_number):
         f"طريقة الدفع: {order.payment_method_name} ({order.payment_currency_selected})\n"
         f"رقم الحوالة: {order.payment_reference_no or 'مرفق إشعار التحويل'}\n"
     )
-    import urllib.parse
-    whatsapp_url = f"https://wa.me/{settings.contact_whatsapp}?text={urllib.parse.quote(whatsapp_msg)}"
+    whatsapp_url = f"https://wa.me/{settings.contact_whatsapp}?text={quote(whatsapp_msg)}"
     
     context = {
         'order': order,
@@ -1342,13 +1342,13 @@ def track_order_view(request):
 
 
 def pwa_manifest(request):
-    """ملف manifest.json لدعم تثبيت المتجر كتطبيق هاتف PWA متكامل"""
+    """ملف manifest.json لدعم تثبيت المتجر كتطبيق هاتف PWA متكامل — محسّن لـ ASO"""
     settings = StoreSettings.get_settings()
     manifest_data = {
         "id": "/",
-        "name": settings.store_name,
-        "short_name": "Veloura",
-        "description": settings.store_tagline,
+        "name": "veloura",
+        "short_name": "veloura",
+        "description": "متجر veloura الفاخر — عطور أصلية وماستر، ساعات راقية رجالية ونسائية، ومستحضرات تجميل عالمية مع توصيل سريع لكافة محافظات اليمن والسعودية",
         "start_url": "/",
         "scope": "/",
         "display": "standalone",
@@ -1357,45 +1357,83 @@ def pwa_manifest(request):
         "theme_color": "#E11D48",
         "lang": "ar",
         "dir": "rtl",
-        "categories": ["shopping", "lifestyle"],
+        "categories": ["shopping", "lifestyle", "beauty"],
+        "prefer_related_applications": False,
+        "launch_handler": {
+            "client_mode": "navigate-existing"
+        },
+        "handle_links": "preferred",
         "icons": [
+            {"src": "/static/icons/icon-48.png",  "sizes": "48x48",   "type": "image/png", "purpose": "any"},
+            {"src": "/static/icons/icon-72.png",  "sizes": "72x72",   "type": "image/png", "purpose": "any"},
+            {"src": "/static/icons/icon-96.png",  "sizes": "96x96",   "type": "image/png", "purpose": "any"},
+            {"src": "/static/icons/icon-128.png", "sizes": "128x128", "type": "image/png", "purpose": "any"},
+            {"src": "/static/icons/icon-144.png", "sizes": "144x144", "type": "image/png", "purpose": "any"},
+            {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "/static/icons/icon-256.png", "sizes": "256x256", "type": "image/png", "purpose": "any"},
+            {"src": "/static/icons/icon-384.png", "sizes": "384x384", "type": "image/png", "purpose": "any"},
+            {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": "/static/icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+            {"src": "/static/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+        ],
+        "screenshots": [
             {
-                "src": "/static/icons/icon-192.png",
-                "sizes": "192x192",
+                "src": "/static/icons/screenshots/screenshot-mobile-1.png",
+                "sizes": "1080x1920",
                 "type": "image/png",
-                "purpose": "any maskable"
+                "form_factor": "narrow",
+                "label": "الصفحة الرئيسية — تشكيلة العطور والساعات الفاخرة"
             },
             {
-                "src": "/static/icons/icon-512.png",
-                "sizes": "512x512",
+                "src": "/static/icons/screenshots/screenshot-mobile-2.png",
+                "sizes": "1080x1920",
                 "type": "image/png",
-                "purpose": "any maskable"
+                "form_factor": "narrow",
+                "label": "تفاصيل المنتج — عرض الأسعار بالريال اليمني والسعودي"
+            },
+            {
+                "src": "/static/icons/screenshots/screenshot-mobile-3.png",
+                "sizes": "1080x1920",
+                "type": "image/png",
+                "form_factor": "narrow",
+                "label": "إتمام الطلب — دفع عبر الكريمي وجوالي والدفع عند الاستلام"
+            },
+            {
+                "src": "/static/icons/screenshots/screenshot-wide-1.png",
+                "sizes": "1920x1080",
+                "type": "image/png",
+                "form_factor": "wide",
+                "label": "متجر Brand Veloura — تصفح من الكمبيوتر"
             }
         ],
         "shortcuts": [
             {
                 "name": "العطور الملكية",
+                "short_name": "عطور",
                 "url": "/perfumes/",
                 "description": "تصفح العطور الأصلية والماستر",
-                "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192"}]
+                "icons": [{"src": "/static/icons/icon-96.png", "sizes": "96x96"}]
             },
             {
                 "name": "الساعات الفاخرة",
+                "short_name": "ساعات",
                 "url": "/watches/",
                 "description": "تشكيلة الساعات الراقية",
-                "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192"}]
+                "icons": [{"src": "/static/icons/icon-96.png", "sizes": "96x96"}]
             },
             {
                 "name": "ركن الهدايا الملكي",
+                "short_name": "هدايا",
                 "url": "/gifting/",
                 "description": "تجهيز باقات الإهداء والتغليف الفاخر",
-                "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192"}]
+                "icons": [{"src": "/static/icons/icon-96.png", "sizes": "96x96"}]
             },
             {
                 "name": "سلة المشتريات",
+                "short_name": "السلة",
                 "url": "/cart/",
                 "description": "معاينة السلة وإتمام الطلب",
-                "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192"}]
+                "icons": [{"src": "/static/icons/icon-96.png", "sizes": "96x96"}]
             }
         ]
     }
@@ -1405,14 +1443,24 @@ def pwa_manifest(request):
 def service_worker(request):
     """ملف sw.js لإدارة الكاش، التصفح أوفلاين، واستقبال إشعارات PWA وتطبيق الهاتف"""
     sw_code = """
-    const CACHE_NAME = 'brand-veloura-pwa-v3';
+    const CACHE_NAME = 'brand-veloura-pwa-v4';
     const OFFLINE_URL = '/offline/';
     const PRECACHE_ASSETS = [
         '/',
         OFFLINE_URL,
         '/manifest.json',
+        '/static/icons/icon-48.png',
+        '/static/icons/icon-72.png',
+        '/static/icons/icon-96.png',
+        '/static/icons/icon-128.png',
+        '/static/icons/icon-144.png',
         '/static/icons/icon-192.png',
+        '/static/icons/icon-256.png',
+        '/static/icons/icon-384.png',
         '/static/icons/icon-512.png',
+        '/static/icons/maskable-192.png',
+        '/static/icons/maskable-512.png',
+        '/static/icons/apple-touch-icon.png',
         '/static/images/logo.jpg'
     ];
 

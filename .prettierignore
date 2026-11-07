@@ -1,0 +1,7 @@
+# Ignore Django HTML templates from prettier auto-formatting to prevent breaking Django template tags
+templates/
+**/templates/**
+*.html
+static/
+.venv/
+

@@ -8,12 +8,15 @@
     <!-- Breadcrumb & Header -->
     <div class="mb-6 pb-4 border-b border-pink-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-            <nav class="flex items-center gap-1.5 text-[11px] text-slate-400 mb-1">
-                <a href="{% url 'store:home' %}" class="hover:text-brand-600 transition">الرئيسية</a>
-                <i data-lucide="chevron-left" class="w-3 h-3 text-pink-300"></i>
-                <a href="{% url 'store:cart_view' %}" class="hover:text-brand-600 transition">سلة المشتريات</a>
-                <i data-lucide="chevron-left" class="w-3 h-3 text-pink-300"></i>
-                <span class="text-slate-900 font-bold">إتمام الطلب</span>
+            <nav class="inline-flex items-center gap-2 text-xs sm:text-sm font-bold bg-white/90 backdrop-blur-md border border-pink-200/90 rounded-2xl px-4 py-2 shadow-2xs mb-3 text-slate-600">
+                <a href="{% url 'store:home' %}" class="flex items-center gap-1.5 text-slate-600 hover:text-brand-600 transition cursor-pointer">
+                    <i data-lucide="home" class="w-4 h-4 text-brand-500"></i>
+                    <span>الرئيسية</span>
+                </a>
+                <i data-lucide="chevron-left" class="w-4 h-4 text-brand-400"></i>
+                <a href="{% url 'store:cart_view' %}" class="text-slate-600 hover:text-brand-600 transition">سلة المشتريات</a>
+                <i data-lucide="chevron-left" class="w-4 h-4 text-brand-400"></i>
+                <span class="text-brand-600 font-extrabold">إتمام الطلب</span>
             </nav>
             <h1 class="text-xl sm:text-2xl font-bold text-slate-900">إتمام الطلب والدفع</h1>
         </div>

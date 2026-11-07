@@ -16,13 +16,16 @@
     <div class="absolute -bottom-24 -right-24 w-72 h-72 bg-pink-300/30 rounded-full blur-3xl pointer-events-none"></div>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <!-- Breadcrumb -->
-        <nav class="flex items-center gap-2 text-[11px] text-slate-500 mb-6" aria-label="مسار التنقل">
-            <a href="{% url 'store:home' %}" class="hover:text-brand-600 transition">الرئيسية</a>
-            <i data-lucide="chevron-left" class="w-3.5 h-3.5 text-slate-400"></i>
-            <a href="{% url 'store:brands_list' %}" class="hover:text-brand-600 transition">الماركات</a>
-            <i data-lucide="chevron-left" class="w-3.5 h-3.5 text-slate-400"></i>
-            <span class="text-slate-900 font-bold truncate max-w-[150px]">{{ brand.name_ar }}</span>
+        <!-- Breadcrumb (Prominent Luxury Capsule) -->
+        <nav class="inline-flex items-center gap-2 text-xs sm:text-sm font-bold bg-white/90 backdrop-blur-md border border-pink-200/90 rounded-2xl px-4 py-2 shadow-2xs mb-6 text-slate-600" aria-label="مسار التنقل">
+            <a href="{% url 'store:home' %}" class="flex items-center gap-1.5 text-slate-600 hover:text-brand-600 transition cursor-pointer">
+                <i data-lucide="home" class="w-4 h-4 text-brand-500"></i>
+                <span>الرئيسية</span>
+            </a>
+            <i data-lucide="chevron-left" class="w-4 h-4 text-brand-400"></i>
+            <a href="{% url 'store:brands_list' %}" class="text-slate-600 hover:text-brand-600 transition">الماركات</a>
+            <i data-lucide="chevron-left" class="w-4 h-4 text-brand-400"></i>
+            <span class="text-brand-600 font-extrabold truncate max-w-[200px]">{{ brand.name_ar }}</span>
         </nav>
 
         <!-- Brand Identity Card -->

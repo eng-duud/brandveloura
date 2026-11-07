@@ -15,6 +15,23 @@ def store_context(request):
             cache.set('bv_active_categories', categories, timeout=300)
         except Exception:
             pass
+
+    main_categories = cache.get('bv_main_categories')
+    if main_categories is None:
+        from django.db.models import Prefetch
+        sub_prefetch = Prefetch(
+            'subcategories',
+            queryset=Category.objects.filter(is_active=True).order_by('display_order', 'name_ar')
+        )
+        main_categories = list(
+            Category.objects.filter(is_active=True, parent__isnull=True)
+            .prefetch_related(sub_prefetch)
+            .order_by('display_order', 'name_ar')
+        )
+        try:
+            cache.set('bv_main_categories', main_categories, timeout=300)
+        except Exception:
+            pass
     
     # حساب عدد عناصر السلة من الجلسة (Session-based cart)
     cart = request.session.get('cart', {})
@@ -56,6 +73,7 @@ def store_context(request):
     return {
         'store_settings': settings,
         'global_categories': categories,
+        'main_categories': main_categories,
         'cart_count': cart_count,
         'active_currency': active_currency,
         'yer_per_sar': settings.yer_per_sar or Decimal('530.00'),

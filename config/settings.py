@@ -65,6 +65,7 @@ SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 # Production Security Enhancements (Enabled when DEBUG=False and not running tests)
 if not DEBUG and 'test' not in sys.argv:
     SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True') == 'True'
+    SECURE_REDIRECT_EXEMPT = [r'^health/?$']
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True

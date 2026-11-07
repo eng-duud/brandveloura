@@ -10,17 +10,17 @@
     --bv-primary-hover: #9f1237;
     --bv-primary-light: #fff1f4;
     --bv-primary-border: #fecdd3;
-    --bv-dark: #0f172a;
-    --bv-dark-surface: #1e293b;
-    --bv-bg: #fcf9fa;
+    --bv-dark: #120e18;
+    --bv-dark-surface: #1e1726;
+    --bv-bg: #faf6f8;
     --bv-card: #ffffff;
     --bv-text: #1e293b;
     --bv-text-muted: #64748b;
-    --bv-border: #f1e5e8;
-    --bv-radius: 12px;
+    --bv-border: #f1e2e7;
+    --bv-radius: 14px;
     --bv-radius-sm: 8px;
-    --bv-radius-lg: 16px;
-    --bv-shadow: 0 4px 20px -2px rgba(190, 18, 63, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+    --bv-radius-lg: 18px;
+    --bv-shadow: 0 4px 20px -2px rgba(190, 18, 63, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
 }
 
 /* Global Typography & Direction */
@@ -40,13 +40,13 @@ html, body {
     font-family: var(--bv-font-num) !important;
 }
 
-/* Header Styling */
+/* Header Styling - Royal Obsidian Plum */
 #header {
-    background: linear-gradient(135deg, #0f172a 0%, #1e1b29 50%, #2a121e 100%) !important;
+    background: linear-gradient(135deg, #120e18 0%, #1c1424 50%, #281422 100%) !important;
     color: #ffffff !important;
-    padding: 12px 24px !important;
-    border-bottom: 2px solid rgba(225, 29, 83, 0.3) !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+    padding: 14px 28px !important;
+    border-bottom: 2px solid rgba(225, 29, 83, 0.25) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
