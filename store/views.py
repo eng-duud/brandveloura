@@ -319,13 +319,28 @@ def product_list_view(request):
                 category_subcategories = list(main_category.subcategories.filter(is_active=True).order_by('display_order', 'name_ar'))
                 products = products.filter(category=active_subcategory)
 
-    # إذا لم يتم تحديد قسم، نعتمد قسم 'العطور' كافتراضي أو أول قسم رئيسي متوفر
+    # إذا لم يتم تحديد قسم، نعتمد القسم الافتراضي المحدد من قبل الإدارة
     if not main_category and all_main_categories:
-        perfumes_cat = next((c for c in all_main_categories if c.slug == 'perfumes' or 'عطور' in c.name_ar), None)
-        main_category = perfumes_cat or all_main_categories[0]
+        # 1. فحص هل هناك قسم تم تعيينه كـ is_default=True
+        default_cat = next((c for c in all_main_categories if getattr(c, 'is_default', False)), None)
+        # 2. فحص إعدادات المتجر العامة
+        if not default_cat:
+            try:
+                settings_obj = StoreSettings.get_settings()
+                if settings_obj and settings_obj.default_category_id:
+                    default_cat = next((c for c in all_main_categories if c.id == settings_obj.default_category_id), None)
+            except Exception:
+                pass
+        # 3. محاولة البحث عن قسم العطور كخيار تقليدي
+        if not default_cat:
+            default_cat = next((c for c in all_main_categories if c.slug == 'perfumes' or 'عطور' in c.name_ar), None)
+        # 4. اختيار أول قسم رئيسي مسجل
+        main_category = default_cat or all_main_categories[0]
         current_category = main_category
         category_subcategories = list(main_category.subcategories.filter(is_active=True).order_by('display_order', 'name_ar'))
         products = products.filter(category_id__in=main_category.get_descendants_and_self_ids())
+    elif not main_category and not all_main_categories:
+        category_subcategories = []
 
     if search_query:
         products = products.filter(

@@ -45,6 +45,7 @@
     <!-- ======================================================================= -->
     <!-- TIER 1: MAIN CATEGORIES HORIZONTAL STRIP (الأقسام الرئيسية الكبيرة)       -->
     <!-- ======================================================================= -->
+    {% if all_main_categories %}
     <div class="bg-white/95 backdrop-blur-md rounded-2xl p-2 sm:p-2.5 border border-pink-200/90 shadow-2xs">
         <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5" id="main-categories-scroll-container">
             {% for cat in all_main_categories %}
@@ -58,10 +59,32 @@
                 <span class="w-2 h-2 rounded-full {% if main_category and main_category.slug == cat.slug %}bg-brand-400{% else %}bg-pink-300{% endif %}"></span>
                 {% endif %}
                 <span>{{ cat.name_ar }}</span>
+                {% if cat.is_default %}
+                <span class="text-[9px] px-1.5 py-0.2 rounded-full {% if main_category and main_category.slug == cat.slug %}bg-white/20 text-white{% else %}bg-brand-50 text-brand-600{% endif %} font-bold">افتراضي</span>
+                {% endif %}
             </a>
             {% endfor %}
         </div>
     </div>
+    {% else %}
+    <div class="bg-white/90 backdrop-blur-md rounded-2xl p-8 border border-pink-200/90 text-center space-y-3 shadow-2xs">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-pink-50 border border-pink-200 flex items-center justify-center text-brand-600">
+            <i data-lucide="layers" class="w-7 h-7"></i>
+        </div>
+        <div class="space-y-1">
+            <h3 class="text-sm font-bold text-slate-900">لا توجد أقسام مسجلة حالياً</h3>
+            <p class="text-xs text-slate-500 max-w-sm mx-auto">عند إضافة أقسامك من لوحة الإدارة ستظهر هنا تلقائياً، ويمكنك تحديد أي قسم ليكون الافتراضي.</p>
+        </div>
+        {% if user.is_staff %}
+        <div class="pt-1">
+            <a href="{% url 'admin:store_category_add' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition shadow-xs">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>إضافة قسم جديد</span>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
 
     <!-- ======================================================================= -->
     <!-- TIER 2: SUBCATEGORIES STRIP + SINGLE FAR-LEFT FILTER BUTTON            -->

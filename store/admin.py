@@ -110,8 +110,8 @@ class SubCategoryInline(admin.TabularInline):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['image_preview', 'name_ar', 'hierarchy_badge', 'category_type_badge', 'products_count', 'is_featured', 'is_active', 'display_order']
-    list_editable = ['is_featured', 'is_active', 'display_order']
+    list_display = ['image_preview', 'name_ar', 'hierarchy_badge', 'is_default', 'category_type_badge', 'products_count', 'is_featured', 'is_active', 'display_order']
+    list_editable = ['is_default', 'is_featured', 'is_active', 'display_order']
     search_fields = ['name_ar', 'name_en']
     list_filter = ['parent', 'category_type', 'is_featured', 'is_active']
     autocomplete_fields = ['parent']
@@ -131,7 +131,7 @@ class CategoryAdmin(admin.ModelAdmin):
     fieldsets = (
         ('معلومات القسم وتصنيفه الهرمي', {
             'description': 'حدد اسم القسم. إن كان قسماً رئيسياً كـ (العطور أو البخور) اترك حقل القسم الرئيسي فارغاً. وإن كان صنفاً فرعياً (مثل: بخور عدني) اختر القسم الرئيسي التابع له.',
-            'fields': (('name_ar', 'parent'), ('category_type', 'image'), ('is_featured', 'is_active', 'display_order'))
+            'fields': (('name_ar', 'parent'), ('category_type', 'image'), ('is_default', 'is_featured', 'is_active', 'display_order'))
         }),
         ('بيانات إضافية ورابط SEO (اختياري)', {
             'classes': ('collapse',),
@@ -795,7 +795,7 @@ class StoreSettingsAdmin(admin.ModelAdmin):
     fieldsets = (
         ('هوية المتجر وسعر الصرف اليومي', {
             'description': 'أي تعديل على سعر الصرف هنا سينعكس فوراً وتلقائياً على كافة أسعار المنتجات المحسوبة بالريال السعودي',
-            'fields': (('store_name', 'yer_per_sar'), 'store_tagline', 'store_logo')
+            'fields': (('store_name', 'yer_per_sar'), 'default_category', 'store_tagline', 'store_logo')
         }),
         ('أرقام التواصل وشريط الإعلانات', {
             'description': 'أرقام التواصل الظاهرة في واجهة المتجر للمحادثات السريعة',

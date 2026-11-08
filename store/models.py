@@ -45,6 +45,17 @@ class StoreSettings(models.Model):
     )
     is_announcement_active = models.BooleanField(default=True, verbose_name='تفعيل شريط الإعلانات')
     
+    # القسم الافتراضي لصفحة الأقسام والكتالوج
+    default_category = models.ForeignKey(
+        'Category',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+',
+        verbose_name='القسم الافتراضي لصفحة الأقسام',
+        help_text='حدد القسم الرئيسي الذي يفتح تلقائياً عند زيارة صفحة الأقسام بدون تحديد قسم معين'
+    )
+
     # رسوم خدمة التغليف الملكي للهدايا
     gift_wrapping_fee_yer = models.DecimalField(
         max_digits=10, decimal_places=2, default=Decimal('2000.00'), blank=True,
@@ -307,6 +318,7 @@ class Category(models.Model):
     image = models.ImageField(upload_to='categories/', null=True, blank=True, verbose_name='صورة القسم')
     image_url_fallback = models.URLField(blank=True, verbose_name='رابط صورة خارجي')
     display_order = models.PositiveIntegerField(default=0, verbose_name='ترتيب العرض')
+    is_default = models.BooleanField(default=False, verbose_name='القسم الافتراضي لصفحة الأقسام', help_text='تحديد هذا القسم كقسم رئيسي افتراضي يفتح تلقائياً للعميل عند دخول صفحة الأقسام')
     is_featured = models.BooleanField(default=True, verbose_name='عرض في الرئيسية')
     is_active = models.BooleanField(default=True, verbose_name='مفعل')
 
@@ -335,6 +347,8 @@ class Category(models.Model):
             base = slugify(self.name_en or self.name_ar, allow_unicode=True)
             self.slug = base if base else f"cat-{uuid.uuid4().hex[:6]}"
         super().save(*args, **kwargs)
+        if self.is_default:
+            Category.objects.filter(is_default=True).exclude(pk=self.pk).update(is_default=False)
         try:
             from django.core.cache import cache
             cache.delete('bv_active_categories')

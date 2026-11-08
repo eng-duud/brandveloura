@@ -236,3 +236,39 @@ class StreamlinedProductAndCategoryTests(TestCase):
         product.refresh_from_db()
         self.assertEqual(product.brand_name, 'Creed')
         self.assertEqual(product.effective_brand_name, 'Creed')
+
+    def test_default_category_configuration_and_empty_db_graceful_handling(self):
+        """فحص تحديد القسم الافتراضي من الإدارة وكذلك التعامل السلس في حال مسح كافة الأقسام"""
+        # 1. إنشاء قسم بخور وجعله هو الافتراضي
+        cat_bakhoor = Category.objects.create(
+            name_ar="البخور والعود",
+            name_en="Bakhoor",
+            slug="bakhoor",
+            is_default=True
+        )
+        
+        # زيارة صفحة الأقسام العامة بدون معامل category
+        res = self.client.get(reverse('store:product_list'))
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.context['main_category'], cat_bakhoor)
+
+        # 2. تغيير الافتراضي لقسم آخر عبر حفظ is_default
+        cat_watches = Category.objects.create(
+            name_ar="الساعات الفاخرة",
+            name_en="Luxury Watches",
+            slug="lux-watches",
+            is_default=True
+        )
+        cat_bakhoor.refresh_from_db()
+        self.assertFalse(cat_bakhoor.is_default)
+        self.assertTrue(cat_watches.is_default)
+
+        res2 = self.client.get(reverse('store:product_list'))
+        self.assertEqual(res2.status_code, 200)
+        self.assertEqual(res2.context['main_category'], cat_watches)
+
+        # 3. محاكاة المسح الكامل لكافة الأقسام والتأكد من عدم حدوث خطأ 500
+        Category.objects.all().delete()
+        res_empty = self.client.get(reverse('store:product_list'))
+        self.assertEqual(res_empty.status_code, 200)
+        self.assertContains(res_empty, 'لا توجد أقسام مسجلة حالياً')
