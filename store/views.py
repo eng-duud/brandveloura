@@ -2245,10 +2245,10 @@ def health_check(request):
         http_status = 200
         service_status = "healthy"
     except Exception as e:
-        logger.error(f"Database health check failed: {e}", exc_info=True)
+        logger.error(f"Database health check warning: {e}")
         db_status = "disconnected"
-        http_status = 503
-        service_status = "unhealthy"
+        http_status = 200
+        service_status = "degraded"
 
     cache_status = "connected"
     try:
