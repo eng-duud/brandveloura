@@ -351,12 +351,6 @@
                     </a>
                     {% endif %}
 
-                    <!-- Track Order Link (Desktop) -->
-                    <a href="{% url 'store:track_order' %}" class="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-white text-xs font-medium transition cursor-pointer min-h-[40px]" title="تتبع طلبي">
-                        <i data-lucide="truck" class="w-4 h-4 text-slate-500"></i>
-                        <span>تتبع الطلب</span>
-                    </a>
-
                     <!-- Currency Switcher (Dual YER/SAR Currency Toggle for All Devices) -->
                     <button 
                         hx-post="{% url 'store:toggle_currency' %}" 
@@ -461,10 +455,6 @@
                                 {% if unread_notifications_count > 0 %}
                                 <span class="px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[9px] font-bold font-num">{{ unread_notifications_count }}</span>
                                 {% endif %}
-                            </a>
-                            <a href="{% url 'store:track_order' %}" class="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition">
-                                <i data-lucide="truck" class="w-3.5 h-3.5 text-slate-500"></i>
-                                <span>تتبع الشحنات</span>
                             </a>
                             {% if user.is_staff %}
                             <a href="{% url 'admin:index' %}" class="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-900 hover:text-white text-slate-700 transition">
@@ -698,12 +688,6 @@
                     </h3>
                     <ul class="space-y-2 text-[11px] font-medium text-slate-600">
                         <li>
-                            <a href="{% url 'store:track_order' %}" class="hover:text-brand-600 transition flex items-center gap-1.5">
-                                <i data-lucide="truck" class="w-3 h-3 text-slate-400"></i>
-                                <span>تتبع حالة الطلب</span>
-                            </a>
-                        </li>
-                        <li>
                             <a href="{% url 'store:cart_view' %}" class="hover:text-brand-600 transition flex items-center gap-1.5">
                                 <i data-lucide="shopping-bag" class="w-3 h-3 text-slate-400"></i>
                                 <span>سلة المشتريات</span>
@@ -917,10 +901,6 @@
                 <div>
                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 px-1">الخدمات والطلبات</span>
                     <nav class="space-y-1 text-xs font-semibold">
-                        <a href="{% url 'store:track_order' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-pink-50 hover:text-slate-900 transition">
-                            <i data-lucide="truck" class="w-4 h-4 text-slate-400"></i>
-                            <span>تتبع الشحنة والطلب</span>
-                        </a>
                         {% if user.is_authenticated %}
                         <a href="{% url 'store:account_profile' %}" onclick="closeMobileSidebar()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-pink-50 hover:text-slate-900 transition">
                             <i data-lucide="user" class="w-4 h-4 text-slate-400"></i>

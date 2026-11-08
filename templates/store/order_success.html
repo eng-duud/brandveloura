@@ -136,11 +136,13 @@
 
         <!-- Links -->
         <div class="pt-3 flex flex-wrap items-center justify-center gap-5">
-            <a href="{% url 'store:track_order' %}?q={{ order.order_number }}" class="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1.5 transition">
-                <i data-lucide="truck" class="w-4 h-4"></i>
-                <span>تتبع الطلب</span>
+            {% if user.is_authenticated %}
+            <a href="{% url 'store:account_profile' %}" class="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1.5 transition">
+                <i data-lucide="package" class="w-4 h-4"></i>
+                <span>متابعة الطلب في حسابي</span>
             </a>
             <span class="text-pink-300">•</span>
+            {% endif %}
             <a href="{% url 'store:home' %}" class="text-xs font-medium text-slate-600 hover:text-slate-900 transition">
                 العودة للرئيسية
             </a>

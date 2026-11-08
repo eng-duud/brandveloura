@@ -1282,23 +1282,10 @@ def order_success_view(request, order_number):
 
 
 def track_order_view(request):
-    """تتبع حالة الطلب برقم الطلب أو الهاتف"""
-    query = request.GET.get('q', '').strip()
-    orders = []
-    searched = False
-    
-    if query:
-        searched = True
-        orders = Order.objects.filter(
-            Q(order_number__iexact=query) | Q(customer_phone__icontains=query)
-        ).order_by('-created_at')[:5]
-        
-    context = {
-        'query': query,
-        'orders': orders,
-        'searched': searched,
-    }
-    return render(request, 'store/track_order.html', context)
+    """إعادة توجيه مسار تتبع الطلب إلى الملف الشخصي وسجل الطلبات"""
+    if request.user.is_authenticated:
+        return redirect('store:account_profile')
+    return redirect('store:home')
 
 
 def pwa_manifest(request):
@@ -2154,7 +2141,6 @@ def sitemap_xml(request):
         {'loc': f"{base_url}/cosmetics/", 'priority': '0.9', 'changefreq': 'daily'},
         {'loc': f"{base_url}/brands/", 'priority': '0.9', 'changefreq': 'daily'},
         {'loc': f"{base_url}/gifting/", 'priority': '0.9', 'changefreq': 'daily'},
-        {'loc': f"{base_url}/track-order/", 'priority': '0.5', 'changefreq': 'monthly'},
     ]
     
     # Categories
