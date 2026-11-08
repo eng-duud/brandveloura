@@ -69,8 +69,8 @@
                         </span>
                         <h1 class="text-2xl sm:text-3xl font-bold leading-tight">العطور، الساعات ومستحضرات التجميل</h1>
                         <p class="text-xs text-slate-300 leading-relaxed">عطور عالمية أصلية وماستر، ساعات رجالية ونسائية، مع التوصيل السريع لكافة المحافظات.</p>
-                        <a href="{% url 'store:perfumes_catalog' %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-500 text-white font-bold text-xs shadow-md hover:bg-brand-600 transition">
-                            <span>تصفح العطور الآن</span>
+                        <a href="{% url 'store:product_list' %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-500 text-white font-bold text-xs shadow-md hover:bg-brand-600 transition">
+                            <span>تصفح الأقسام والمنتجات</span>
                             <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
                         </a>
                     </div>
@@ -431,55 +431,6 @@
     </div>
 </section>
 {% endif %}
-
-<!-- 5. Store Features Strip -->
-<section class="border-y border-pink-200 bg-white/60 py-6">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            
-            <div class="flex items-center gap-2.5 p-3 rounded-2xl bg-white border border-pink-200 shadow-2xs">
-                <div class="w-9 h-9 rounded-xl bg-brand-50 text-brand-600 border border-pink-100 flex items-center justify-center shrink-0">
-                    <i data-lucide="check-circle" class="w-4 h-4 text-brand-600"></i>
-                </div>
-                <div>
-                    <h4 class="font-bold text-slate-900 text-xs">منتجات أصلية</h4>
-                    <p class="text-[10px] text-slate-500">ضمان الجودة والمطابقة</p>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-2.5 p-3 rounded-2xl bg-white border border-pink-200 shadow-2xs">
-                <div class="w-9 h-9 rounded-xl bg-brand-50 text-brand-600 border border-pink-100 flex items-center justify-center shrink-0">
-                    <i data-lucide="truck" class="w-4 h-4 text-brand-600"></i>
-                </div>
-                <div>
-                    <h4 class="font-bold text-slate-900 text-xs">توصيل لكافة المحافظات</h4>
-                    <p class="text-[10px] text-slate-500">شحن مباشر وسريع</p>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-2.5 p-3 rounded-2xl bg-white border border-pink-200 shadow-2xs">
-                <div class="w-9 h-9 rounded-xl bg-brand-50 text-brand-600 border border-pink-100 flex items-center justify-center shrink-0">
-                    <i data-lucide="credit-card" class="w-4 h-4 text-brand-600"></i>
-                </div>
-                <div>
-                    <h4 class="font-bold text-slate-900 text-xs">طرق دفع متعددة</h4>
-                    <p class="text-[10px] text-slate-500">حوالات بنكية ومحافظ</p>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-2.5 p-3 rounded-2xl bg-white border border-pink-200 shadow-2xs">
-                <div class="w-9 h-9 rounded-xl bg-brand-50 text-brand-600 border border-pink-100 flex items-center justify-center shrink-0">
-                    <i data-lucide="headset" class="w-4 h-4 text-brand-600"></i>
-                </div>
-                <div>
-                    <h4 class="font-bold text-slate-900 text-xs">خدمة العملاء</h4>
-                    <p class="text-[10px] text-slate-500">متابعة واستفسارات</p>
-                </div>
-            </div>
-
-        </div>
-    </div>
-</section>
 
 <!-- Slider & Strip Scrolling Scripts -->
 <script>
