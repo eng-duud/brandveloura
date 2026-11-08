@@ -21,6 +21,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application source
 COPY . /app/
 
+# Ensure start script has executable permissions
+RUN chmod +x /app/start.sh
+
 # Collect static files into staticfiles directory
 RUN python manage.py collectstatic --noinput
 
@@ -31,5 +34,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/health/ || exit 1
 
-# Execute migrations and launch Gunicorn with dynamic $PORT support
-CMD ["sh", "-c", "python manage.py migrate && gunicorn --bind 0.0.0.0:${PORT:-8000} --workers 3 config.wsgi:application"]
+# Execute start script
+CMD ["/bin/sh", "/app/start.sh"]
