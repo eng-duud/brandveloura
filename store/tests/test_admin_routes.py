@@ -39,17 +39,17 @@ class AdminRoutesAndOperationsTests(TestCase):
     def test_admin_access_control(self):
         """فحص أمان لوحة الإدارة: منع المستخدم العادي والسماح للمدير فقط"""
         # مستخدم غير مسجل
-        res_anon = self.client.get('/admin/')
+        res_anon = self.client.get(reverse('admin:index'))
         self.assertEqual(res_anon.status_code, 302)
 
         # مستخدم عادي ليس لديه صلاحية staff
         self.client.force_login(self.regular_user)
-        res_user = self.client.get('/admin/')
+        res_user = self.client.get(reverse('admin:index'))
         self.assertEqual(res_user.status_code, 302)
 
         # المدير العام (Superuser)
         self.client.force_login(self.admin_user)
-        res_admin = self.client.get('/admin/')
+        res_admin = self.client.get(reverse('admin:index'))
         self.assertEqual(res_admin.status_code, 200)
 
     def test_admin_category_add_and_list(self):
@@ -57,7 +57,7 @@ class AdminRoutesAndOperationsTests(TestCase):
         self.client.force_login(self.admin_user)
 
         # عرض جدول الأقسام
-        list_res = self.client.get('/admin/store/category/')
+        list_res = self.client.get(reverse('admin:store_category_changelist'))
         self.assertEqual(list_res.status_code, 200)
 
         # إضافة قسم جديد
@@ -65,14 +65,13 @@ class AdminRoutesAndOperationsTests(TestCase):
             'name_ar': 'ساعات سويسرية راقية',
             'name_en': 'Swiss Luxury Watches',
             'slug': 'swiss-luxury-watches',
-            'category_type': 'watches',
             'description': 'أحدث الساعات',
             'display_order': '1',
             'is_featured': 'on',
             'is_active': 'on',
             '_save': 'Save'
         }
-        add_res = self.client.post('/admin/store/category/add/', post_data, follow=True)
+        add_res = self.client.post(reverse('admin:store_category_add'), post_data, follow=True)
         self.assertEqual(add_res.status_code, 200)
         self.assertTrue(Category.objects.filter(slug='swiss-luxury-watches').exists())
 
@@ -81,7 +80,7 @@ class AdminRoutesAndOperationsTests(TestCase):
         self.client.force_login(self.admin_user)
 
         # عرض جدول المنتجات
-        list_res = self.client.get('/admin/store/product/')
+        list_res = self.client.get(reverse('admin:store_product_changelist'))
         self.assertEqual(list_res.status_code, 200)
 
         # إضافة منتج جديد
@@ -106,7 +105,7 @@ class AdminRoutesAndOperationsTests(TestCase):
             'images-MAX_NUM_FORMS': '1000',
             '_save': 'Save'
         }
-        add_res = self.client.post('/admin/store/product/add/', product_data, follow=True)
+        add_res = self.client.post(reverse('admin:store_product_add'), product_data, follow=True)
         self.assertEqual(add_res.status_code, 200)
 
         created_prod = Product.objects.filter(slug='sauvage-elixir-dior').first()
@@ -115,7 +114,7 @@ class AdminRoutesAndOperationsTests(TestCase):
         self.assertTrue(created_prod.has_grades)
 
         # تعديل المنتج
-        edit_url = f'/admin/store/product/{created_prod.id}/change/'
+        edit_url = reverse('admin:store_product_change', args=[created_prod.id])
         product_data['stock_quantity'] = '35'
         edit_res = self.client.post(edit_url, product_data, follow=True)
         self.assertEqual(edit_res.status_code, 200)
@@ -144,12 +143,12 @@ class AdminRoutesAndOperationsTests(TestCase):
         )
 
         # استعراض قائمة الطلبات في الإدارة
-        list_res = self.client.get('/admin/store/order/')
+        list_res = self.client.get(reverse('admin:store_order_changelist'))
         self.assertEqual(list_res.status_code, 200)
         self.assertContains(list_res, order.order_number)
 
         # استعراض صفحة تعديل الطلب
-        change_url = f'/admin/store/order/{order.id}/change/'
+        change_url = reverse('admin:store_order_change', args=[order.id])
         detail_res = self.client.get(change_url)
         self.assertEqual(detail_res.status_code, 200)
 
@@ -196,7 +195,7 @@ class AdminRoutesAndOperationsTests(TestCase):
             'is_active': 'on',
             '_save': 'Save'
         }
-        res_acc = self.client.post('/admin/store/paymentaccount/add/', acc_data, follow=True)
+        res_acc = self.client.post(reverse('admin:store_paymentaccount_add'), acc_data, follow=True)
         self.assertEqual(res_acc.status_code, 200)
         self.assertTrue(PaymentAccount.objects.filter(account_number='5544332211').exists())
 
@@ -208,7 +207,7 @@ class AdminRoutesAndOperationsTests(TestCase):
             'is_active': 'on',
             '_save': 'Save'
         }
-        res_zone = self.client.post('/admin/store/shippingzone/add/', zone_data, follow=True)
+        res_zone = self.client.post(reverse('admin:store_shippingzone_add'), zone_data, follow=True)
         self.assertEqual(res_zone.status_code, 200)
         self.assertTrue(ShippingZone.objects.filter(city_name='حضرموت - المكلا').exists())
 
@@ -217,7 +216,7 @@ class AdminRoutesAndOperationsTests(TestCase):
         self.client.force_login(self.admin_user)
 
         settings_obj = StoreSettings.get_settings()
-        change_url = f'/admin/store/storesettings/{settings_obj.id}/change/'
+        change_url = reverse('admin:store_storesettings_change', args=[settings_obj.id])
         settings_data = {
             'store_name': 'Brand Veloura Boutique',
             'store_tagline': 'بوتيك الفخامة الأول للعطور والساعات ومستلزمات التجميل',
@@ -250,7 +249,7 @@ class AdminRoutesAndOperationsTests(TestCase):
             'is_active': 'on',
             '_save': 'Save'
         }
-        res = self.client.post('/admin/store/herobanner/add/', banner_data, follow=True)
+        res = self.client.post(reverse('admin:store_herobanner_add'), banner_data, follow=True)
         self.assertEqual(res.status_code, 200)
         self.assertTrue(HeroBanner.objects.filter(title='تشكيلة العطور الخاصة 2026').exists())
 

@@ -110,10 +110,10 @@ class SubCategoryInline(admin.TabularInline):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['image_preview', 'name_ar', 'hierarchy_badge', 'is_default', 'category_type_badge', 'products_count', 'is_featured', 'is_active', 'display_order']
+    list_display = ['image_preview', 'name_ar', 'hierarchy_badge', 'is_default', 'products_count', 'is_featured', 'is_active', 'display_order']
     list_editable = ['is_default', 'is_featured', 'is_active', 'display_order']
     search_fields = ['name_ar', 'name_en']
-    list_filter = ['parent', 'category_type', 'is_featured', 'is_active']
+    list_filter = ['parent', 'is_featured', 'is_active']
     autocomplete_fields = ['parent']
     prepopulated_fields = {'slug': ('name_ar',)}
     list_per_page = 25
@@ -131,7 +131,7 @@ class CategoryAdmin(admin.ModelAdmin):
     fieldsets = (
         ('معلومات القسم وتصنيفه الهرمي', {
             'description': 'حدد اسم القسم. إن كان قسماً رئيسياً كـ (العطور أو البخور) اترك حقل القسم الرئيسي فارغاً. وإن كان صنفاً فرعياً (مثل: بخور عدني) اختر القسم الرئيسي التابع له.',
-            'fields': (('name_ar', 'parent'), ('category_type', 'image'), ('is_default', 'is_featured', 'is_active', 'display_order'))
+            'fields': (('name_ar', 'parent'), 'image', ('is_default', 'is_featured', 'is_active', 'display_order'))
         }),
         ('بيانات إضافية ورابط SEO (اختياري)', {
             'classes': ('collapse',),
@@ -139,6 +139,11 @@ class CategoryAdmin(admin.ModelAdmin):
             'fields': (('name_en', 'slug'), 'description', 'image_url_fallback')
         }),
     )
+
+    def save_model(self, request, obj, form, change):
+        if not getattr(obj, 'category_type', None):
+            obj.category_type = 'general'
+        super().save_model(request, obj, form, change)
 
     @admin.display(description='المستوى')
     def hierarchy_badge(self, obj):
@@ -151,44 +156,11 @@ class CategoryAdmin(admin.ModelAdmin):
             '<span style="background-color: #fdf2f8; color: #be123f; border: 1px solid #fecdd3; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">⭐ قسم رئيسي</span>'
         )
 
-    def get_form(self, request, obj=None, **kwargs):
-        form_class = super().get_form(request, obj, **kwargs)
-
-        class CustomCategoryAdminForm(form_class):
-            def __init__(self, *args, **form_kwargs):
-                super().__init__(*args, **form_kwargs)
-                if 'category_type' in self.fields:
-                    target_obj = obj or getattr(self, 'instance', None)
-                    if target_obj and getattr(target_obj, 'pk', None) and target_obj.category_type and target_obj.category_type not in [c[0] for c in Category.CATEGORY_TYPES]:
-                        legacy_dict = dict(getattr(Category, 'ALL_CATEGORY_TYPES', []))
-                        legacy_label = legacy_dict.get(target_obj.category_type, target_obj.category_type)
-                        self.fields['category_type'].choices = list(Category.CATEGORY_TYPES) + [(target_obj.category_type, f"{legacy_label} (سابق)")]
-                    else:
-                        self.fields['category_type'].choices = list(Category.CATEGORY_TYPES)
-
-        return CustomCategoryAdminForm
-
     @admin.display(description='الصورة')
     def image_preview(self, obj):
         return format_html(
             '<img src="{}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 8px; border: 1.5px solid #fecdd3;" />',
             obj.get_image_url
-        )
-
-    @admin.display(description='نوع القسم')
-    def category_type_badge(self, obj):
-        types_map = {
-            'perfumes': ('عطور فاخرة', '#be185d', '#fdf2f8'),
-            'watches': ('ساعات راقية', '#0369a1', '#f0f9ff'),
-            'general': ('عام / أقسام أخرى', '#475569', '#f8fafc'),
-            'cosmetics': ('مستحضرات تجميل', '#b45309', '#fffbeb'),
-            'care': ('عناية بالبشرة', '#047857', '#ecfdf5'),
-            'bundles': ('باقات هدايا', '#6d28d9', '#f5f3ff'),
-        }
-        title, color, bg = types_map.get(obj.category_type, ('عام / أقسام أخرى', '#475569', '#f8fafc'))
-        return format_html(
-            '<span style="background-color: {}; color: {}; border: 1px solid {}; padding: 2px 9px; border-radius: 6px; font-weight: 700; font-size: 11px;">{}</span>',
-            bg, color, color + '33', title
         )
 
     def get_queryset(self, request):

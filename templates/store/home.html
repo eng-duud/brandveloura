@@ -241,7 +241,7 @@
             {% for cat in categories %}
             <div class="w-[160px] sm:w-[185px] md:w-[200px] shrink-0 snap-start flex flex-col">
                 <a 
-                    href="{% if cat.category_type == 'perfumes' %}{% url 'store:perfumes_catalog' %}{% elif cat.category_type == 'watches' %}{% url 'store:watches_catalog' %}{% elif cat.category_type in 'cosmetics care' %}{% url 'store:cosmetics_catalog' %}{% else %}{% url 'store:product_list' %}?category={{ cat.slug }}{% endif %}" 
+                    href="{% url 'store:product_list' %}?category={{ cat.slug }}" 
                     class="h-full rounded-2xl bg-white border border-pink-200 hover:border-brand-400 p-3 flex flex-col justify-between transition-all duration-200 hover:shadow-md group cursor-pointer text-center"
                 >
                     <div>

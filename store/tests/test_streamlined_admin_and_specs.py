@@ -109,48 +109,32 @@ class StreamlinedProductAndCategoryTests(TestCase):
         self.assertNotIn('care', actual_keys)
         self.assertNotIn('bundles', actual_keys)
 
-    def test_category_admin_form_choices_and_legacy_compatibility(self):
-        """التحقق من أن نموذج إضافة قسم جديد يقتصر على الأقسام المعتمدة، مع دعم الأقسام القديمة"""
+    def test_category_admin_form_omits_category_type(self):
+        """التحقق من تبسيط لوحة الإدارة وإلغاء حقل نوع القسم من واجهة الإضافة والتعديل"""
         site = AdminSite()
         cat_admin = CategoryAdmin(Category, site)
 
-        # عند إضافة قسم جديد (obj=None)
-        form_class_add = cat_admin.get_form(None, obj=None)
-        form_add = form_class_add()
-        add_choices = [c[0] for c in form_add.fields['category_type'].choices]
-        self.assertEqual(set(add_choices), {'perfumes', 'watches', 'general'})
-        self.assertNotIn('cosmetics', add_choices)
-        self.assertNotIn('care', add_choices)
-        self.assertNotIn('bundles', add_choices)
+        # التأكد من عدم وجود حقل category_type في الحقول المعروضة للإدارة
+        admin_fields = [f for fs in cat_admin.fieldsets for row in fs[1]['fields'] for f in (row if isinstance(row, tuple) else [row])]
+        self.assertNotIn('category_type', admin_fields)
+        self.assertNotIn('category_type', cat_admin.list_display)
+        self.assertNotIn('category_type', cat_admin.list_filter)
 
-        # عند تعديل قسم موجود مسبقاً بنوع قديم (backward compatibility)
-        legacy_cat = Category.objects.create(
-            name_ar="مستحضرات تجميل قديمة",
-            slug="old-cosmetics",
-            category_type="cosmetics"
-        )
-        form_class_edit = cat_admin.get_form(None, obj=legacy_cat)
-        form_edit = form_class_edit(instance=legacy_cat)
-        edit_choices = [c[0] for c in form_edit.fields['category_type'].choices]
-        self.assertIn('cosmetics', edit_choices)
-
-        # فحص إمكانية حفظ القسم القديم عبر لوحة الإدارة دون أخطاء تحقق
+        # فحص إمكانية حفظ القسم الجديد وتعيين النوع التلقائي general
         self.client.force_login(self.admin_user)
         post_data = {
-            'name_ar': 'مستحضرات تجميل محدثة',
-            'name_en': 'Updated Cosmetics',
-            'slug': 'old-cosmetics',
-            'category_type': 'cosmetics',
-            'description': 'وصف تجريبي',
+            'name_ar': 'قسم جديد مبسط',
+            'slug': 'simple-category',
             'display_order': '5',
             'is_featured': 'on',
             'is_active': 'on',
             '_save': 'Save'
         }
-        res = self.client.post(f'/admin/store/category/{legacy_cat.id}/change/', post_data, follow=True)
+        res = self.client.post(reverse('admin:store_category_add'), post_data, follow=True)
         self.assertEqual(res.status_code, 200)
-        legacy_cat.refresh_from_db()
-        self.assertEqual(legacy_cat.name_ar, 'مستحضرات تجميل محدثة')
+        new_cat = Category.objects.get(slug='simple-category')
+        self.assertEqual(new_cat.name_ar, 'قسم جديد مبسط')
+        self.assertEqual(new_cat.category_type, 'general')
 
     def test_product_detail_and_quick_view_omit_specifications(self):
         """التحقق من حذف بلوك المواصفات الفنية والتركيز على وصف المنتج في صفحة المنتج ونافذة النظرة السريعة"""
@@ -209,7 +193,7 @@ class StreamlinedProductAndCategoryTests(TestCase):
             'images-MAX_NUM_FORMS': '1000',
             '_save': 'Save'
         }
-        res = self.client.post('/admin/store/product/add/', post_data, follow=True)
+        res = self.client.post(reverse('admin:store_product_add'), post_data, follow=True)
         self.assertEqual(res.status_code, 200)
         product = Product.objects.filter(name_ar='عطر شانيل الحصري').first()
         self.assertIsNotNone(product)
@@ -231,7 +215,7 @@ class StreamlinedProductAndCategoryTests(TestCase):
             'images-MAX_NUM_FORMS': '1000',
             '_save': 'Save'
         }
-        res_edit = self.client.post(f'/admin/store/product/{product.id}/change/', post_data_edit, follow=True)
+        res_edit = self.client.post(reverse('admin:store_product_change', args=[product.id]), post_data_edit, follow=True)
         self.assertEqual(res_edit.status_code, 200)
         product.refresh_from_db()
         self.assertEqual(product.brand_name, 'Creed')
