@@ -43,3 +43,7 @@ staticfiles/
 *.swp
 *.swo
 
+
+# Node/Tailwind build dependencies
+node_modules/
+npm-debug.log*

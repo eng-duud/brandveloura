@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load image_optimization %}
 
 {% block title %}{{ brand.name_ar }}{% if brand.name_en %} ({{ brand.name_en }}){% endif %} | {{ store_settings.store_name }}{% endblock %}
 
@@ -34,9 +35,13 @@
             <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-white border-2 border-pink-200 p-3 shadow-luxury flex items-center justify-center shrink-0 group transition duration-300 hover:scale-105">
                 {% if brand.logo or brand.logo_url_fallback %}
                 <img 
-                    src="{{ brand.get_logo_url }}" 
+                    src="{{ brand.get_logo_url|cloudinary_webp:192 }}"
+                    srcset="{{ brand.get_logo_url|cloudinary_webp_srcset:'96,192,288' }}"
+                    sizes="112px"
                     alt="{{ brand.name_ar }}" 
                     class="w-full h-full object-contain"
+                    loading="eager"
+                    decoding="async"
                 >
                 {% else %}
                 <span class="text-3xl font-bold text-brand-600 font-serif">
@@ -308,7 +313,7 @@
             >
                 <div class="w-12 h-12 rounded-xl bg-pink-50/50 border border-pink-100 flex items-center justify-center mb-2 p-1 group-hover:scale-105 transition-all">
                     {% if ob.logo or ob.logo_url_fallback %}
-                    <img src="{{ ob.get_logo_url }}" alt="{{ ob.name_ar }}" class="w-full h-full object-contain">
+                    <img src="{{ ob.get_logo_url|cloudinary_webp:160 }}" srcset="{{ ob.get_logo_url|cloudinary_webp_srcset:'96,160,240' }}" sizes="64px" alt="{{ ob.name_ar }}" loading="lazy" decoding="async" class="w-full h-full object-contain">
                     {% else %}
                     <span class="text-xs font-bold text-brand-600 font-serif">{{ ob.name_en|default:ob.name_ar|slice:":2"|upper }}</span>
                     {% endif %}

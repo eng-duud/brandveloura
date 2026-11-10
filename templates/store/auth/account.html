@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static image_optimization %}
 
 {% block title %}حسابي | Brand Veloura{% endblock %}
 
@@ -257,7 +257,7 @@
                     <div class="flex items-center justify-between text-xs py-1.5 border-b border-slate-50 last:border-none">
                         <div class="flex items-center gap-3">
                             {% if item.product_image_url %}
-                            <img src="{{ item.product_image_url }}" alt="{{ item.product_name }}" class="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0">
+                            <img src="{{ item.product_image_url|cloudinary_webp:96 }}" alt="{{ item.product_name }}" width="40" height="40" loading="lazy" decoding="async" class="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0">
                             {% endif %}
                             <div>
                                 <p class="font-bold text-slate-800">{{ item.product_name }}</p>

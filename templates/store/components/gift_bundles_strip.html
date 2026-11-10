@@ -1,4 +1,5 @@
 <!-- UI-PATTERN: Gift Bundles Showcase Strip (شريط باقات الهدايا) -->
+{% load image_optimization %}
 {% if gift_bundles %}
 <section class="py-7 bg-white/40 border-t border-pink-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -65,9 +66,12 @@
                         <div class="aspect-4/3 w-full rounded-xl overflow-hidden bg-pink-50/30 mb-3 relative border border-pink-100">
                             {% if bundle.primary_image_url %}
                             <img 
-                                src="{{ bundle.primary_image_url }}" 
+                                src="{{ bundle.primary_image_url|cloudinary_webp:360 }}"
+                                srcset="{{ bundle.primary_image_url|cloudinary_webp_srcset:'240,360,540' }}"
+                                sizes="250px"
                                 alt="{{ bundle.name_ar }}" 
                                 loading="lazy" 
+                                decoding="async"
                                 class="w-full h-full object-cover"
                             >
                             {% else %}

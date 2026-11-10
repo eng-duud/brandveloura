@@ -39,3 +39,6 @@ Thumbs.db
 run.bat
 run.ps1
 
+
+# Frontend build dependencies (installed in the dedicated CSS build stage)
+node_modules/

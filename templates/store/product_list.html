@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load image_optimization %}
 
 {% block title %}
     {% if active_subcategory %}{{ active_subcategory.name_ar }} — {{ main_category.name_ar }} | {% elif main_category %}{{ main_category.name_ar }} | {% endif %}الأقسام والمنتجات — {{ store_settings.store_name }}
@@ -54,7 +55,7 @@
                 class="px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 flex items-center gap-2 {% if main_category and main_category.slug == cat.slug %}bg-slate-900 text-white shadow-xs{% else %}bg-pink-50/70 hover:bg-pink-100 text-slate-700 border border-pink-200/60{% endif %}"
             >
                 {% if cat.image %}
-                <img src="{{ cat.get_image_url }}" alt="{{ cat.name_ar }}" class="w-5 h-5 rounded-full object-cover shrink-0">
+                <img src="{{ cat.get_image_url|cloudinary_webp:48 }}" alt="{{ cat.name_ar }}" width="20" height="20" loading="lazy" decoding="async" class="w-5 h-5 rounded-full object-cover shrink-0">
                 {% else %}
                 <span class="w-2 h-2 rounded-full {% if main_category and main_category.slug == cat.slug %}bg-brand-400{% else %}bg-pink-300{% endif %}"></span>
                 {% endif %}

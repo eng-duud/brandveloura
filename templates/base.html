@@ -1,9 +1,9 @@
-{% load static %}
+{% load static image_optimization %}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ store_settings.store_name }}{% endblock %}</title>
     <meta name="description" content="{% block meta_description %}{{ store_settings.store_name }} — متجر العطور والساعات ومستحضرات التجميل{% endblock %}">
     <meta name="keywords" content="{% block meta_keywords %}عطور أصلية, عطور ماستر, ساعات, مستحضرات تجميل, عناية بالبشرة, Brand Veloura, متجر فيلورا, عطور اليمن{% endblock %}">
@@ -79,58 +79,14 @@
     <meta name="msapplication-TileImage" content="/static/icons/icon-144.png">
     <meta name="msapplication-TileColor" content="#FFF5F7">
 
-    <!-- Google Fonts: Shrikhand & Lobster Two (Bespoke Logo Mark) + IBM Plex Sans Arabic (Luxury Standard) + Plus Jakarta Sans (Clean Num) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Lobster+Two:ital,wght@0,700;1,700&family=Pacifico&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Shrikhand&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
+    <link rel="dns-prefetch" href="//res.cloudinary.com">
+    <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
 
-    <!-- Tailwind CSS (CDN with Custom Design Tokens) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['"IBM Plex Sans Arabic"', 'system-ui', 'sans-serif'],
-                        ibm: ['"IBM Plex Sans Arabic"', 'sans-serif'],
-                        num: ['"Plus Jakarta Sans"', '"IBM Plex Sans Arabic"', 'sans-serif'],
-                        brandlogo: ['"Shrikhand"', '"Lobster Two"', '"Pacifico"', 'cursive'],
-                    },
-                    colors: {
-                        brand: {
-                            50: '#fff0f7',
-                            100: '#fde4f2',
-                            200: '#fec2f5',
-                            300: '#fba7e8',
-                            400: '#f672d4',
-                            500: '#e83ab8',
-                            600: '#d11a9e',
-                            700: '#b10f81',
-                            800: '#920f6a',
-                            900: '#791258',
-                            950: '#4a0434',
-                        },
-                        pearl: '#FFF0F7',
-                        slate: {
-                            850: '#151f33',
-                            950: '#0a0f1d',
-                        }
-                    },
-                    boxShadow: {
-                        'luxury': '0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03)',
-                        'luxury-lg': '0 12px 30px -4px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04)',
-                        'glass': '0 8px 32px 0 rgba(15, 23, 42, 0.04)',
-                    }
-                }
-            }
-        }
-    </script>
-
-    <!-- HTMX (Lightweight 14KB Instant Interactivity) -->
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Self-hosted, version-pinned storefront scripts; defer to keep HTML parsing non-blocking. -->
+    <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
+    <script src="{% static 'js/lucide-sprite.js' %}" data-sprite-url="{% static 'icons/lucide-sprite.svg' %}" defer></script>
 
     <style>
         body {
@@ -181,19 +137,8 @@
             background-size: 0.95rem;
             padding-left: 2.2rem !important;
         }
-        /* Official Brand Veloura Logo Font — Milkshake */
-        @font-face {
-            font-family: 'Milkshake';
-            src: url("{% static 'fonts/Milkshake.woff2' %}") format('woff2'),
-                 url("{% static 'fonts/Milkshake.woff' %}") format('woff'),
-                 url("https://db.onlinewebfonts.com/t/13dbbd029d70f10549374a111e88aee0.woff2") format('woff2');
-            font-weight: normal;
-            font-style: normal;
-            font-display: swap;
-        }
-
         .font-brand-logo {
-            font-family: 'Milkshake', 'Shrikhand', 'Lobster Two', 'Pacifico', cursive !important;
+            font-family: 'Milkshake', cursive !important;
             letter-spacing: 0.02em;
             transform: translateY(-0.5px);
         }
@@ -240,7 +185,7 @@
     <!-- PWA Install Banner (Luxury Boutique Palette - Matched with Brand Logo) -->
     <div id="pwa-install-banner" class="hidden bg-[#0f172a] text-white px-4 py-2.5 text-xs md:text-sm flex items-center justify-between shadow-md sticky top-0 z-50 border-b border-white/10">
         <div class="flex items-center gap-3">
-            <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-8 h-8 rounded-xl object-cover shadow-xs border border-[#fec2f5]/40 shrink-0">
+                    <img src="{% static 'images/logo.webp' %}" alt="Brand Veloura" width="32" height="32" decoding="async" class="w-8 h-8 rounded-xl object-cover shadow-xs border border-[#fec2f5]/40 shrink-0">
             <div>
                 <p class="tracking-wide text-white flex items-center gap-1.5">
                     <span class="text-xs font-bold text-slate-300">تطبيق</span>
@@ -314,7 +259,7 @@
                     </button>
 
                     <a href="{% url 'store:home' %}" class="flex items-center gap-2 sm:gap-2.5 group cursor-pointer">
-                        <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-2xl object-cover shadow-xs group-hover:scale-105 transition-all duration-300 border border-pink-200 shrink-0">
+                        <img src="{% static 'images/logo.webp' %}" alt="Brand Veloura" width="44" height="44" decoding="async" class="w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-2xl object-cover shadow-xs group-hover:scale-105 transition-all duration-300 border border-pink-200 shrink-0">
                         <div>
                             <span class="font-brand-logo text-xl md:text-2xl text-slate-900 tracking-wide block leading-tight">Brand Veloura</span>
                         </div>
@@ -427,7 +372,7 @@
                             onclick="toggleUserMenu(event)"
                             class="px-2.5 sm:px-3.5 py-2 rounded-2xl bg-gradient-to-r from-rose-50 to-white hover:from-brand-50 hover:to-rose-50 border border-rose-200/90 text-slate-800 text-xs font-bold flex items-center gap-2 transition shadow-2xs cursor-pointer min-h-[44px] group">
                             {% if user.store_profile.avatar_url %}
-                            <img src="{{ user.store_profile.avatar_url }}" alt="{{ user.first_name|default:user.username }}" class="w-5 h-5 rounded-full object-cover border border-brand-400">
+                            <img src="{{ user.store_profile.avatar_url|cloudinary_webp:48 }}" alt="{{ user.first_name|default:user.username }}" width="20" height="20" decoding="async" class="w-5 h-5 rounded-full object-cover border border-brand-400">
                             {% else %}
                             <div class="w-5 h-5 rounded-full bg-brand-600 text-white flex items-center justify-center text-[10px] font-serif font-bold">
                                 {{ user.first_name|default:user.username|slice:":1"|upper }}
@@ -621,7 +566,7 @@
                 <!-- 1. الهوية والنبذة (Brand & Social) -->
                 <div class="space-y-3.5">
                     <div class="flex items-center gap-2.5">
-                        <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-10 h-10 rounded-xl object-cover shadow-xs border border-rose-200 shrink-0">
+                        <img src="{% static 'images/logo.webp' %}" alt="Brand Veloura" width="40" height="40" loading="lazy" decoding="async" class="w-10 h-10 rounded-xl object-cover shadow-xs border border-rose-200 shrink-0">
                         <div>
                             <span class="font-brand-logo text-xl text-slate-900 tracking-wide block leading-tight">Brand Veloura</span>
                         </div>
@@ -807,7 +752,7 @@
             <!-- 1. Header of Sidebar -->
             <div class="p-4 border-b border-pink-200 flex items-center justify-between bg-[#FFF0F7]">
                 <div class="flex items-center gap-2.5">
-                    <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-9 h-9 rounded-xl object-cover shadow-xs border border-pink-200 shrink-0">
+                    <img src="{% static 'images/logo.webp' %}" alt="Brand Veloura" width="36" height="36" decoding="async" class="w-9 h-9 rounded-xl object-cover shadow-xs border border-pink-200 shrink-0">
                     <div>
                         <span class="font-brand-logo text-lg text-slate-900 tracking-wide block leading-tight">Brand Veloura</span>
                     </div>
@@ -824,7 +769,7 @@
                 {% if user.is_authenticated %}
                 <div class="p-3 rounded-2xl bg-gradient-to-r from-pink-50 to-white border border-pink-200 flex items-center gap-3 shadow-2xs">
                     {% if user.store_profile.avatar_url %}
-                    <img src="{{ user.store_profile.avatar_url }}" alt="{{ user.first_name }}" class="w-10 h-10 rounded-xl object-cover border border-brand-300 shrink-0">
+                    <img src="{{ user.store_profile.avatar_url|cloudinary_webp:96 }}" alt="{{ user.first_name }}" width="40" height="40" loading="lazy" decoding="async" class="w-10 h-10 rounded-xl object-cover border border-brand-300 shrink-0">
                     {% else %}
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-pink-500 text-white font-serif font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs">
                         {{ user.first_name|default:user.username|slice:":1"|upper }}
@@ -865,7 +810,7 @@
                             <span class="flex items-center gap-2.5 font-bold">
                                 <span class="w-7 h-7 rounded-lg bg-pink-100/80 flex items-center justify-center text-brand-600 shrink-0 overflow-hidden">
                                     {% if cat.image %}
-                                    <img src="{{ cat.get_image_url }}" alt="{{ cat.name_ar }}" class="w-full h-full object-cover">
+                                    <img src="{{ cat.get_image_url|cloudinary_webp:64 }}" alt="{{ cat.name_ar }}" width="28" height="28" loading="lazy" decoding="async" class="w-full h-full object-cover">
                                     {% else %}
                                     <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
                                     {% endif %}
@@ -999,7 +944,7 @@
 
     <!-- PWA & Lucide Scripts -->
     <script>
-        lucide.createIcons();
+        if (window.lucide) window.lucide.createIcons();
 
         // Sync mobile bottom navigation cart badge with top header badge
         function syncCartBadges() {
@@ -1227,7 +1172,7 @@
         }
 
         document.body.addEventListener('htmx:afterSwap', function(evt) {
-            lucide.createIcons();
+            if (window.lucide) window.lucide.createIcons();
             // If swap targeted the quick view content, make sure modal is visible
             if (evt.detail.target && evt.detail.target.id === 'quick-view-content') {
                 openQuickViewModal();
@@ -1272,7 +1217,7 @@
             toast.className = `${bgClass} px-5 py-3 rounded-2xl shadow-luxury-lg text-xs font-bold flex items-center gap-2 animate-toast pointer-events-auto border border-white/10`;
             toast.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 text-rose-300"></i><span>${message}</span>`;
             container.appendChild(toast);
-            lucide.createIcons();
+            if (window.lucide) window.lucide.createIcons();
             setTimeout(() => {
                 toast.style.opacity = '0';
                 toast.style.transform = 'translate(-50%, -20px)';
@@ -1604,8 +1549,8 @@
             const menu = document.getElementById('notifications-dropdown-menu');
             if (menu) {
                 menu.classList.toggle('hidden');
-                if (!menu.classList.contains('hidden') && typeof lucide !== 'undefined') {
-                    lucide.createIcons();
+                if (!menu.classList.contains('hidden') && window.lucide) {
+                    window.lucide.createIcons();
                 }
             }
         }

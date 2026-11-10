@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load image_optimization %}
 
 {% block title %}{{ product.name_ar }} | {{ product.brand_name }} — {{ store_settings.store_name }}{% endblock %}
 
@@ -113,8 +114,12 @@
             <div class="h-64 sm:h-80 lg:h-auto lg:aspect-square max-h-[300px] sm:max-h-[360px] lg:max-h-[400px] w-full rounded-2xl sm:rounded-3xl overflow-hidden bg-white border border-pink-200/90 shadow-2xs relative group flex items-center justify-center p-3 sm:p-5">
                 <img 
                     id="main-product-image"
-                    src="{{ product.primary_image_url }}" 
+                    src="{{ product.primary_image_url|cloudinary_webp:960 }}"
+                    srcset="{{ product.primary_image_url|cloudinary_webp_srcset:'640,960,1280' }}"
+                    sizes="(min-width: 1024px) 42vw, 100vw"
                     alt="{{ product.name_ar }}" 
+                    fetchpriority="high"
+                    decoding="async"
                     class="max-h-full max-w-full object-contain transition-all duration-300 ease-out group-hover:scale-105"
                 >
                 {% if product.discount_percentage > 0 %}
@@ -130,11 +135,11 @@
                 {% for img in images %}
                 <button 
                     type="button"
-                    onclick="switchProductGalleryImage(this, '{{ img.get_image_url }}')"
+                    onclick="switchProductGalleryImage(this, '{{ img.get_image_url|cloudinary_webp:960 }}')"
                     class="gallery-thumb-btn w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl overflow-hidden border-2 transition-all duration-200 shrink-0 bg-white p-1 cursor-pointer focus:outline-none flex items-center justify-center {% if forloop.first %}border-brand-600 ring-2 ring-brand-200/90 shadow-xs{% else %}border-pink-200/70 hover:border-brand-300 opacity-75 hover:opacity-100{% endif %}"
                     aria-label="عرض صورة {{ product.name_ar }} {{ forloop.counter }}"
                 >
-                    <img src="{{ img.get_image_url }}" alt="{{ product.name_ar }} - صورة {{ forloop.counter }}" class="max-h-full max-w-full object-contain">
+                    <img src="{{ img.get_image_url|cloudinary_webp:160 }}" srcset="{{ img.get_image_url|cloudinary_webp_srcset:'96,160,240' }}" sizes="80px" alt="{{ product.name_ar }} - صورة {{ forloop.counter }}" loading="lazy" decoding="async" class="max-h-full max-w-full object-contain">
                 </button>
                 {% endfor %}
             </div>
@@ -442,6 +447,8 @@
         if (!mainImg) return;
         mainImg.style.opacity = '0.35';
         setTimeout(() => {
+            mainImg.removeAttribute('srcset');
+            mainImg.removeAttribute('sizes');
             mainImg.src = newSrc;
             mainImg.style.opacity = '1';
         }, 100);

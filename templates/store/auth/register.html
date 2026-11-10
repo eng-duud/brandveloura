@@ -16,7 +16,7 @@
         <!-- Header & Brand Mark -->
         <div class="text-center space-y-1.5">
             <a href="{% url 'store:home' %}" class="inline-block group">
-                <img src="{% static 'images/logo.jpg' %}" alt="Brand Veloura" class="w-14 h-14 rounded-2xl object-cover shadow-sm border border-slate-200 mx-auto mb-1 group-hover:scale-105 transition-transform">
+                <img src="{% static 'images/logo.webp' %}" alt="Brand Veloura" width="56" height="56" decoding="async" class="w-14 h-14 rounded-2xl object-cover shadow-sm border border-slate-200 mx-auto mb-1 group-hover:scale-105 transition-transform">
                 <span class="font-brand-logo text-2xl text-slate-900 tracking-wide block leading-tight">Brand Veloura</span>
             </a>
             <h1 class="text-xl sm:text-2xl font-bold text-slate-900 mt-2">إنشاء حساب جديد</h1>
@@ -235,7 +235,7 @@
             input.type = 'password';
             icon.setAttribute('data-lucide', 'eye');
         }
-        lucide.createIcons();
+        if (window.lucide) window.lucide.createIcons();
     }
 
     function onGoogleAuthCredential(response) {
@@ -250,4 +250,3 @@
     }
 </script>
 {% endblock %}
-

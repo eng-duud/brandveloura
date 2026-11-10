@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load image_optimization %}
 
 {% block title %}{{ store_settings.store_name }} — متجر العطور والساعات ومستحضرات التجميل{% endblock %}
 
@@ -18,8 +19,13 @@
                 >
                     <!-- Background Image -->
                     <img 
-                        src="{{ banner.get_image_url }}" 
+                        src="{{ banner.get_image_url|cloudinary_webp:1280 }}"
+                        srcset="{{ banner.get_image_url|cloudinary_webp_srcset:'768,1280,1600' }}"
+                        sizes="100vw"
                         alt="{{ banner.title }}" 
+                        loading="{% if forloop.first %}eager{% else %}lazy{% endif %}"
+                        decoding="async"
+                        {% if forloop.first %}fetchpriority="high"{% endif %}
                         class="absolute inset-0 w-full h-full object-cover opacity-60 scale-100 transition-transform duration-3000 ease-out"
                     >
                     <!-- Elegant Dark Gradient for Readability -->
@@ -60,7 +66,7 @@
             {% else %}
                 <!-- Fallback Banner -->
                 <div class="hero-slide absolute inset-0 opacity-100 z-10 flex items-center">
-                    <img src="https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1600&q=80" alt="Brand Veloura" class="absolute inset-0 w-full h-full object-cover opacity-60">
+                    <img src="https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1200&q=75" alt="Brand Veloura" loading="eager" fetchpriority="high" decoding="async" class="absolute inset-0 w-full h-full object-cover opacity-60">
                     <div class="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/70 to-transparent"></div>
                     <div class="relative z-10 max-w-xl p-6 sm:p-10 text-white space-y-3">
                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-500 text-white text-[11px] font-bold border border-pink-400">
@@ -248,9 +254,12 @@
                         <!-- Category Image -->
                         <div class="aspect-square w-full rounded-xl overflow-hidden bg-pink-50/40 border border-pink-100 mb-2.5 relative">
                             <img 
-                                src="{{ cat.get_image_url }}" 
+                                src="{{ cat.get_image_url|cloudinary_webp:320 }}"
+                                srcset="{{ cat.get_image_url|cloudinary_webp_srcset:'160,320,480' }}"
+                                sizes="(min-width: 768px) 200px, 45vw"
                                 alt="{{ cat.name_ar }}" 
                                 loading="lazy"
+                                decoding="async"
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
                             >
                         </div>
@@ -353,7 +362,7 @@
                             <!-- Brand Logo Container -->
                             <div class="w-14 h-14 rounded-2xl bg-pink-50/50 border border-pink-100 flex items-center justify-center mx-auto mb-3 p-1.5 shadow-2xs group-hover:scale-105 group-hover:bg-pink-100/60 transition-all overflow-hidden">
                                 {% if b.logo or b.logo_url_fallback %}
-                                <img src="{{ b.get_logo_url }}" alt="{{ b.name_ar }}" class="w-full h-full object-contain">
+                                <img src="{{ b.get_logo_url|cloudinary_webp:160 }}" srcset="{{ b.get_logo_url|cloudinary_webp_srcset:'96,160,240' }}" sizes="64px" alt="{{ b.name_ar }}" loading="lazy" decoding="async" class="w-full h-full object-contain">
                                 {% else %}
                                 <span class="text-base font-bold text-brand-600 font-serif">
                                     {{ b.name_en|default:b.name_ar|slice:":2"|upper }}

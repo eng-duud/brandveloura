@@ -1,3 +1,4 @@
+{% load image_optimization %}
 <div id="cart-container" class="space-y-6">
     {% if cart_items %}
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -10,8 +11,14 @@
                 <!-- Product Thumbnail & Main Details -->
                 <div class="flex items-center gap-3 sm:gap-3.5 min-w-0 flex-1">
                     <img 
-                        src="{{ item.image_url }}" 
+                        src="{{ item.image_url|cloudinary_webp:160 }}"
+                        srcset="{{ item.image_url|cloudinary_webp_srcset:'96,160,240' }}"
+                        sizes="80px"
                         alt="{{ item.name }}" 
+                        width="80"
+                        height="80"
+                        loading="lazy"
+                        decoding="async"
                         class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-contain bg-pink-50/40 border border-pink-100 shrink-0 p-1"
                     >
                     <div class="min-w-0 flex-1 space-y-0.5">
@@ -168,3 +175,5 @@
         lucide.createIcons();
     }
 </script>
+{% load image_optimization %}
+<div id="cart-container" class="space-y-6">

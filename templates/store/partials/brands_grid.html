@@ -1,3 +1,4 @@
+{% load image_optimization %}
 <div id="brands-grid" class="space-y-6">
     <!-- Results Header -->
     <div class="flex items-center justify-between text-xs text-slate-500 pb-3 border-b border-pink-200">
@@ -21,10 +22,13 @@
                     <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-pink-50/40 border border-pink-100 flex items-center justify-center mx-auto mb-3.5 p-2 shadow-2xs group-hover:scale-105 group-hover:bg-pink-100/50 transition-all overflow-hidden">
                         {% if brand.logo or brand.logo_url_fallback %}
                         <img 
-                            src="{{ brand.get_logo_url }}" 
+                            src="{{ brand.get_logo_url|cloudinary_webp:160 }}"
+                            srcset="{{ brand.get_logo_url|cloudinary_webp_srcset:'96,160,240' }}"
+                            sizes="80px"
                             alt="{{ brand.name_ar }}" 
                             class="w-full h-full object-contain"
                             loading="lazy"
+                            decoding="async"
                         >
                         {% else %}
                         <span class="text-xl sm:text-2xl font-bold text-brand-600 font-serif">
@@ -86,3 +90,5 @@
     </div>
     {% endif %}
 </div>
+{% load image_optimization %}
+<div id="brands-grid" class="space-y-6">
