@@ -264,7 +264,7 @@
                         <div class="aspect-square w-full rounded-xl overflow-hidden bg-pink-50/40 border border-pink-100 mb-2.5 relative">
                             <img 
                                 src="{{ cat.get_image_url|cloudinary_webp:320 }}"
-                                srcset="{{ cat.get_image_url|cloudinary_webp_srcset:'160,320,480' }}"
+                                srcset="{{ cat.get_image_url|cloudinary_webp_srcset:'160,256,384' }}"
                                 sizes="(min-width: 768px) 200px, 45vw"
                                 alt="{{ cat.name_ar }}" 
                                 loading="lazy"
