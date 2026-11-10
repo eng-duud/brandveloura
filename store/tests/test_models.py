@@ -1,5 +1,9 @@
 from decimal import Decimal
-from django.test import TestCase
+from unittest.mock import patch
+from django.core.cache import cache
+from django.db import connection
+from django.test import TestCase, TransactionTestCase
+from django.test.utils import CaptureQueriesContext
 from django.contrib.auth.models import User
 from store.models import (
     StoreSettings, PaymentAccount, ShippingZone,
@@ -113,3 +117,25 @@ class ModelLogicTests(TestCase):
         self.assertEqual(profile.user.username, "testshopper")
         self.assertEqual(profile.phone, "771234567")
         self.assertEqual(profile.shipping_address, "صنعاء - حدة")
+
+
+class StoreSettingsCacheTests(TransactionTestCase):
+    def test_cache_avoids_repeated_reads_and_save_invalidates_it(self):
+        cache.delete('bv_store_settings')
+        with patch.dict('os.environ', {
+            'STORE_PHONE': '',
+            'STORE_WHATSAPP': '',
+            'STORE_INSTAGRAM': '',
+        }):
+            StoreSettings.get_settings()
+            with CaptureQueriesContext(connection) as queries:
+                StoreSettings.get_settings()
+            self.assertEqual(len(queries), 0)
+
+            settings_obj = StoreSettings.objects.get(pk=1)
+            settings_obj.store_name = 'Cache invalidation test'
+            settings_obj.save()
+            refreshed = StoreSettings.get_settings()
+            self.assertEqual(refreshed.store_name, 'Cache invalidation test')
+
+        cache.delete('bv_store_settings')

@@ -3,7 +3,7 @@ import urllib.parse
 import uuid
 from django.contrib import admin
 from django.utils.html import format_html
-from django.db.models import Sum
+from django.db.models import Count, Q, Sum
 from django.urls import reverse
 from django.contrib.auth.models import Group, User
 from django.contrib.auth.admin import UserAdmin as DefaultUserAdmin
@@ -35,13 +35,28 @@ def custom_admin_each_context(request):
         settings_obj = StoreSettings.get_settings()
         ctx['store_settings'] = settings_obj
         ctx['yer_per_sar'] = settings_obj.yer_per_sar
-        ctx['admin_total_orders'] = Order.objects.count()
-        ctx['admin_pending_orders'] = Order.objects.filter(status='pending_verification').count()
-        ctx['admin_total_sales_yer'] = Order.objects.exclude(status='cancelled').aggregate(s=Sum('total_yer'))['s'] or 0
-        ctx['admin_total_sales_sar'] = Order.objects.exclude(status='cancelled').aggregate(s=Sum('total_sar'))['s'] or 0
-        ctx['admin_low_stock_count'] = Product.objects.filter(stock_quantity__lte=3, is_active=True).count()
-        ctx['admin_unread_notifications_count'] = Notification.objects.filter(for_admin=True, is_read=False).count()
-        ctx['admin_recent_orders'] = Order.objects.order_by('-created_at')[:6]
+
+        from django.core.cache import cache
+        pending_count = cache.get('bv_admin_pending_orders')
+        if pending_count is None:
+            pending_count = Order.objects.filter(status='pending_verification').count()
+            cache.set('bv_admin_pending_orders', pending_count, timeout=10)
+        ctx['admin_pending_orders'] = pending_count
+
+        resolver_match = getattr(request, 'resolver_match', None)
+        if getattr(resolver_match, 'namespace', '') == 'admin' and getattr(resolver_match, 'url_name', '') == 'index':
+            order_stats = Order.objects.aggregate(
+                total_orders=Count('id'),
+                pending_orders=Count('id', filter=Q(status='pending_verification')),
+                total_sales_yer=Sum('total_yer', filter=~Q(status='cancelled')),
+                total_sales_sar=Sum('total_sar', filter=~Q(status='cancelled')),
+            )
+            ctx['admin_total_orders'] = order_stats['total_orders'] or 0
+            ctx['admin_pending_orders'] = order_stats['pending_orders'] or 0
+            ctx['admin_total_sales_yer'] = order_stats['total_sales_yer'] or 0
+            ctx['admin_total_sales_sar'] = order_stats['total_sales_sar'] or 0
+            ctx['admin_low_stock_count'] = Product.objects.filter(stock_quantity__lte=3, is_active=True).count()
+            ctx['admin_recent_orders'] = Order.objects.order_by('-created_at')[:6]
     except Exception:
         pass
     return ctx

@@ -103,7 +103,18 @@ class StoreSettings(models.Model):
 
     @classmethod
     def get_settings(cls):
-        settings_obj = cls.objects.first()
+        from django.core.cache import cache
+        from django.db import connection
+
+        cache_key = 'bv_store_settings'
+        use_cache = not connection.in_atomic_block
+        try:
+            settings_obj = cache.get(cache_key) if use_cache else None
+        except Exception:
+            settings_obj = None
+
+        if settings_obj is None:
+            settings_obj = cls.objects.first()
         if not settings_obj:
             settings_obj, created = cls.objects.get_or_create(id=1)
         else:
@@ -130,7 +141,13 @@ class StoreSettings(models.Model):
                 settings_obj.save()
             except Exception:
                 pass
-                
+
+        if use_cache:
+            try:
+                cache.set(cache_key, settings_obj, timeout=60)
+            except Exception:
+                pass
+
         return settings_obj
 
     @classmethod
@@ -161,6 +178,7 @@ class StoreSettings(models.Model):
         try:
             from django.core.cache import cache
             cache.delete('bv_yer_per_sar')
+            cache.delete('bv_store_settings')
         except Exception:
             pass
 
@@ -168,6 +186,7 @@ class StoreSettings(models.Model):
         try:
             from django.core.cache import cache
             cache.delete('bv_yer_per_sar')
+            cache.delete('bv_store_settings')
         except Exception:
             pass
         super().delete(*args, **kwargs)
@@ -770,6 +789,12 @@ class Order(models.Model):
                             item.product.save(update_fields=['stock_quantity'])
         super().save(*args, **kwargs)
 
+        try:
+            from django.core.cache import cache
+            cache.delete('bv_admin_pending_orders')
+        except Exception:
+            pass
+
         # إرسال إشعار تلقائي للعميل عند تحديث حالة الطلب
         if not is_new and prev_status and prev_status != self.status and self.user:
             status_notifications = {
@@ -809,6 +834,14 @@ class Order(models.Model):
                     order=self,
                     link=f"/order-success/{self.order_number}/"
                 )
+
+    def delete(self, *args, **kwargs):
+        try:
+            from django.core.cache import cache
+            cache.delete('bv_admin_pending_orders')
+        except Exception:
+            pass
+        return super().delete(*args, **kwargs)
 
     @property
     def get_receipt_url(self):
@@ -926,6 +959,24 @@ class Notification(models.Model):
         verbose_name_plural = 'مركز الإشعارات والتنبيهات'
         ordering = ['-created_at']
 
+    def _invalidate_unread_count_cache(self):
+        try:
+            from django.core.cache import cache
+            if self.recipient_id:
+                cache.delete(f'bv_unread_notifications_user_{self.recipient_id}')
+            if self.for_admin:
+                cache.delete('bv_admin_unread_notifications')
+        except Exception:
+            pass
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self._invalidate_unread_count_cache()
+
+    def delete(self, *args, **kwargs):
+        self._invalidate_unread_count_cache()
+        return super().delete(*args, **kwargs)
+
     def __str__(self):
         target = "الإدارة" if self.for_admin else (self.recipient.username if self.recipient else "عام")
         status = "مقروء" if self.is_read else "جديد"
@@ -990,5 +1041,3 @@ class WebPushSubscription(models.Model):
     def __str__(self):
         user_label = self.user.get_full_name() or self.user.username if self.user else 'عميل زائر'
         return f"{user_label} - {self.endpoint[:40]}..."
-
-

@@ -2075,9 +2075,12 @@ def mark_all_notifications_read_view(request):
         return JsonResponse({'status': 'unauthorized'}, status=401)
         
     Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+    from django.core.cache import cache
+    cache.delete(f'bv_unread_notifications_user_{request.user.pk}')
     
     if request.user.is_staff and request.POST.get('admin_scope') == '1':
         Notification.objects.filter(for_admin=True, is_read=False).update(is_read=True)
+        cache.delete('bv_admin_unread_notifications')
         
     if request.headers.get('HX-Request'):
         notifications = Notification.objects.filter(recipient=request.user).order_by('-created_at')[:8]
@@ -2271,7 +2274,6 @@ def custom_500_view(request):
 def custom_403_view(request, exception=None):
     """صفحة خطأ 403 مخصصة بهوية المتجر الفاخرة"""
     return render(request, '403.html', status=403)
-
 
 
 

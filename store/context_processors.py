@@ -55,9 +55,27 @@ def store_context(request):
     admin_unread_notifications_count = 0
     if request.user.is_authenticated:
         from .models import Notification
-        unread_notifications_count = Notification.objects.filter(recipient=request.user, is_read=False).count()
+        user_cache_key = f'bv_unread_notifications_user_{request.user.pk}'
+        unread_notifications_count = cache.get(user_cache_key)
+        if unread_notifications_count is None:
+            unread_notifications_count = Notification.objects.filter(
+                recipient=request.user, is_read=False
+            ).count()
+            try:
+                cache.set(user_cache_key, unread_notifications_count, timeout=10)
+            except Exception:
+                pass
         if request.user.is_staff:
-            admin_unread_notifications_count = Notification.objects.filter(for_admin=True, is_read=False).count()
+            admin_cache_key = 'bv_admin_unread_notifications'
+            admin_unread_notifications_count = cache.get(admin_cache_key)
+            if admin_unread_notifications_count is None:
+                admin_unread_notifications_count = Notification.objects.filter(
+                    for_admin=True, is_read=False
+                ).count()
+                try:
+                    cache.set(admin_cache_key, admin_unread_notifications_count, timeout=10)
+                except Exception:
+                    pass
 
     # ضمان انعكاس متغيرات البيئة فورياً في المتجر (WhatsApp, Phone, Instagram)
     env_phone = os.getenv('STORE_PHONE', '').strip()
@@ -83,4 +101,3 @@ def store_context(request):
         'unread_notifications_count': unread_notifications_count,
         'admin_unread_notifications_count': admin_unread_notifications_count,
     }
-
