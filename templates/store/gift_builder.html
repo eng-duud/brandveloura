@@ -6,6 +6,18 @@
 {% block extra_head %}
 <style>
     /* Product Card Selection Styles */
+    .gift-item-card {
+        border-color: #fbcfe8 !important;
+        background-color: #ffffff !important;
+    }
+    .gift-item-card .check-badge {
+        border: 2px solid #cbd5e1 !important;
+        background-color: #ffffff !important;
+        border-radius: 8px !important;
+    }
+    .gift-item-card:hover .check-badge {
+        border-color: #e83ab8 !important;
+    }
     .gift-item-card.is-selected {
         border-color: #e83ab8 !important;
         box-shadow: 0 0 0 2px rgba(232, 58, 184, 0.3), 0 4px 12px rgba(232, 58, 184, 0.12) !important;
@@ -212,6 +224,17 @@
                     </div>
                 </div>
 
+                <!-- Category Switch Pills & Quick Filter in Step 1 -->
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-1">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <span class="text-xs font-bold text-slate-700 ml-1">تصفح الأقسام:</span>
+                        <span class="px-3 py-1.5 rounded-xl bg-brand-500 text-white text-xs font-bold shadow-2xs">العطور الملكية</span>
+                        <button type="button" onclick="goToStep(2); filterAccessoriesCategory('watches');" class="px-3 py-1.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-slate-700 border border-pink-200 text-xs font-medium transition cursor-pointer">ساعات فاخرة ⌚</button>
+                        <button type="button" onclick="goToStep(2); filterAccessoriesCategory('cosmetics');" class="px-3 py-1.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-slate-700 border border-pink-200 text-xs font-medium transition cursor-pointer">مستحضرات تجميل 💄</button>
+                        <button type="button" onclick="goToStep(2); filterAccessoriesCategory('care');" class="px-3 py-1.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-slate-700 border border-pink-200 text-xs font-medium transition cursor-pointer">عناية وإكسسوارات ✨</button>
+                    </div>
+                </div>
+
                 <!-- Global Grade Switcher & Quick Search -->
                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 p-3.5 rounded-2xl bg-pink-50/50 border border-pink-200">
                     
@@ -272,7 +295,7 @@
                         <!-- Top Badges: Checkmark + In-Box Badge -->
                         <div class="flex items-center justify-between gap-1 mb-2">
                             <!-- Checkmark Badge -->
-                            <div class="check-badge w-6 h-6 rounded-full border-2 border-pink-300 bg-white flex items-center justify-center transition shadow-2xs group-hover:border-brand-500 pointer-events-none">
+                            <div class="check-badge w-6 h-6 rounded-lg border-2 border-slate-300 bg-white flex items-center justify-center transition shadow-2xs group-hover:border-brand-500 pointer-events-none">
                                 <svg class="check-icon w-3.5 h-3.5 stroke-[3] text-white opacity-0 transition scale-75" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                     <polyline points="20 6 9 17 4 12"></polyline>
                                 </svg>
@@ -344,6 +367,18 @@
                                 <input type="hidden" name="grade_{{ perfume.id }}" id="grade_input_{{ perfume.id }}" value="original">
                             </div>
                             {% endif %}
+                        </div>
+
+                        <!-- Direct Toggle Selection Button -->
+                        <div class="pt-2 mt-2 border-t border-pink-100">
+                            <button 
+                                type="button" 
+                                class="toggle-btn w-full py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border shadow-2xs cursor-pointer bg-pink-50 hover:bg-brand-500 hover:text-white text-brand-700 border-pink-200"
+                                onclick="event.stopPropagation(); togglePerfumeCard('{{ perfume.id }}')"
+                            >
+                                <i data-lucide="plus" class="w-3.5 h-3.5 btn-icon"></i>
+                                <span class="btn-text">إضافة للصندوق</span>
+                            </button>
                         </div>
 
                     </div>
@@ -427,8 +462,8 @@
 
                         <!-- Top Badges -->
                         <div class="flex items-center justify-between gap-1 mb-2">
-                            <div class="check-badge w-5 h-5 rounded-full border-2 border-pink-300 bg-white flex items-center justify-center transition shadow-2xs group-hover:border-brand-500 pointer-events-none">
-                                <svg class="check-icon w-3 h-3 stroke-[3] text-white opacity-0 transition scale-75" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <div class="check-badge w-6 h-6 rounded-lg border-2 border-slate-300 bg-white flex items-center justify-center transition shadow-2xs group-hover:border-brand-500 pointer-events-none">
+                                <svg class="check-icon w-3.5 h-3.5 stroke-[3] text-white opacity-0 transition scale-75" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                     <polyline points="20 6 9 17 4 12"></polyline>
                                 </svg>
                             </div>
@@ -455,6 +490,18 @@
                             <p class="text-xs font-black text-slate-950 font-num pt-1 border-t border-pink-100">
                                 +{{ acc.price_yer|floatformat:0 }} <span class="text-[9px] font-normal text-slate-500">ر.ي</span>
                             </p>
+                        </div>
+
+                        <!-- Direct Toggle Selection Button -->
+                        <div class="pt-2 mt-2 border-t border-pink-100">
+                            <button 
+                                type="button" 
+                                class="toggle-btn w-full py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border shadow-2xs cursor-pointer bg-pink-50 hover:bg-brand-500 hover:text-white text-brand-700 border-pink-200"
+                                onclick="event.stopPropagation(); toggleAccessoryCard('{{ acc.id }}')"
+                            >
+                                <i data-lucide="plus" class="w-3.5 h-3.5 btn-icon"></i>
+                                <span class="btn-text">إضافة للصندوق</span>
+                            </button>
                         </div>
                     </div>
                     {% empty %}
@@ -859,11 +906,16 @@
     const wrappingFee = {{ wrapping_fee|default:"2500" }};
 
     // Step Navigation Function
+    function getSelectedTotalCount() {
+        const pCount = document.querySelectorAll('.perfume-checkbox:checked').length;
+        const aCount = document.querySelectorAll('.accessory-checkbox:checked').length;
+        return pCount + aCount;
+    }
+
     function goToStep(step) {
-        if (step === 2 || step === 3 || step === 4) {
-            const checkedPerfumes = document.querySelectorAll('.perfume-checkbox:checked');
-            if (checkedPerfumes.length === 0) {
-                alert('يرجى اختيار عطر واحد على الأقل أولاً لإتمام باقة الإهداء.');
+        if (step === 3 || step === 4) {
+            if (getSelectedTotalCount() === 0) {
+                alert('يرجى اختيار عطر أو ملحق واحد على الأقل أولاً لإضافته إلى صندوق الإهداء.');
                 goToStep(1);
                 return;
             }
@@ -1032,14 +1084,24 @@
             const price = priceEl ? parseFloat(priceEl.innerText.replace(/,/g, '')) || 0 : 0;
             const title = card.dataset.title;
             const img = card.dataset.image;
+            const toggleBtn = card.querySelector('.toggle-btn');
+            const btnText = toggleBtn ? toggleBtn.querySelector('.btn-text') : null;
 
             if (check && check.checked) {
                 card.classList.add('is-selected');
+                if (toggleBtn) {
+                    toggleBtn.className = 'toggle-btn w-full py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer bg-brand-500 text-white border-brand-500';
+                    if (btnText) btnText.innerText = '✓ مضاف بالصندوق';
+                }
                 perfumeCount++;
                 totalYer += price;
                 selectedItems.push({ title: title, img: img, type: 'عطر' });
             } else {
                 card.classList.remove('is-selected');
+                if (toggleBtn) {
+                    toggleBtn.className = 'toggle-btn w-full py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border shadow-2xs cursor-pointer bg-pink-50 hover:bg-brand-500 hover:text-white text-brand-700 border-pink-200';
+                    if (btnText) btnText.innerText = '+ إضافة للصندوق';
+                }
             }
         });
 
@@ -1049,14 +1111,24 @@
             const price = parseFloat(card.dataset.price) || 0;
             const title = card.dataset.title;
             const img = card.dataset.image;
+            const toggleBtn = card.querySelector('.toggle-btn');
+            const btnText = toggleBtn ? toggleBtn.querySelector('.btn-text') : null;
 
             if (check && check.checked) {
                 card.classList.add('is-selected');
+                if (toggleBtn) {
+                    toggleBtn.className = 'toggle-btn w-full py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer bg-brand-500 text-white border-brand-500';
+                    if (btnText) btnText.innerText = '✓ مضاف بالصندوق';
+                }
                 accessoryCount++;
                 totalYer += price;
                 selectedItems.push({ title: title, img: img, type: 'ملحق' });
             } else {
                 card.classList.remove('is-selected');
+                if (toggleBtn) {
+                    toggleBtn.className = 'toggle-btn w-full py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border shadow-2xs cursor-pointer bg-pink-50 hover:bg-brand-500 hover:text-white text-brand-700 border-pink-200';
+                    if (btnText) btnText.innerText = '+ إضافة للصندوق';
+                }
             }
         });
 
@@ -1211,11 +1283,14 @@
     }
 
     // Filter Accessories Category
-    function filterAccessoriesCategory(category) {
+    function filterAccessoriesCategory(category, targetBtn) {
         document.querySelectorAll('.acc-cat-btn').forEach(btn => {
-            btn.className = 'acc-cat-btn px-3 py-1.5 rounded-xl bg-pink-50 text-slate-700 hover:bg-pink-100 border border-pink-200 text-xs font-medium transition';
+            btn.className = 'acc-cat-btn px-3 py-1.5 rounded-xl bg-pink-50 text-slate-700 hover:bg-pink-100 border border-pink-200 text-xs font-medium transition cursor-pointer';
         });
-        event.currentTarget.className = 'acc-cat-btn px-3 py-1.5 rounded-xl bg-brand-500 text-white text-xs font-bold shadow-2xs transition';
+        const currentActive = targetBtn || (window.event && window.event.currentTarget) || document.querySelector(`.acc-cat-btn[data-category="${category}"]`);
+        if (currentActive && currentActive.classList) {
+            currentActive.className = 'acc-cat-btn px-3 py-1.5 rounded-xl bg-brand-500 text-white text-xs font-bold shadow-2xs transition cursor-pointer';
+        }
 
         document.querySelectorAll('.product-gift-card[data-accessory-id]').forEach(card => {
             if (category === 'all' || card.dataset.category === category) {
@@ -1236,9 +1311,8 @@
 
     // Form Submission Validation
     function validateGiftBuilderForm() {
-        const checkedPerfumes = document.querySelectorAll('.perfume-checkbox:checked');
-        if (checkedPerfumes.length === 0) {
-            alert('يرجى اختيار عطر واحد على الأقل لتجهيز باقة الإهداء بالنقر على إطار العطر.');
+        if (getSelectedTotalCount() === 0) {
+            alert('يرجى اختيار عطر أو ملحق واحد على الأقل لتجهيز باقة الإهداء بالنقر على بطاقة المنتج.');
             goToStep(1);
             return false;
         }

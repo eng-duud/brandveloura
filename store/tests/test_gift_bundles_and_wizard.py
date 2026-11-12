@@ -264,3 +264,47 @@ class GiftBundlesAndWizardTests(TestCase):
         gifting_resp = self.client.get(reverse('store:gift_builder'))
         self.assertNotContains(gifting_resp, 'id="floating-gift-cta"')
 
+    def test_admin_gift_bundle_quick_product_picker_and_sync(self):
+        """التحقق من ظهور مربعات التحديد السريعة في لوحة الإدارة ومزامنتها التلقائية مع محتويات الباقة"""
+        admin_user = User.objects.create_superuser('testsuperadmin', 'admin@brandveloura.com', 'pass1234')
+        self.client.force_login(admin_user)
+
+        # 1. فحص صفحة إضافة باقة جديدة: ظهور مربعات التحديد والقائمة المنسدلة
+        add_url = reverse('admin:store_giftbundle_add')
+        resp = self.client.get(add_url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'name="bundle_products"')
+        self.assertContains(resp, self.perfume.name_ar)
+        self.assertContains(resp, self.watch.name_ar)
+
+        # 2. حفظ باقة جديدة مع تحديد المنتجات عبر bundle_products
+        post_data = {
+            'title_ar': 'باقة الزهور الذهبية',
+            'slug': 'golden-flowers-bundle',
+            'price_yer': '65000.00',
+            'display_order': '0',
+            'bundle_products': [str(self.perfume.id), str(self.watch.id)],
+            'items-TOTAL_FORMS': '0',
+            'items-INITIAL_FORMS': '0',
+            'items-MIN_NUM_FORMS': '0',
+            'items-MAX_NUM_FORMS': '1000',
+        }
+        resp_post = self.client.post(add_url, post_data)
+        self.assertEqual(resp_post.status_code, 302)
+
+        created_bundle = GiftBundle.objects.filter(slug='golden-flowers-bundle').first()
+        self.assertIsNotNone(created_bundle)
+        self.assertEqual(created_bundle.items.count(), 2)
+        included_product_ids = set(created_bundle.items.values_list('product_id', flat=True))
+        self.assertIn(self.perfume.id, included_product_ids)
+        self.assertIn(self.watch.id, included_product_ids)
+
+    def test_gift_builder_explicit_toggle_buttons_and_badges(self):
+        """التحقق من ظهور أزرار الإضافة الصريحة ومربعات الاختيار المرئية في واجهة صانع الإهداء"""
+        resp = self.client.get(reverse('store:gift_builder'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'toggle-btn')
+        self.assertContains(resp, 'إضافة للصندوق')
+        self.assertContains(resp, 'check-badge')
+        self.assertContains(resp, 'تصفح الأقسام:')
+

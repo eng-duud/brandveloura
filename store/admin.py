@@ -602,15 +602,40 @@ class ProductAdmin(admin.ModelAdmin):
 # 2.5. إدارة باقات الهدايا الجاهزة (Ready Gift Bundles)
 # ==============================================================================
 
+class GiftBundleAdminForm(forms.ModelForm):
+    """نموذج إدارة وتجهيز باقات الهدايا مع اختيار مرئي مباشر للمنتجات عبر مربعات تحديد ☑"""
+    bundle_products = forms.ModelMultipleChoiceField(
+        queryset=Product.objects.filter(is_active=True).exclude(category__category_type='bundles').select_related('category', 'brand').order_by('category__category_type', 'name_ar'),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'bundle-products-checkbox-grid'}),
+        required=False,
+        label='اختيار منتجات الباقة السريع (ضع علامة ☑ على المنتجات)',
+        help_text='ضع علامة ☑ على أي عطر أو ساعة أو مستحضر لإضافته فوراً إلى محتويات هذه الباقة. سيتم حفظها وتنسيقها تلقائياً بالأسفل.'
+    )
+
+    class Meta:
+        model = GiftBundle
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields['bundle_products'].initial = list(self.instance.items.values_list('product_id', flat=True))
+
+
 class GiftBundleItemInline(admin.TabularInline):
     model = GiftBundleItem
-    autocomplete_fields = ['product']
-    extra = 1
+    extra = 0
     fields = ['product', 'grade', 'quantity', 'custom_note', 'display_order']
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "product":
+            kwargs["queryset"] = Product.objects.filter(is_active=True).exclude(category__category_type='bundles').select_related('category', 'brand').order_by('category__category_type', 'name_ar')
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(GiftBundle)
 class GiftBundleAdmin(admin.ModelAdmin):
+    form = GiftBundleAdminForm
     list_display = [
         'cover_preview', 'title_ar', 'formatted_price_yer', 'formatted_price_sar',
         'discount_badge', 'items_count_display', 'packaging_badges',
@@ -621,12 +646,22 @@ class GiftBundleAdmin(admin.ModelAdmin):
     list_editable = ['is_active', 'is_featured', 'display_order']
     prepopulated_fields = {'slug': ('title_ar',)}
     inlines = [GiftBundleItemInline]
+
+    class Media:
+        css = {
+            'all': ('admin/css/admin_bundle_picker.css',)
+        }
+        js = ('admin/js/admin_bundle_picker.js',)
     
     fieldsets = (
         ('معلومات الباقة الأساسية', {
             'fields': (
                 'title_ar', 'title_en', 'slug', 'subtitle', 'description'
             )
+        }),
+        ('اختيار المنتجات المشمولة في الهدية (حدد بالعلامة ☑)', {
+            'fields': ('bundle_products',),
+            'description': 'اختر المنتجات المراد تضمينها في هذه الهدية بوضع علامة ☑ مباشرة. يمكنك أيضاً تعديل الكميات والدرجات في جدول المحتويات بالأسفل.'
         }),
         ('صورة الغلاف', {
             'fields': ('cover_image', 'cover_image_url_fallback')
@@ -643,6 +678,36 @@ class GiftBundleAdmin(admin.ModelAdmin):
             )
         }),
     )
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        # مزامنة المنتجات المحددة عبر حقل الاختيار السريع bundle_products
+        if 'bundle_products' in form.cleaned_data:
+            selected_products = form.cleaned_data['bundle_products']
+            selected_pids = set(selected_products.values_list('id', flat=True))
+            
+            existing_items = {item.product_id: item for item in form.instance.items.all()}
+            
+            # 1. إضافة المنتجات الجديدة المحددة بالعلامة
+            current_order = form.instance.items.count()
+            for prod in selected_products:
+                if prod.id not in existing_items:
+                    current_order += 1
+                    c_type = getattr(prod.category, 'category_type', '')
+                    def_grade = 'master' if c_type == 'perfumes' and prod.has_grades else 'original' if c_type == 'perfumes' else 'standard'
+                    GiftBundleItem.objects.create(
+                        bundle=form.instance,
+                        product=prod,
+                        grade=def_grade,
+                        quantity=1,
+                        display_order=current_order
+                    )
+            
+            # 2. في حالة تعديل باقة قائمة وإلغاء تحديد منتجات من الحقل السريع
+            if change:
+                for pid, item in existing_items.items():
+                    if pid not in selected_pids:
+                        item.delete()
 
     def cover_preview(self, obj):
         img = obj.get_image_url()
