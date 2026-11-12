@@ -73,21 +73,45 @@ def validate_receipt_file(uploaded_file):
 
 
 def home_view(request):
-    """الصفحة الرئيسية للمتجر بتصميم فاخر وقنوات أفقية تفاعلية"""
-    from django.db.models import Count
+    """الصفحة الرئيسية للمتجر بتصميم فاخر وقنوات أفقية تفاعلية تغطي كافة الأقسام باختصار وتنظيم"""
+    from django.db.models import Count, Q
     banners = HeroBanner.objects.filter(is_active=True).order_by('display_order')
     categories = Category.objects.filter(is_active=True).order_by('display_order')
     
-    # المنتجات المميزة لشريط التمرير الأفقي
+    # 1. المنتجات المميزة لشريط التمرير الأفقي
     featured_products = Product.objects.filter(
         is_active=True, is_featured=True
-    ).select_related('category').prefetch_related('images').order_by('-created_at')[:12]
+    ).select_related('category', 'brand').prefetch_related('images').order_by('-created_at')[:12]
     if not featured_products.exists():
         featured_products = Product.objects.filter(
             is_active=True
-        ).select_related('category').prefetch_related('images').order_by('-created_at')[:12]
+        ).select_related('category', 'brand').prefetch_related('images').order_by('-created_at')[:12]
+
+    # دالة مساعدة سريعة لجلب أفضل منتجات كل قسم هرمياً (القسم وفروعه)
+    def get_category_products(type_keys, limit=10):
+        if isinstance(type_keys, str):
+            type_keys = [type_keys]
+        q_filter = Q(category_type__in=type_keys) | Q(parent__category_type__in=type_keys)
+        for k in type_keys:
+            q_filter |= Q(slug__icontains=k) | Q(parent__slug__icontains=k)
         
-    # الماركات والبراندات الفاخرة المسجلة في لوحة التحكم (مع استعلام تجميعي لعدد المنتجات)
+        cat_ids = list(Category.objects.filter(q_filter, is_active=True).values_list('id', flat=True))
+        if not cat_ids:
+            return Product.objects.none()
+        return Product.objects.filter(
+            category_id__in=cat_ids,
+            is_active=True
+        ).select_related('category', 'brand').prefetch_related('images').order_by(
+            '-is_featured', '-is_best_seller', '-created_at'
+        )[:limit]
+
+    # 2. أشرطة الأقسام الرئيسية
+    perfume_products = get_category_products('perfumes', limit=10)
+    watch_products = get_category_products('watches', limit=10)
+    cosmetic_products = get_category_products(['cosmetics', 'care'], limit=10)
+    gift_bundles = get_category_products('bundles', limit=10)
+        
+    # 3. الماركات والبراندات الفاخرة المسجلة في لوحة التحكم (مع استعلام تجميعي لعدد المنتجات)
     featured_brands = Brand.objects.filter(is_active=True).annotate(
         products_count=Count('products', filter=Q(products__is_active=True))
     ).order_by('display_order', '-products_count', 'name_ar')
@@ -122,18 +146,16 @@ def home_view(request):
             'count': count,
         })
 
-    # باقات الهدايا والمناسبات الفاخرة
-    gift_bundles = Product.objects.filter(
-        category__category_type='bundles', is_active=True
-    ).select_related('category').prefetch_related('images').order_by('-created_at')[:8]
-
     context = {
         'banners': banners,
         'categories': categories,
         'featured_products': featured_products,
+        'perfume_products': perfume_products,
+        'watch_products': watch_products,
+        'cosmetic_products': cosmetic_products,
+        'gift_bundles': gift_bundles,
         'featured_brands': featured_brands,
         'perfume_brands': perfume_brands_data,
-        'gift_bundles': gift_bundles,
     }
     return render(request, 'store/home.html', context)
 

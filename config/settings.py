@@ -30,7 +30,7 @@ railway_domain = os.getenv('RAILWAY_PUBLIC_DOMAIN', '').strip()
 if railway_domain and railway_domain not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(railway_domain)
 if '*' not in ALLOWED_HOSTS:
-    for domain_pattern in ['.railway.app', '.up.railway.app', 'localhost', '127.0.0.1']:
+    for domain_pattern in ['.railway.app', '.up.railway.app', 'brandveloura.com', 'www.brandveloura.com', '.brandveloura.com', 'localhost', '127.0.0.1']:
         if domain_pattern not in ALLOWED_HOSTS:
             ALLOWED_HOSTS.append(domain_pattern)
 
@@ -38,7 +38,7 @@ if '*' not in ALLOWED_HOSTS:
 CSRF_TRUSTED_ORIGINS = [
     origin.strip() for origin in os.getenv(
         'CSRF_TRUSTED_ORIGINS', 
-        'https://*.railway.app,https://*.up.railway.app,http://localhost:8000,http://127.0.0.1:8000'
+        'https://*.railway.app,https://*.up.railway.app,https://brandveloura.com,https://www.brandveloura.com,http://localhost:8000,http://127.0.0.1:8000'
     ).split(',') if origin.strip()
 ]
 if railway_domain:

@@ -1,6 +1,8 @@
 from decimal import Decimal
 import urllib.parse
 import uuid
+from django import forms
+from django.core.exceptions import ValidationError
 from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Count, Q, Sum
@@ -269,8 +271,61 @@ class ProductImageInline(admin.TabularInline):
         return '—'
 
 
+class ProductAdminForm(forms.ModelForm):
+    """نموذج إدارة المنتجات مع تقييد الأخطاء ومنع تضارب البيانات تلقائياً"""
+    class Meta:
+        model = Product
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'price_yer' in self.fields:
+            self.fields['price_yer'].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        has_grades = cleaned_data.get('has_grades')
+        price_yer = cleaned_data.get('price_yer')
+        compare_at_price_yer = cleaned_data.get('compare_at_price_yer')
+        price_original_yer = cleaned_data.get('price_original_yer')
+        compare_at_price_original_yer = cleaned_data.get('compare_at_price_original_yer')
+        price_master_yer = cleaned_data.get('price_master_yer')
+        compare_at_price_master_yer = cleaned_data.get('compare_at_price_master_yer')
+        stock_quantity = cleaned_data.get('stock_quantity')
+
+        if stock_quantity is not None and stock_quantity < 0:
+            self.add_error('stock_quantity', 'لا يمكن أن تكون كمية المخزون سالبة.')
+
+        if has_grades:
+            if not price_original_yer and not price_master_yer and (not price_yer or price_yer == 0):
+                raise ValidationError('عند تفعيل خيار الدرجات (أصلي / ماستر)، يجب تحديد سعر واحد على الأقل (سعر الأصلي أو سعر الماستر).')
+            
+            # إذا لم يُدخل المستخدم سعراً افتراضياً، يتم ملؤه تلقائياً من سعر الماستر أو الأصلي
+            if not price_yer or price_yer == 0:
+                if price_master_yer:
+                    cleaned_data['price_yer'] = price_master_yer
+                elif price_original_yer:
+                    cleaned_data['price_yer'] = price_original_yer
+        else:
+            if not price_yer or price_yer <= 0:
+                self.add_error('price_yer', 'يجب إدخال سعر افتراضي أكبر من صفر بالريال اليمني.')
+
+        # التحقق من أن السعر قبل الخصم أعلى من السعر الفعلي
+        if compare_at_price_yer and price_yer and compare_at_price_yer <= price_yer:
+            self.add_error('compare_at_price_yer', 'السعر قبل الخصم يجب أن يكون أكبر من السعر الحالي لظهور نسبة الخصم بشكل صحيح.')
+
+        if compare_at_price_original_yer and price_original_yer and compare_at_price_original_yer <= price_original_yer:
+            self.add_error('compare_at_price_original_yer', 'سعر الأصلي قبل الخصم يجب أن يكون أكبر من السعر الحالي للأصلي.')
+
+        if compare_at_price_master_yer and price_master_yer and compare_at_price_master_yer <= price_master_yer:
+            self.add_error('compare_at_price_master_yer', 'سعر الماستر قبل الخصم يجب أن يكون أكبر من السعر الحالي للماستر.')
+
+        return cleaned_data
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
+    form = ProductAdminForm
     list_display = [
         'image_preview', 'name_ar', 'brand_name_badge', 'category', 
         'formatted_price_yer', 'formatted_price_sar', 'grades_badge', 
@@ -728,22 +783,38 @@ class OrderAdmin(admin.ModelAdmin):
 
     @admin.action(description='اعتماد الدفع للطلبات المحددة (تم التحقق)')
     def mark_as_verified(self, request, queryset):
-        count = queryset.update(status='payment_verified')
+        count = 0
+        for order in queryset:
+            order.status = 'payment_verified'
+            order.save()
+            count += 1
         self.message_user(request, f'تم اعتماد وتأكيد الدفع لـ {count} طلب بنجاح.')
 
     @admin.action(description='تغيير الحالة إلى (قيد التجهيز والتغليف)')
     def mark_as_processing(self, request, queryset):
-        count = queryset.update(status='processing')
+        count = 0
+        for order in queryset:
+            order.status = 'processing'
+            order.save()
+            count += 1
         self.message_user(request, f'تم نقل {count} طلب إلى قيد التجهيز.')
 
     @admin.action(description='تغيير الحالة إلى (جاري التوصيل مع المندوب)')
     def mark_as_out_for_delivery(self, request, queryset):
-        count = queryset.update(status='out_for_delivery')
+        count = 0
+        for order in queryset:
+            order.status = 'out_for_delivery'
+            order.save()
+            count += 1
         self.message_user(request, f'تم نقل {count} طلب إلى جاري التوصيل.')
 
     @admin.action(description='تأكيد استلام العميل للطلب (تم التسليم بنجاح)')
     def mark_as_delivered(self, request, queryset):
-        count = queryset.update(status='delivered')
+        count = 0
+        for order in queryset:
+            order.status = 'delivered'
+            order.save()
+            count += 1
         self.message_user(request, f'تم تحديث {count} طلب إلى مكتمل ومسلم.')
 
     @admin.action(description='إلغاء الطلبات واسترجاع كمياتها للمخزون آلياً ♻️')

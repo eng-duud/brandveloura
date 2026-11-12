@@ -5,6 +5,7 @@ from decimal import Decimal
 from django.db import models
 from django.conf import settings
 from django.utils.text import slugify
+from django.core.exceptions import ValidationError
 
 
 def sanitize_image_url(url, fallback=''):
@@ -172,6 +173,13 @@ class StoreSettings(models.Model):
         except Exception:
             pass
         return rate
+
+    def clean(self):
+        super().clean()
+        if self.yer_per_sar is not None and self.yer_per_sar <= 0:
+            raise ValidationError({'yer_per_sar': 'يجب أن يكون سعر صرف الريال السعودي أكبر من الصفر.'})
+        if self.gift_wrapping_fee_yer is not None and self.gift_wrapping_fee_yer < 0:
+            raise ValidationError({'gift_wrapping_fee_yer': 'لا يمكن أن تكون رسوم التغليف سالبة.'})
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -361,6 +369,18 @@ class Category(models.Model):
         ids.extend(self.subcategories.values_list('id', flat=True))
         return ids
 
+    def clean(self):
+        super().clean()
+        if self.parent_id and self.pk and self.parent_id == self.pk:
+            raise ValidationError({'parent': 'لا يمكن تحديد القسم كقسم رئيسي لنفسه.'})
+        curr = self.parent
+        visited = {self.pk} if self.pk else set()
+        while curr:
+            if curr.pk in visited:
+                raise ValidationError({'parent': 'خطأ في التفرع الهرمي: لا يمكن تحديد تصنيف تابع كقسم رئيسي تجنباً للتكرار الدائري.'})
+            visited.add(curr.pk)
+            curr = curr.parent
+
     def save(self, *args, **kwargs):
         if not self.slug:
             base = slugify(self.name_en or self.name_ar, allow_unicode=True)
@@ -446,7 +466,7 @@ class Product(models.Model):
     description = models.TextField(blank=True, verbose_name='وصف المنتج')
     
     # السعر الأساسي بالريال اليمني
-    price_yer = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='السعر الافتراضي بالريال اليمني')
+    price_yer = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), blank=True, verbose_name='السعر الافتراضي بالريال اليمني')
     compare_at_price_yer = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='السعر قبل الخصم (ريال يمني - اختياري)')
     
     # خاصية العطور: الأصلي والماستر (طبق الأصل)
@@ -521,10 +541,10 @@ class Product(models.Model):
         if self.brand:
             self.brand_name = self.brand.name_ar or self.brand.name_en
         if self.has_grades:
-            if self.price_original_yer and not self.price_yer:
-                self.price_yer = self.price_original_yer
-            elif self.price_master_yer and not self.price_yer:
+            if self.price_master_yer and (not self.price_yer or self.price_yer == 0):
                 self.price_yer = self.price_master_yer
+            elif self.price_original_yer and (not self.price_yer or self.price_yer == 0):
+                self.price_yer = self.price_original_yer
         if not self.slug:
             base = slugify(self.name_en or self.name_ar, allow_unicode=True)
             if not base:
@@ -659,6 +679,23 @@ class ProductImage(models.Model):
         if self.image:
             return sanitize_image_url(self.image.url, fallback)
         return fallback
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.is_primary and self.product_id:
+            ProductImage.objects.filter(product_id=self.product_id, is_primary=True).exclude(pk=self.pk).update(is_primary=False)
+        elif self.product_id and not ProductImage.objects.filter(product_id=self.product_id, is_primary=True).exists():
+            ProductImage.objects.filter(pk=self.pk).update(is_primary=True)
+            self.is_primary = True
+
+    def delete(self, *args, **kwargs):
+        was_primary = self.is_primary
+        prod_id = self.product_id
+        super().delete(*args, **kwargs)
+        if was_primary and prod_id:
+            first_rem = ProductImage.objects.filter(product_id=prod_id).first()
+            if first_rem:
+                ProductImage.objects.filter(pk=first_rem.pk).update(is_primary=True)
 
 
 class Order(models.Model):

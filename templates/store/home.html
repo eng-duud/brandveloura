@@ -130,89 +130,9 @@
     </div>
 </section>
 
-<!-- 2. Strip 1: Featured Products Horizontal Scroll -->
-{% if featured_products %}
-<section class="py-10 bg-white/40 border-y border-pink-200">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        <!-- Header of Featured Strip -->
-        <div class="flex items-center justify-between mb-5">
-            <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-xl bg-white text-brand-600 flex items-center justify-center border border-pink-200 shrink-0 shadow-2xs">
-                    <i data-lucide="sparkles" class="w-4 h-4 text-brand-600"></i>
-                </div>
-                <div>
-                    <h2 class="text-base sm:text-xl font-bold text-slate-900">المنتجات المميزة</h2>
-                    <span class="text-[11px] text-slate-500 block">مختارات من أبرز المنتجات المتاحة</span>
-                </div>
-            </div>
-            
-            <!-- Actions & Scroll Buttons -->
-            <div class="flex items-center gap-2">
-                <a href="{% url 'store:product_list' %}" class="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-800 text-xs font-semibold transition border border-pink-200 shadow-2xs">
-                    <span>مشاهدة الكل</span>
-                    <i data-lucide="arrow-left" class="w-3 h-3"></i>
-                </a>
-                <div class="flex items-center gap-1">
-                    <button 
-                        type="button"
-                        onclick="scrollContainer('featured-scroll', 260)" 
-                        class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
-                        title="تمرير لليمين"
-                    >
-                        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
-                    </button>
-                    <button 
-                        type="button"
-                        onclick="scrollContainer('featured-scroll', -260)" 
-                        class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
-                        title="تمرير لليسار"
-                    >
-                        <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Horizontal Scroll Container -->
-        <div 
-            id="featured-scroll" 
-            class="flex items-stretch gap-3 sm:gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-3 pt-1"
-            style="scrollbar-width: thin;"
-        >
-            {% for product in featured_products %}
-            <div class="w-[160px] sm:w-[185px] md:w-[200px] shrink-0 snap-start flex flex-col">
-                {% include 'store/components/product_card.html' with product=product %}
-            </div>
-            {% endfor %}
-
-            <!-- Final Card in the Horizontal Strip: View All Featured -->
-            <div class="w-[150px] sm:w-[170px] md:w-[185px] shrink-0 snap-start flex flex-col">
-                <a 
-                    href="{% url 'store:product_list' %}" 
-                    class="h-full rounded-2xl bg-white border-2 border-dashed border-pink-200 hover:border-brand-400 p-4 flex flex-col items-center justify-center text-center group transition duration-200 cursor-pointer shadow-2xs"
-                >
-                    <div class="w-10 h-10 rounded-xl bg-brand-500 text-white flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
-                        <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                    </div>
-                    <h3 class="font-bold text-slate-900 text-xs mb-0.5">مشاهدة الكل</h3>
-                    <p class="text-[10px] text-slate-400 font-light mb-3">استعراض كامل القائمة</p>
-                    <span class="px-3 py-1.5 rounded-xl bg-white text-slate-800 text-xs font-semibold border border-pink-200 shadow-2xs group-hover:bg-brand-500 group-hover:text-white group-hover:border-brand-500 transition">
-                        تصفح المنتجات
-                    </span>
-                </a>
-            </div>
-        </div>
-
-    </div>
-</section>
-{% endif %}
-<!-- Gifting & Occasions Bundles Strip -->
-{% include 'store/components/gift_bundles_strip.html' %}
-
-<!-- 3. Strip 2: Categories Horizontal Scroll -->
+<!-- 2. Categories Horizontal Scroll Strip -->
 {% if categories %}
-<section class="py-10 bg-transparent border-b border-pink-200">
+<section class="py-8 bg-transparent border-b border-pink-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <!-- Header of Categories Strip -->
@@ -223,24 +143,24 @@
                 </div>
                 <div>
                     <h2 class="text-base sm:text-xl font-bold text-slate-900">الأقسام والتشكيلات</h2>
-                    <span class="text-[11px] text-slate-400 block">تصفح المنتجات حسب الفئة</span>
+                    <span class="text-[11px] text-slate-500 block">تصفح معروضات المتجر حسب الأقسام الرئيسية</span>
                 </div>
             </div>
             
             <div class="flex items-center gap-1">
                 <button 
                     type="button"
-                    onclick="scrollContainer('categories-scroll', 240)" 
+                    onclick="sliderStep('categories-scroll', 'prev')" 
                     class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
-                    title="تمرير لليمين"
+                    title="تمرير لليمين (السابق)"
                 >
                     <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
                 </button>
                 <button 
                     type="button"
-                    onclick="scrollContainer('categories-scroll', -240)" 
+                    onclick="sliderStep('categories-scroll', 'next')" 
                     class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
-                    title="تمرير لليسار"
+                    title="تمرير لليسار (التالي)"
                 >
                     <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
                 </button>
@@ -250,11 +170,11 @@
         <!-- Horizontal Categories Strip -->
         <div 
             id="categories-scroll" 
-            class="flex items-stretch gap-3 sm:gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-3 pt-1"
-            style="scrollbar-width: thin;"
+            class="bv-slider-strip flex flex-nowrap items-stretch gap-3 sm:gap-4 overflow-x-auto pb-4 pt-1 select-none"
+            style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; cursor: grab;"
         >
             {% for cat in categories %}
-            <div class="w-[160px] sm:w-[185px] md:w-[200px] shrink-0 snap-start flex flex-col">
+            <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 185px !important; width: 185px !important; max-width: 215px !important; min-width: 170px !important;">
                 <a 
                     href="{% url 'store:product_list' %}?category={{ cat.slug }}" 
                     class="h-full rounded-2xl bg-white border border-pink-200 hover:border-brand-400 p-3 flex flex-col justify-between transition-all duration-200 hover:shadow-md group cursor-pointer text-center"
@@ -290,7 +210,7 @@
             {% endfor %}
 
             <!-- Final Card in Categories Strip: View All Categories -->
-            <div class="w-[150px] sm:w-[170px] md:w-[185px] shrink-0 snap-start flex flex-col">
+            <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 170px !important; width: 170px !important; max-width: 200px !important; min-width: 160px !important;">
                 <a 
                     href="{% url 'store:product_list' %}" 
                     class="h-full rounded-2xl bg-white border-2 border-dashed border-pink-200 hover:border-brand-400 p-4 flex flex-col items-center justify-center text-center group transition duration-200 cursor-pointer shadow-2xs"
@@ -311,7 +231,319 @@
 </section>
 {% endif %}
 
-<!-- 4. Luxury Brands Horizontal Scroll Strip -->
+<!-- 3. Featured Products Horizontal Scroll Strip -->
+{% if featured_products %}
+<section class="py-10 bg-white/40 border-b border-pink-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Header of Featured Strip -->
+        <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-white text-brand-600 flex items-center justify-center border border-pink-200 shrink-0 shadow-2xs">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-brand-600"></i>
+                </div>
+                <div>
+                    <h2 class="text-base sm:text-xl font-bold text-slate-900">المنتجات المميزة</h2>
+                    <span class="text-[11px] text-slate-500 block">مختارات حصرية من أبرز المنتجات وأكثرها طلباً</span>
+                </div>
+            </div>
+            
+            <!-- Actions & Scroll Buttons -->
+            <div class="flex items-center gap-2">
+                <a href="{% url 'store:product_list' %}" class="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-800 text-xs font-semibold transition border border-pink-200 shadow-2xs">
+                    <span>مشاهدة الكل</span>
+                    <i data-lucide="arrow-left" class="w-3 h-3"></i>
+                </a>
+                <div class="flex items-center gap-1">
+                    <button 
+                        type="button"
+                        onclick="sliderStep('featured-scroll', 'prev')" 
+                        class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
+                        title="تمرير لليمين (السابق)"
+                    >
+                        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button 
+                        type="button"
+                        onclick="sliderStep('featured-scroll', 'next')" 
+                        class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
+                        title="تمرير لليسار (التالي)"
+                    >
+                        <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Horizontal Scroll Container -->
+        <div 
+            id="featured-scroll" 
+            class="bv-slider-strip flex flex-nowrap items-stretch gap-3 sm:gap-4 overflow-x-auto pb-4 pt-1 select-none"
+            style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; cursor: grab;"
+        >
+            {% for product in featured_products %}
+            <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 190px !important; width: 190px !important; max-width: 220px !important; min-width: 175px !important;">
+                {% include 'store/components/product_card.html' with product=product %}
+            </div>
+            {% endfor %}
+
+            <!-- Final Card in the Horizontal Strip: View All Featured -->
+            <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 170px !important; width: 170px !important; max-width: 200px !important; min-width: 160px !important;">
+                <a 
+                    href="{% url 'store:product_list' %}" 
+                    class="h-full rounded-2xl bg-white border-2 border-dashed border-pink-200 hover:border-brand-400 p-4 flex flex-col items-center justify-center text-center group transition duration-200 cursor-pointer shadow-2xs"
+                >
+                    <div class="w-10 h-10 rounded-xl bg-brand-500 text-white flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
+                        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-900 text-xs mb-0.5">مشاهدة الكل</h3>
+                    <p class="text-[10px] text-slate-400 font-light mb-3">استعراض كامل القائمة</p>
+                    <span class="px-3 py-1.5 rounded-xl bg-white text-slate-800 text-xs font-semibold border border-pink-200 shadow-2xs group-hover:bg-brand-500 group-hover:text-white group-hover:border-brand-500 transition">
+                        تصفح المنتجات
+                    </span>
+                </a>
+            </div>
+        </div>
+
+    </div>
+</section>
+{% endif %}
+
+<!-- 4. Luxury Perfumes Horizontal Scroll Strip -->
+{% if perfume_products %}
+<section class="py-10 bg-transparent border-b border-pink-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Header of Perfumes Strip -->
+        <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-white text-brand-600 flex items-center justify-center border border-pink-200 shrink-0 shadow-2xs">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-brand-600"></i>
+                </div>
+                <div>
+                    <h2 class="text-base sm:text-xl font-bold text-slate-900">قسم العطور الفاخرة</h2>
+                    <span class="text-[11px] text-slate-500 block">عطور عالمية أصلية وماستر تستر بأعلى ثبات وفوحان</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <a href="{% url 'store:perfumes_catalog' %}" class="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-800 text-xs font-semibold transition border border-pink-200 shadow-2xs">
+                    <span>صالة العطور</span>
+                    <i data-lucide="arrow-left" class="w-3 h-3"></i>
+                </a>
+                <div class="flex items-center gap-1">
+                    <button 
+                        type="button"
+                        onclick="sliderStep('perfumes-scroll', 'prev')" 
+                        class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
+                        title="تمرير لليمين (السابق)"
+                    >
+                        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button 
+                        type="button"
+                        onclick="sliderStep('perfumes-scroll', 'next')" 
+                        class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
+                        title="تمرير لليسار (التالي)"
+                    >
+                        <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Horizontal Perfumes Scroll Container -->
+        <div 
+            id="perfumes-scroll" 
+            class="bv-slider-strip flex flex-nowrap items-stretch gap-3 sm:gap-4 overflow-x-auto pb-4 pt-1 select-none"
+            style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; cursor: grab;"
+        >
+            {% for product in perfume_products %}
+            <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 190px !important; width: 190px !important; max-width: 220px !important; min-width: 175px !important;">
+                {% include 'store/components/product_card.html' with product=product %}
+            </div>
+            {% endfor %}
+
+            <!-- Final Card in Perfumes Strip: View All Perfumes -->
+            <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 170px !important; width: 170px !important; max-width: 200px !important; min-width: 160px !important;">
+                <a 
+                    href="{% url 'store:perfumes_catalog' %}" 
+                    class="h-full rounded-2xl bg-white border-2 border-dashed border-pink-200 hover:border-brand-400 p-4 flex flex-col items-center justify-center text-center group transition duration-200 cursor-pointer shadow-2xs"
+                >
+                    <div class="w-10 h-10 rounded-xl bg-brand-500 text-white flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-900 text-xs mb-0.5">كافة العطور</h3>
+                    <p class="text-[10px] text-slate-400 font-light mb-3">تصفح تشكيلة العطور</p>
+                    <span class="px-3 py-1.5 rounded-xl bg-white text-slate-800 text-xs font-semibold border border-pink-200 shadow-2xs group-hover:bg-brand-500 group-hover:text-white group-hover:border-brand-500 transition">
+                        استعراض القسم
+                    </span>
+                </a>
+            </div>
+        </div>
+
+    </div>
+</section>
+{% endif %}
+
+<!-- 5. Luxury Watches Horizontal Scroll Strip -->
+{% if watch_products %}
+<section class="py-10 bg-white/40 border-b border-pink-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Header of Watches Strip -->
+        <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-white text-brand-600 flex items-center justify-center border border-pink-200 shrink-0 shadow-2xs">
+                    <i data-lucide="watch" class="w-4 h-4 text-brand-600"></i>
+                </div>
+                <div>
+                    <h2 class="text-base sm:text-xl font-bold text-slate-900">قسم الساعات الفاخرة</h2>
+                    <span class="text-[11px] text-slate-500 block">ساعات رجالية ونسائية بتصاميم عصرية وكلاسيكية راقية</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <a href="{% url 'store:watches_catalog' %}" class="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-800 text-xs font-semibold transition border border-pink-200 shadow-2xs">
+                    <span>صالة الساعات</span>
+                    <i data-lucide="arrow-left" class="w-3 h-3"></i>
+                </a>
+                <div class="flex items-center gap-1">
+                    <button 
+                        type="button"
+                        onclick="sliderStep('watches-scroll', 'prev')" 
+                        class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
+                        title="تمرير لليمين (السابق)"
+                    >
+                        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button 
+                        type="button"
+                        onclick="sliderStep('watches-scroll', 'next')" 
+                        class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
+                        title="تمرير لليسار (التالي)"
+                    >
+                        <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Horizontal Watches Scroll Container -->
+        <div 
+            id="watches-scroll" 
+            class="bv-slider-strip flex flex-nowrap items-stretch gap-3 sm:gap-4 overflow-x-auto pb-4 pt-1 select-none"
+            style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; cursor: grab;"
+        >
+            {% for product in watch_products %}
+            <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 190px !important; width: 190px !important; max-width: 220px !important; min-width: 175px !important;">
+                {% include 'store/components/product_card.html' with product=product %}
+            </div>
+            {% endfor %}
+
+            <!-- Final Card in Watches Strip: View All Watches -->
+            <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 170px !important; width: 170px !important; max-width: 200px !important; min-width: 160px !important;">
+                <a 
+                    href="{% url 'store:watches_catalog' %}" 
+                    class="h-full rounded-2xl bg-white border-2 border-dashed border-pink-200 hover:border-brand-400 p-4 flex flex-col items-center justify-center text-center group transition duration-200 cursor-pointer shadow-2xs"
+                >
+                    <div class="w-10 h-10 rounded-xl bg-brand-500 text-white flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
+                        <i data-lucide="watch" class="w-4 h-4"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-900 text-xs mb-0.5">كافة الساعات</h3>
+                    <p class="text-[10px] text-slate-400 font-light mb-3">تصفح تشكيلة الساعات</p>
+                    <span class="px-3 py-1.5 rounded-xl bg-white text-slate-800 text-xs font-semibold border border-pink-200 shadow-2xs group-hover:bg-brand-500 group-hover:text-white group-hover:border-brand-500 transition">
+                        استعراض القسم
+                    </span>
+                </a>
+            </div>
+        </div>
+
+    </div>
+</section>
+{% endif %}
+
+<!-- 6. Cosmetics & Skincare Horizontal Scroll Strip -->
+{% if cosmetic_products %}
+<section class="py-10 bg-transparent border-b border-pink-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Header of Cosmetics Strip -->
+        <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-white text-brand-600 flex items-center justify-center border border-pink-200 shrink-0 shadow-2xs">
+                    <i data-lucide="heart" class="w-4 h-4 text-brand-600"></i>
+                </div>
+                <div>
+                    <h2 class="text-base sm:text-xl font-bold text-slate-900">مستحضرات التجميل والعناية</h2>
+                    <span class="text-[11px] text-slate-500 block">منتجات عناية ومكياج أصلي من كبرى الماركات العالمية</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <a href="{% url 'store:cosmetics_catalog' %}" class="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-800 text-xs font-semibold transition border border-pink-200 shadow-2xs">
+                    <span>صالة التجميل</span>
+                    <i data-lucide="arrow-left" class="w-3 h-3"></i>
+                </a>
+                <div class="flex items-center gap-1">
+                    <button 
+                        type="button"
+                        onclick="sliderStep('cosmetics-scroll', 'prev')" 
+                        class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
+                        title="تمرير لليمين (السابق)"
+                    >
+                        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button 
+                        type="button"
+                        onclick="sliderStep('cosmetics-scroll', 'next')" 
+                        class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
+                        title="تمرير لليسار (التالي)"
+                    >
+                        <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Horizontal Cosmetics Scroll Container -->
+        <div 
+            id="cosmetics-scroll" 
+            class="bv-slider-strip flex flex-nowrap items-stretch gap-3 sm:gap-4 overflow-x-auto pb-4 pt-1 select-none"
+            style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; cursor: grab;"
+        >
+            {% for product in cosmetic_products %}
+            <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 190px !important; width: 190px !important; max-width: 220px !important; min-width: 175px !important;">
+                {% include 'store/components/product_card.html' with product=product %}
+            </div>
+            {% endfor %}
+
+            <!-- Final Card in Cosmetics Strip: View All Cosmetics -->
+            <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 170px !important; width: 170px !important; max-width: 200px !important; min-width: 160px !important;">
+                <a 
+                    href="{% url 'store:cosmetics_catalog' %}" 
+                    class="h-full rounded-2xl bg-white border-2 border-dashed border-pink-200 hover:border-brand-400 p-4 flex flex-col items-center justify-center text-center group transition duration-200 cursor-pointer shadow-2xs"
+                >
+                    <div class="w-10 h-10 rounded-xl bg-brand-500 text-white flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
+                        <i data-lucide="heart" class="w-4 h-4"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-900 text-xs mb-0.5">كافة المستحضرات</h3>
+                    <p class="text-[10px] text-slate-400 font-light mb-3">تصفح منتجات العناية</p>
+                    <span class="px-3 py-1.5 rounded-xl bg-white text-slate-800 text-xs font-semibold border border-pink-200 shadow-2xs group-hover:bg-brand-500 group-hover:text-white group-hover:border-brand-500 transition">
+                        استعراض القسم
+                    </span>
+                </a>
+            </div>
+        </div>
+
+    </div>
+</section>
+{% endif %}
+
+<!-- 7. Gifting & Occasions Bundles Strip -->
+{% include 'store/components/gift_bundles_strip.html' %}
+
+<!-- 8. Luxury Brands Horizontal Scroll Strip -->
 {% if featured_brands or perfume_brands %}
 <section class="py-10 bg-transparent border-b border-pink-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -336,17 +568,17 @@
                 <div class="flex items-center gap-1">
                     <button 
                         type="button"
-                        onclick="scrollContainer('brands-scroll', 220)" 
+                        onclick="sliderStep('brands-scroll', 'prev')" 
                         class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
-                        title="تمرير لليمين"
+                        title="تمرير لليمين (السابق)"
                     >
                         <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
                     </button>
                     <button 
                         type="button"
-                        onclick="scrollContainer('brands-scroll', -220)" 
+                        onclick="sliderStep('brands-scroll', 'next')" 
                         class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
-                        title="تمرير لليسار"
+                        title="تمرير لليسار (التالي)"
                     >
                         <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
                     </button>
@@ -357,12 +589,12 @@
         <!-- Horizontal Brands Strip -->
         <div 
             id="brands-scroll" 
-            class="flex items-stretch gap-3 sm:gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-3 pt-1"
-            style="scrollbar-width: thin;"
+            class="bv-slider-strip flex flex-nowrap items-stretch gap-3 sm:gap-4 overflow-x-auto pb-4 pt-1 select-none"
+            style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; cursor: grab;"
         >
             {% if featured_brands %}
                 {% for b in featured_brands %}
-                <div class="w-[165px] sm:w-[195px] md:w-[210px] shrink-0 snap-start flex flex-col">
+                <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 190px !important; width: 190px !important; max-width: 220px !important; min-width: 175px !important;">
                     <a 
                         href="{% url 'store:brand_detail' b.slug %}" 
                         class="h-full rounded-2xl bg-white border border-pink-200 hover:border-brand-400 p-4 flex flex-col justify-between transition-all duration-200 hover:shadow-md group cursor-pointer text-center"
@@ -399,7 +631,7 @@
                 {% endfor %}
             {% else %}
                 {% for b in perfume_brands %}
-                <div class="w-[160px] sm:w-[185px] md:w-[200px] shrink-0 snap-start flex flex-col">
+                <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 190px !important; width: 190px !important; max-width: 220px !important; min-width: 175px !important;">
                     <a 
                         href="{% url 'store:perfumes_catalog' %}?brand={{ b.brand_name }}" 
                         class="h-full rounded-2xl bg-white border border-pink-200 hover:border-brand-400 p-3.5 flex flex-col justify-between transition-all duration-200 hover:shadow-md group cursor-pointer text-center"
@@ -429,7 +661,7 @@
             {% endif %}
 
             <!-- Final Card in Brands Strip: View All Brands Directory -->
-            <div class="w-[160px] shrink-0 snap-start flex flex-col">
+            <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 170px !important; width: 170px !important; max-width: 200px !important; min-width: 160px !important;">
                 <a 
                     href="{% url 'store:brands_list' %}" 
                     class="h-full rounded-2xl bg-white border-2 border-dashed border-pink-200 hover:border-brand-400 p-4 flex flex-col items-center justify-center text-center group transition duration-200 cursor-pointer shadow-2xs"
@@ -449,6 +681,57 @@
     </div>
 </section>
 {% endif %}
+
+<!-- 9. Store Trust & Service Guarantees Strip -->
+<section class="py-12 bg-white/70 border-b border-pink-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+            <!-- Item 1: Authenticity Guarantee -->
+            <div class="flex items-start gap-3 p-4 rounded-2xl bg-white border border-pink-100 shadow-2xs hover:shadow-md hover:border-brand-300 transition-all duration-200">
+                <div class="w-10 h-10 rounded-xl bg-brand-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                    <i data-lucide="shield-check" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-900 text-xs sm:text-sm">أصالة وجودة مضمونة</h4>
+                    <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">عطور ومستحضرات مختارة بعناية فائقة، خيارات أصلية وماستر موثوقة.</p>
+                </div>
+            </div>
+
+            <!-- Item 2: Fast Delivery to All Governorates -->
+            <div class="flex items-start gap-3 p-4 rounded-2xl bg-white border border-pink-100 shadow-2xs hover:shadow-md hover:border-brand-300 transition-all duration-200">
+                <div class="w-10 h-10 rounded-xl bg-brand-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                    <i data-lucide="truck" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-900 text-xs sm:text-sm">توصيل لكافة المحافظات</h4>
+                    <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">توصيل سريع وآمن لجميع المدن والمحافظات اليمنية مع تتبع مباشر.</p>
+                </div>
+            </div>
+
+            <!-- Item 3: Luxury Gifting & Price Shielding -->
+            <div class="flex items-start gap-3 p-4 rounded-2xl bg-white border border-pink-100 shadow-2xs hover:shadow-md hover:border-brand-300 transition-all duration-200">
+                <div class="w-10 h-10 rounded-xl bg-brand-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                    <i data-lucide="gift" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-900 text-xs sm:text-sm">تغليف إهداء فاخر</h4>
+                    <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">خدمة الإهداء مع كرت مخصص وإمكانية حجب الأسعار عن المستلم.</p>
+                </div>
+            </div>
+
+            <!-- Item 4: Instant Customer Service & Multi-Currency -->
+            <div class="flex items-start gap-3 p-4 rounded-2xl bg-white border border-pink-100 shadow-2xs hover:shadow-md hover:border-brand-300 transition-all duration-200">
+                <div class="w-10 h-10 rounded-xl bg-brand-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                    <i data-lucide="credit-card" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-900 text-xs sm:text-sm">دفع ميسر بعدة عملات</h4>
+                    <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">مرونة كاملة في الدفع بالريال اليمني أو السعودي والتحويل المصرفي.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 
 <!-- Slider & Strip Scrolling Scripts -->
 <script>
@@ -520,62 +803,199 @@
         });
     }
 
-    // 2. Horizontal Strip Scrolling Functions & Smooth Auto-Ticker (Moderate Speed "نص نص")
-    function scrollContainer(containerId, distance) {
-        const el = document.getElementById(containerId);
-        if (el) {
-            el.scrollBy({ left: distance, behavior: 'smooth' });
+    // 2. High-Performance Horizontal Sliders (Smooth Auto-Gliding + Desktop Drag-to-Scroll + RTL Navigation)
+    let bvRtlType = null;
+    function detectRTLType() {
+        if (bvRtlType) return bvRtlType;
+        try {
+            const div = document.createElement('div');
+            div.dir = 'rtl';
+            div.style.width = '4px';
+            div.style.height = '1px';
+            div.style.overflow = 'scroll';
+            div.style.position = 'absolute';
+            div.style.top = '-9999px';
+            div.innerHTML = '<div style="width: 8px; height: 1px;"></div>';
+            document.body.appendChild(div);
+            if (div.scrollLeft > 0) {
+                bvRtlType = 'default';
+            } else {
+                div.scrollLeft = 1;
+                bvRtlType = (div.scrollLeft === 0) ? 'negative' : 'reverse';
+            }
+            document.body.removeChild(div);
+        } catch (e) {
+            bvRtlType = 'negative';
         }
+        return bvRtlType || 'negative';
     }
 
-    // Auto-scroll loop with pause on hover/touch and seamless wrapping
-    function setupSmoothAutoScroll(stripId, stepPixels = 1, intervalMs = 30) {
+    const bvSliders = {};
+
+    function initLuxurySlider(stripId, options = {}) {
         const el = document.getElementById(stripId);
         if (!el) return;
 
-        let isInteracting = false;
+        const speed = options.speed || 0.65; // pixels per animation frame (smooth 60fps)
+        let isPaused = false;
+        let pauseTimer = null;
+        let isMouseDown = false;
+        let startX = 0;
+        let startScrollLeft = 0;
+        let hasDragged = false;
+        let rafId = null;
 
-        el.addEventListener('mouseenter', () => { isInteracting = true; });
-        el.addEventListener('mouseleave', () => { isInteracting = false; });
-        el.addEventListener('touchstart', () => { isInteracting = true; }, { passive: true });
-        el.addEventListener('touchend', () => { isInteracting = false; }, { passive: true });
-
-        // Auto-detect browser RTL scroll direction (positive or negative)
-        let scrollDirection = -1;
-        try {
-            const initial = el.scrollLeft;
-            el.scrollLeft += 2;
-            if (el.scrollLeft !== initial) {
-                scrollDirection = 1;
-            } else {
-                el.scrollLeft -= 2;
-                if (el.scrollLeft !== initial) {
-                    scrollDirection = -1;
-                }
-            }
-            el.scrollLeft = initial;
-        } catch (e) {
-            scrollDirection = -1;
+        function pauseTemporarily(ms = 3500) {
+            isPaused = true;
+            if (pauseTimer) clearTimeout(pauseTimer);
+            pauseTimer = setTimeout(() => {
+                isPaused = false;
+            }, ms);
         }
 
-        setInterval(() => {
-            if (isInteracting) return;
-            const before = el.scrollLeft;
-            el.scrollLeft += (scrollDirection * stepPixels);
+        // Pause on mouse hover & mobile touch
+        el.addEventListener('mouseenter', () => { isPaused = true; });
+        el.addEventListener('mouseleave', () => {
+            if (!isMouseDown) isPaused = false;
+        });
+        el.addEventListener('touchstart', () => { isPaused = true; }, { passive: true });
+        el.addEventListener('touchend', () => { pauseTemporarily(2500); }, { passive: true });
 
-            // If reached the end and stopped moving, loop back seamlessly
-            if (el.scrollLeft === before) {
-                el.scrollLeft = 0;
+        // Mouse Drag-to-Scroll (Desktop grab & glide)
+        el.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return; // Only primary mouse button
+            isMouseDown = true;
+            hasDragged = false;
+            startX = e.pageX - el.offsetLeft;
+            startScrollLeft = el.scrollLeft;
+            isPaused = true;
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isMouseDown) {
+                isMouseDown = false;
+                el.classList.remove('is-dragging');
+                pauseTemporarily(2500);
+                setTimeout(() => { hasDragged = false; }, 80);
             }
-        }, intervalMs);
+        });
+
+        el.addEventListener('mousemove', (e) => {
+            if (!isMouseDown) return;
+            const x = e.pageX - el.offsetLeft;
+            const walk = (x - startX);
+            if (Math.abs(walk) > 4) {
+                hasDragged = true;
+                el.classList.add('is-dragging');
+                e.preventDefault();
+                el.scrollLeft = startScrollLeft - walk;
+            }
+        });
+
+        // Prevent accidental card click/modal open if user was dragging
+        el.addEventListener('click', (e) => {
+            if (hasDragged) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }, true);
+
+        // Smooth Auto-Glide Loop via requestAnimationFrame
+        function glide() {
+            if (!isPaused && !isMouseDown && el.scrollWidth > el.clientWidth) {
+                const mode = detectRTLType();
+                const maxScroll = el.scrollWidth - el.clientWidth;
+
+                if (mode === 'negative') {
+                    el.scrollLeft -= speed;
+                    if (Math.abs(el.scrollLeft) >= maxScroll - 2) {
+                        el.scrollLeft = 0; // seamless loop
+                    }
+                } else {
+                    el.scrollLeft += speed;
+                    if (el.scrollLeft >= maxScroll - 2) {
+                        el.scrollLeft = 0; // seamless loop
+                    }
+                }
+            }
+            rafId = requestAnimationFrame(glide);
+        }
+
+        rafId = requestAnimationFrame(glide);
+
+        // Step navigation for next/prev arrows
+        function step(dir) {
+            pauseTemporarily(3500);
+            const mode = detectRTLType();
+            const stepAmount = 240;
+            let delta = 0;
+            if (dir === 'next') {
+                delta = (mode === 'negative') ? -stepAmount : stepAmount;
+            } else {
+                delta = (mode === 'negative') ? stepAmount : -stepAmount;
+            }
+            el.scrollBy({ left: delta, behavior: 'smooth' });
+        }
+
+        bvSliders[stripId] = { step, pauseTemporarily };
     }
 
-    // Initialize auto-scroll on categories, brands, and featured products
+    function sliderStep(stripId, dir) {
+        if (bvSliders[stripId]) {
+            bvSliders[stripId].step(dir);
+        } else {
+            const el = document.getElementById(stripId);
+            if (el) {
+                const delta = (dir === 'next') ? -240 : 240;
+                el.scrollBy({ left: delta, behavior: 'smooth' });
+            }
+        }
+    }
+
+    function scrollContainer(containerId, distance) {
+        if (distance < 0) {
+            sliderStep(containerId, 'next');
+        } else {
+            sliderStep(containerId, 'prev');
+        }
+    }
+
+    // Initialize all sliders when DOM is ready
     document.addEventListener('DOMContentLoaded', () => {
-        setupSmoothAutoScroll('categories-scroll', 1, 32);
-        setupSmoothAutoScroll('brands-scroll', 1, 30);
-        setupSmoothAutoScroll('featured-scroll', 1, 35);
+        initLuxurySlider('categories-scroll', { speed: 0.55 });
+        initLuxurySlider('featured-scroll', { speed: 0.65 });
+        initLuxurySlider('perfumes-scroll', { speed: 0.60 });
+        initLuxurySlider('watches-scroll', { speed: 0.60 });
+        initLuxurySlider('cosmetics-scroll', { speed: 0.60 });
+        initLuxurySlider('bundles-scroll', { speed: 0.60 });
+        initLuxurySlider('brands-scroll', { speed: 0.55 });
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
     });
 </script>
+
+<style>
+    /* Continuous horizontal sliders */
+    .bv-slider-strip {
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    .bv-slider-strip::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+    }
+    .bv-slider-strip.is-dragging {
+        cursor: grabbing !important;
+        scroll-behavior: auto !important;
+    }
+    .bv-slider-strip img {
+        -webkit-user-drag: none;
+        user-drag: none;
+    }
+</style>
 
 {% endblock %}
