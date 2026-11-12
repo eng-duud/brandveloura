@@ -1,22 +1,31 @@
-<!-- UI-PATTERN: Floating Gift CTA Component (زر الإهداء المباشر - يظهر في الشاشات المتوسطة والكبيرة فقط لمنع التداخل مع النافبار السفلي للجوال) -->
+<!-- UI-PATTERN: Floating Gift CTA Component (زر الإهداء الملكي العائم - متجاوب للجوال واللابتوب مع إخفاء تلقائي في صفحات الإهداء) -->
+{% if 'gifting' not in request.path %}
 <aside 
-    class="hidden md:block fixed bottom-5 left-4 sm:left-6 z-30 group pointer-events-auto"
-    aria-label="خدمة الإهداء"
+    id="floating-gift-cta"
+    class="fixed bottom-20 left-4 md:bottom-6 md:left-6 z-30 group pointer-events-auto transition-all duration-300 transform hover:-translate-y-1"
+    aria-label="خدمة الإهداء الملكي"
 >
     <a 
         href="{% url 'store:gift_builder' %}" 
-        class="flex items-center gap-2.5 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 shadow-lg hover:shadow-xl transition duration-200"
-        title="خدمة الإهداء"
+        class="flex items-center gap-2.5 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-full bg-slate-950/95 hover:bg-slate-900 text-white border border-brand-500/50 shadow-[0_8px_30px_rgba(232,58,184,0.3)] hover:shadow-[0_12px_35px_rgba(232,58,184,0.45)] transition-all duration-200 backdrop-blur-md"
+        title="خدمة الإهداء الملكي الفاخر"
     >
-        <span class="w-7 h-7 rounded-full bg-brand-600 text-white flex items-center justify-center shrink-0">
-            <i data-lucide="gift" class="w-3.5 h-3.5"></i>
+        <!-- Animated Icon with Glow -->
+        <span class="relative w-8 h-8 rounded-full bg-gradient-to-tr from-brand-600 to-pink-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <span class="absolute inset-0 rounded-full bg-brand-400 animate-ping opacity-30"></span>
+            <i data-lucide="gift" class="w-4 h-4 relative z-10"></i>
         </span>
 
-        <div class="text-right">
-            <span class="text-[10px] text-slate-300 block leading-tight">خدمة الإهداء</span>
-            <span class="text-xs font-bold text-white block">إرسال كهدية</span>
+        <!-- Label Details -->
+        <div class="text-right leading-tight">
+            <div class="flex items-center gap-1.5">
+                <span class="text-[10px] text-pink-300 font-bold tracking-wide">خدمة الإهداء</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            </div>
+            <span class="text-xs font-black text-white block">إرسال كهدية فاخرة</span>
         </div>
 
-        <i data-lucide="chevron-left" class="w-3.5 h-3.5 text-slate-400"></i>
+        <i data-lucide="chevron-left" class="w-3.5 h-3.5 text-pink-300/80 group-hover:-translate-x-0.5 transition-transform"></i>
     </a>
 </aside>
+{% endif %}

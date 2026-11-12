@@ -698,6 +698,129 @@ class ProductImage(models.Model):
                 ProductImage.objects.filter(pk=first_rem.pk).update(is_primary=True)
 
 
+class GiftBundle(models.Model):
+    """باقات الهدايا الجاهزة المنسقة مسبقاً من الإدارة مع إمكانية التخصيص أو الشراء المباشر"""
+    title_ar = models.CharField(max_length=200, verbose_name='اسم الباقة بالعربي')
+    title_en = models.CharField(max_length=200, blank=True, verbose_name='اسم الباقة بالإنجليزي')
+    slug = models.SlugField(max_length=220, unique=True, allow_unicode=True, blank=True, verbose_name='الرابط الدائم (Slug)')
+    subtitle = models.CharField(max_length=255, blank=True, verbose_name='وصف فرعي / مناسبة الباقة')
+    description = models.TextField(blank=True, verbose_name='تفاصيل ومحتويات الباقة')
+    
+    cover_image = models.ImageField(upload_to='gift_bundles/', blank=True, null=True, verbose_name='صورة غلاف الباقة')
+    cover_image_url_fallback = models.URLField(max_length=1000, blank=True, verbose_name='رابط صورة بديل (Cloudinary/URL)')
+    
+    price_yer = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='سعر الباقة الإجمالي بالريال اليمني')
+    compare_at_price_yer = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='السعر قبل الخصم (ريال يمني - اختياري)')
+    
+    includes_luxury_packaging = models.BooleanField(default=True, verbose_name='تشمل تغليف ملكي فاخر مجاناً')
+    includes_gift_card = models.BooleanField(default=True, verbose_name='تشمل كرت إهداء مخصص مجاناً')
+    
+    is_active = models.BooleanField(default=True, verbose_name='نشطة ومتاحة في المتجر')
+    is_featured = models.BooleanField(default=True, verbose_name='عرض كباقة مميزة في الرئيسية وركن الإهداء')
+    display_order = models.PositiveIntegerField(default=0, verbose_name='ترتيب العرض')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+
+    class Meta:
+        verbose_name = 'باقة هدايا جاهزة'
+        verbose_name_plural = 'باقات الهدايا الجاهزة'
+        ordering = ['display_order', '-created_at']
+
+    def __str__(self):
+        return self.title_ar
+
+    def clean(self):
+        super().clean()
+        if self.price_yer is not None and self.price_yer <= 0:
+            raise ValidationError({'price_yer': 'يجب أن يكون سعر الباقة أكبر من الصفر.'})
+        if self.compare_at_price_yer and self.price_yer and self.compare_at_price_yer <= self.price_yer:
+            raise ValidationError({'compare_at_price_yer': 'السعر قبل الخصم يجب أن يكون أكبر من السعر الحالي لظهور نسبة التوفير بشكل صحيح.'})
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.title_en or self.title_ar, allow_unicode=True)
+            if not base:
+                base = f"bundle-{uuid.uuid4().hex[:6]}"
+            curr_slug = base
+            counter = 1
+            while GiftBundle.objects.filter(slug=curr_slug).exclude(pk=self.pk).exists():
+                curr_slug = f"{base}-{counter}"
+                counter += 1
+            self.slug = curr_slug
+        super().save(*args, **kwargs)
+
+    @property
+    def primary_image_url(self):
+        return self.get_image_url()
+
+    def get_image_url(self):
+        if self.cover_image:
+            return sanitize_image_url(self.cover_image.url, self.cover_image_url_fallback)
+        if self.cover_image_url_fallback:
+            return self.cover_image_url_fallback
+        first_item = self.items.select_related('product').first()
+        if first_item and first_item.product:
+            return first_item.product.primary_image_url
+        return 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=800&q=80'
+
+    @property
+    def price_sar(self):
+        settings = StoreSettings.get_settings()
+        rate = settings.yer_per_sar or Decimal('530.00')
+        return round(self.price_yer / rate, 1)
+
+    @property
+    def compare_at_price_sar(self):
+        if not self.compare_at_price_yer:
+            return None
+        settings = StoreSettings.get_settings()
+        rate = settings.yer_per_sar or Decimal('530.00')
+        return round(self.compare_at_price_yer / rate, 1)
+
+    @property
+    def discount_percentage(self):
+        if self.compare_at_price_yer and self.compare_at_price_yer > self.price_yer:
+            return int(round(((self.compare_at_price_yer - self.price_yer) / self.compare_at_price_yer) * 100))
+        return 0
+
+    @property
+    def name_ar(self):
+        return self.title_ar
+
+    @property
+    def brand_name(self):
+        return 'Brand Veloura'
+
+    @property
+    def items_count(self):
+        return self.items.count()
+
+
+class GiftBundleItem(models.Model):
+    """عنصر أو منتج مشمول داخل باقة الهدية الجاهزة (عطر، ساعة، ملحق، إلخ)"""
+    GRADE_CHOICES = [
+        ('master', 'ماستر تستر (Master)'),
+        ('original', 'أصلي وكالة (Original)'),
+        ('standard', 'قياسي / منتج عادي'),
+    ]
+
+    bundle = models.ForeignKey(GiftBundle, on_delete=models.CASCADE, related_name='items', verbose_name='الباقة التابع لها')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='bundle_inclusions', verbose_name='المنتج المشمول')
+    grade = models.CharField(max_length=20, choices=GRADE_CHOICES, default='master', verbose_name='درجة المنتج (للعطور)')
+    quantity = models.PositiveIntegerField(default=1, verbose_name='الكمية داخل الباقة')
+    custom_note = models.CharField(max_length=150, blank=True, verbose_name='ملاحظة الصنف (مثلاً: 100 مل أو كرتون فاخر)')
+    display_order = models.PositiveIntegerField(default=0, verbose_name='ترتيب الظهور داخل الباقة')
+
+    class Meta:
+        verbose_name = 'محتوى الباقة'
+        verbose_name_plural = 'محتويات الباقة'
+        ordering = ['display_order', 'id']
+
+    def __str__(self):
+        return f"{self.product.name_ar} ({self.get_grade_display()}) x {self.quantity}"
+
+
 class Order(models.Model):
     """سجل الطلبات وإشعارات التحويل اليدوي"""
     STATUS_CHOICES = [

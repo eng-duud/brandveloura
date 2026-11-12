@@ -24,6 +24,8 @@ urlpatterns = [
     path('brands/<slug:slug>/', views.brand_detail_view, name='brand_detail'),
     path('gifting/', views.gift_builder_view, name='gift_builder'),
     path('gifting/calculate/', views.gift_calculate_live, name='gift_calculate'),
+    path('gifting/bundles/<slug:slug>/', views.gift_bundle_detail_view, name='gift_bundle_detail'),
+    path('gifting/bundles/<slug:slug>/order/', views.gift_bundle_order_direct, name='gift_bundle_order_direct'),
     path('products/<slug:slug>/', views.product_detail_view, name='product_detail'),
     path('products/<slug:slug>/modal/', views.product_quick_view, name='product_modal'),
     

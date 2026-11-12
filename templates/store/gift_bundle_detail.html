@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load image_optimization %}
+
+{% block title %}{{ bundle.title_ar }} | باقات الهدايا الملكية | {{ store_settings.store_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+
+    <!-- Breadcrumb -->
+    <nav class="inline-flex items-center gap-2 text-xs sm:text-sm font-bold bg-white/90 backdrop-blur-md border border-pink-200/90 rounded-2xl px-4 py-2 shadow-2xs mb-6 text-slate-600">
+        <a href="{% url 'store:home' %}" class="flex items-center gap-1.5 text-slate-600 hover:text-brand-600 transition cursor-pointer">
+            <i data-lucide="home" class="w-4 h-4 text-brand-500"></i>
+            <span>الرئيسية</span>
+        </a>
+        <i data-lucide="chevron-left" class="w-4 h-4 text-brand-400"></i>
+        <a href="{% url 'store:gift_builder' %}" class="text-slate-600 hover:text-brand-600 transition cursor-pointer">
+            <span>خدمة الإهداء</span>
+        </a>
+        <i data-lucide="chevron-left" class="w-4 h-4 text-brand-400"></i>
+        <span class="text-brand-600 font-extrabold truncate max-w-[200px] sm:max-w-none">{{ bundle.title_ar }}</span>
+    </nav>
+
+    <!-- Main Bundle Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- Right Column (Desktop): Cover Image & Trust Badges (5 cols) -->
+        <div class="lg:col-span-5 space-y-4">
+            <div class="bg-white rounded-3xl p-4 border border-pink-200 shadow-sm relative overflow-hidden">
+                <!-- Cover Image -->
+                <div class="aspect-4/3 sm:aspect-square w-full rounded-2xl overflow-hidden bg-pink-50/40 relative border border-pink-100 flex items-center justify-center">
+                    {% if bundle.primary_image_url %}
+                    <img 
+                        src="{{ bundle.primary_image_url|cloudinary_webp:600 }}"
+                        srcset="{{ bundle.primary_image_url|cloudinary_webp_srcset:'360,480,720' }}"
+                        sizes="(min-width: 1024px) 40vw, 90vw"
+                        alt="{{ bundle.title_ar }}" 
+                        loading="eager"
+                        class="w-full h-full object-cover"
+                    >
+                    {% else %}
+                    <i data-lucide="package" class="w-16 h-16 text-pink-300"></i>
+                    {% endif %}
+
+                    <!-- Floating Badges -->
+                    <div class="absolute top-3 right-3 flex flex-col gap-1.5 items-end">
+                        <span class="px-3 py-1 rounded-full bg-brand-500 text-white text-xs font-bold shadow-sm">
+                            باقة إهداء جاهزة
+                        </span>
+                        {% if bundle.discount_percentage and bundle.discount_percentage > 0 %}
+                        <span class="px-2.5 py-1 rounded-full bg-rose-600 text-white text-xs font-extrabold shadow-sm font-num">
+                            وفر {{ bundle.discount_percentage }}%
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    {% if bundle.includes_luxury_packaging %}
+                    <div class="absolute bottom-3 right-3 px-3 py-1 rounded-full bg-slate-950/85 backdrop-blur-xs text-white text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                        <i data-lucide="gift" class="w-3.5 h-3.5 text-brand-400"></i>
+                        <span>تشمل التغليف الملكي مجاناً</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Guarantee Perks Grid -->
+            <div class="grid grid-cols-2 gap-2.5 bg-pink-50/40 rounded-2xl p-3.5 border border-pink-200 text-xs text-slate-700">
+                <div class="flex items-center gap-2 p-2 rounded-xl bg-white border border-pink-100 shadow-2xs">
+                    <i data-lucide="eye-off" class="w-4 h-4 text-brand-600 shrink-0"></i>
+                    <span class="font-medium">حجب الأسعار في الفاتورة</span>
+                </div>
+                <div class="flex items-center gap-2 p-2 rounded-xl bg-white border border-pink-100 shadow-2xs">
+                    <i data-lucide="file-text" class="w-4 h-4 text-brand-600 shrink-0"></i>
+                    <span class="font-medium">طباعة كرت إهداء مجاناً</span>
+                </div>
+                <div class="flex items-center gap-2 p-2 rounded-xl bg-white border border-pink-100 shadow-2xs">
+                    <i data-lucide="truck" class="w-4 h-4 text-brand-600 shrink-0"></i>
+                    <span class="font-medium">توصيل لكافة المحافظات</span>
+                </div>
+                <div class="flex items-center gap-2 p-2 rounded-xl bg-white border border-pink-100 shadow-2xs">
+                    <i data-lucide="credit-card" class="w-4 h-4 text-brand-600 shrink-0"></i>
+                    <span class="font-medium">دفع باليمني أو السعودي</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Left Column (Desktop): Details, Contents Breakdown & Actions (7 cols) -->
+        <div class="lg:col-span-7 space-y-6">
+            
+            <!-- Header & Pricing -->
+            <div class="bg-white rounded-3xl p-5 sm:p-6 border border-pink-200 shadow-sm space-y-4">
+                <div>
+                    <span class="text-xs font-bold text-brand-700 uppercase tracking-wider block mb-1">
+                        Brand Veloura Luxury Gifting
+                    </span>
+                    <h1 class="text-xl sm:text-3xl font-black text-slate-900 leading-tight">
+                        {{ bundle.title_ar }}
+                    </h1>
+                    {% if bundle.subtitle %}
+                    <p class="text-sm font-bold text-brand-600 mt-1">
+                        {{ bundle.subtitle }}
+                    </p>
+                    {% endif %}
+                </div>
+
+                <!-- Price Box -->
+                <div class="p-4 rounded-2xl bg-gradient-to-r from-pink-50/70 to-purple-50/40 border border-pink-200 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <span class="text-xs text-slate-500 block mb-0.5">سعر الباقة المتكاملة:</span>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-2xl sm:text-3xl font-black text-slate-950 font-num">
+                                {{ bundle.price_yer|floatformat:0 }}
+                            </span>
+                            <span class="text-sm font-bold text-slate-600">ريال يمني</span>
+                            
+                            {% if bundle.compare_at_price_yer %}
+                            <span class="text-sm text-slate-400 line-through mr-2 font-num">
+                                {{ bundle.compare_at_price_yer|floatformat:0 }} ر.ي
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="text-left bg-white px-3.5 py-2 rounded-xl border border-pink-200 shadow-2xs">
+                        <span class="text-[11px] text-slate-500 block">المعادل بالريال السعودي:</span>
+                        <span class="text-base font-black text-emerald-800 font-num">
+                            {{ bundle.price_sar }} ر.س
+                        </span>
+                    </div>
+                </div>
+
+                {% if bundle.description %}
+                <div class="text-xs sm:text-sm text-slate-600 leading-relaxed pt-2 border-t border-pink-100">
+                    {{ bundle.description|linebreaks }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Contents Breakdown (محتويات الباقة) -->
+            <div class="bg-white rounded-3xl p-5 sm:p-6 border border-pink-200 shadow-sm space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-pink-100">
+                    <div class="flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-full bg-brand-500 text-white font-bold text-xs flex items-center justify-center font-num">
+                            {{ bundle.items.count }}
+                        </span>
+                        <div>
+                            <h2 class="font-bold text-slate-900 text-sm sm:text-base">محتويات الباقة المشمولة</h2>
+                            <p class="text-xs text-slate-500">تم اختيار وتنسيق هذه المنتجات بعناية فائقة لتشكل هدية متكاملة تليق بأعزائك</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    {% for item in bundle.items.all %}
+                    <div class="p-3.5 rounded-2xl bg-pink-50/30 border border-pink-200 hover:border-brand-300 transition flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <!-- Product Thumbnail -->
+                            <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white border border-pink-100 p-1 shrink-0 overflow-hidden flex items-center justify-center">
+                                {% if item.product.primary_image_url %}
+                                <img src="{{ item.product.primary_image_url|cloudinary_webp:160 }}" alt="{{ item.product.name_ar }}" class="w-full h-full object-contain">
+                                {% else %}
+                                <i data-lucide="package" class="w-6 h-6 text-pink-300"></i>
+                                {% endif %}
+                            </div>
+
+                            <!-- Product Info -->
+                            <div class="min-w-0">
+                                <span class="text-[10px] font-bold text-brand-700 block truncate">
+                                    {{ item.product.brand_name|default:"Brand Veloura" }}
+                                </span>
+                                <h3 class="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                                    {{ item.product.name_ar }}
+                                </h3>
+                                <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                                    <!-- Grade Badge -->
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold {% if item.grade == 'master' %}bg-purple-100 text-purple-800 border border-purple-200{% elif item.grade == 'original' %}bg-amber-100 text-amber-900 border border-amber-200{% else %}bg-slate-100 text-slate-700{% endif %}">
+                                        {{ item.get_grade_display }}
+                                    </span>
+                                    {% if item.custom_note %}
+                                    <span class="text-[11px] text-slate-500 font-medium">
+                                        ({{ item.custom_note }})
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quantity Badge -->
+                        <div class="shrink-0 text-left">
+                            <span class="px-2.5 py-1 rounded-lg bg-white border border-pink-200 text-xs font-bold text-slate-700 font-num">
+                                عدد {{ item.quantity }}
+                            </span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-xs text-slate-400 py-3 text-center">تفاصيل المنتجات المشمولة متاحة عند الطلب.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Action Buttons: Direct Order vs Customizer -->
+            <div class="bg-white rounded-3xl p-5 sm:p-6 border border-pink-200 shadow-sm space-y-4">
+                <h3 class="font-bold text-slate-900 text-sm">كيف ترغب في إتمام هذه الهدية؟</h3>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    
+                    <!-- 1. Direct Order Button -->
+                    <form method="POST" action="{% url 'store:gift_bundle_order_direct' bundle.slug %}">
+                        {% csrf_token %}
+                        <button 
+                            type="submit" 
+                            class="w-full py-4 px-4 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-sm transition flex flex-col items-center justify-center gap-1 cursor-pointer shadow-md hover:shadow-lg active:scale-98"
+                        >
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="gift" class="w-4 h-4"></i>
+                                <span>طلب الباقة مباشرة كهدية</span>
+                            </div>
+                            <span class="text-[11px] font-normal text-pink-100">الانتقال فوراً لبيانات المستلم والدفع</span>
+                        </button>
+                    </form>
+
+                    <!-- 2. Customize in Gift Builder -->
+                    <a 
+                        href="{% url 'store:gift_builder' %}?bundle_slug={{ bundle.slug }}" 
+                        class="py-4 px-4 rounded-2xl bg-pink-50 hover:bg-pink-100 text-brand-700 border-2 border-pink-300 font-bold text-sm transition flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-98 text-center"
+                    >
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="sliders" class="w-4 h-4"></i>
+                            <span>تعديل وتخصيص الباقة</span>
+                        </div>
+                        <span class="text-[11px] font-normal text-slate-500">إضافة أو استبدال عطور وملحقات حسب رغبتك</span>
+                    </a>
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

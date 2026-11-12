@@ -24,6 +24,7 @@ admin.site.index_title = "لوحة التحكم — إدارة العطور، ا
 from .models import (
     StoreSettings, PaymentAccount, ShippingZone, 
     Category, Brand, Product, ProductImage, 
+    GiftBundle, GiftBundleItem,
     Order, OrderItem, HeroBanner, UserProfile, Notification,
     WebPushSubscription
 )
@@ -595,6 +596,98 @@ class ProductAdmin(admin.ModelAdmin):
     def mark_out_of_stock(self, request, queryset):
         updated = queryset.update(stock_quantity=0)
         self.message_user(request, f"تم تحديد المخزون إلى 0 لـ {updated} منتج.")
+
+
+# ==============================================================================
+# 2.5. إدارة باقات الهدايا الجاهزة (Ready Gift Bundles)
+# ==============================================================================
+
+class GiftBundleItemInline(admin.TabularInline):
+    model = GiftBundleItem
+    autocomplete_fields = ['product']
+    extra = 1
+    fields = ['product', 'grade', 'quantity', 'custom_note', 'display_order']
+
+
+@admin.register(GiftBundle)
+class GiftBundleAdmin(admin.ModelAdmin):
+    list_display = [
+        'cover_preview', 'title_ar', 'formatted_price_yer', 'formatted_price_sar',
+        'discount_badge', 'items_count_display', 'packaging_badges',
+        'is_featured', 'is_active', 'display_order'
+    ]
+    list_filter = ['is_active', 'is_featured', 'includes_luxury_packaging', 'includes_gift_card', 'created_at']
+    search_fields = ['title_ar', 'title_en', 'subtitle', 'description']
+    list_editable = ['is_active', 'is_featured', 'display_order']
+    prepopulated_fields = {'slug': ('title_ar',)}
+    inlines = [GiftBundleItemInline]
+    
+    fieldsets = (
+        ('معلومات الباقة الأساسية', {
+            'fields': (
+                'title_ar', 'title_en', 'slug', 'subtitle', 'description'
+            )
+        }),
+        ('صورة الغلاف', {
+            'fields': ('cover_image', 'cover_image_url_fallback')
+        }),
+        ('التسعير والتوفير', {
+            'fields': (
+                'price_yer', 'compare_at_price_yer'
+            )
+        }),
+        ('مزايا الهدية والظهور', {
+            'fields': (
+                'includes_luxury_packaging', 'includes_gift_card',
+                'is_active', 'is_featured', 'display_order'
+            )
+        }),
+    )
+
+    def cover_preview(self, obj):
+        img = obj.get_image_url()
+        if img:
+            return format_html(
+                '<img src="{}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 8px; border: 1px solid #fbcfe8;" />',
+                img
+            )
+        return '—'
+    cover_preview.short_description = 'الغلاف'
+
+    def formatted_price_yer(self, obj):
+        return f"{obj.price_yer:,.0f} ر.ي"
+    formatted_price_yer.short_description = 'السعر (يمني)'
+
+    def formatted_price_sar(self, obj):
+        return f"{obj.price_sar} ر.س"
+    formatted_price_sar.short_description = 'السعر (سعودي)'
+
+    def discount_badge(self, obj):
+        disc = obj.discount_percentage
+        if disc > 0:
+            return format_html(
+                '<span style="background: #fdf2f8; color: #db2777; border: 1px solid #fbcfe8; padding: 2px 7px; border-radius: 6px; font-weight: bold; font-size: 11px;">توفير {}%</span>',
+                disc
+            )
+        return '—'
+    discount_badge.short_description = 'نسبة التوفير'
+
+    def items_count_display(self, obj):
+        c = obj.items.count()
+        return format_html(
+            '<span style="font-weight: bold; color: #1e293b;">{} منتجات</span>',
+            c
+        )
+    items_count_display.short_description = 'عدد المحتويات'
+
+    def packaging_badges(self, obj):
+        badges = []
+        if obj.includes_luxury_packaging:
+            badges.append('<span style="background:#f3e8ff; color:#7e22ce; padding: 2px 6px; border-radius: 4px; font-size: 10px;">🎁 تغليف فاخر</span>')
+        if obj.includes_gift_card:
+            badges.append('<span style="background:#fef3c7; color:#b45309; padding: 2px 6px; border-radius: 4px; font-size: 10px;">✉️ كرت إهداء</span>')
+        return format_html('&nbsp;'.join(badges)) if badges else '—'
+    packaging_badges.short_description = 'المزايا المشمولة'
 
 
 # ==============================================================================

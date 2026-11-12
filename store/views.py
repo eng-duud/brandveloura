@@ -23,7 +23,7 @@ from .models import (
     StoreSettings, PaymentAccount, ShippingZone, 
     Category, Brand, Product, 
     Order, OrderItem, HeroBanner, UserProfile, Notification,
-    WebPushSubscription
+    WebPushSubscription, GiftBundle, GiftBundleItem
 )
 
 logger = logging.getLogger(__name__)
@@ -109,7 +109,11 @@ def home_view(request):
     perfume_products = get_category_products('perfumes', limit=10)
     watch_products = get_category_products('watches', limit=10)
     cosmetic_products = get_category_products(['cosmetics', 'care'], limit=10)
-    gift_bundles = get_category_products('bundles', limit=10)
+    ready_gift_bundles = list(GiftBundle.objects.filter(is_active=True).prefetch_related('items__product').order_by('display_order', '-created_at')[:10])
+    if ready_gift_bundles:
+        gift_bundles = ready_gift_bundles
+    else:
+        gift_bundles = get_category_products('bundles', limit=10)
         
     # 3. الماركات والبراندات الفاخرة المسجلة في لوحة التحكم (مع استعلام تجميعي لعدد المنتجات)
     featured_brands = Brand.objects.filter(is_active=True).annotate(
@@ -807,16 +811,96 @@ def get_shipping_fee(request):
     })
 
 
-def gift_builder_view(request):
-    """ركن وصانع الهدية الملكي: معالج خطوات تفاعلي سريع ومدمج في شاشة واحدة عبر HTMX"""
+def gift_bundle_detail_view(request, slug):
+    """عرض تفاصيل باقة الإهداء الجاهزة ومحتوياتها ونسبة التوفير وزر الشراء المباشر أو التخصيص"""
+    bundle = get_object_or_404(
+        GiftBundle.objects.prefetch_related('items__product__images', 'items__product__category'),
+        slug=slug, 
+        is_active=True
+    )
     settings = StoreSettings.get_settings()
     yer_per_sar = settings.yer_per_sar or Decimal('530.00')
     wrapping_fee = settings.gift_wrapping_fee_yer or Decimal('2500.00')
 
+    # حساب إجمالي أسعار الأصناف الفردية في حال شراؤها منفصلة
+    items_total_yer = Decimal('0.00')
+    for item in bundle.items.all():
+        p = item.product
+        p_price = p.price_master_yer if item.grade == 'master' and p.price_master_yer else (p.price_original_yer or p.price_yer)
+        items_total_yer += (p_price * item.quantity)
+    if bundle.includes_luxury_packaging:
+        items_total_yer += wrapping_fee
+
+    context = {
+        'bundle': bundle,
+        'items_total_yer': items_total_yer,
+        'wrapping_fee': wrapping_fee,
+        'yer_per_sar': yer_per_sar,
+    }
+    return render(request, 'store/gift_bundle_detail.html', context)
+
+
+def gift_bundle_order_direct(request, slug):
+    """شراء باقة الإهداء الجاهزة مباشرة وتوجيه العميل لصفحة إتمام الطلب"""
+    bundle = get_object_or_404(GiftBundle, slug=slug, is_active=True)
+    cart = request.session.get('cart', {})
+    
+    b_key = f"bundle_{bundle.id}"
+    cart[b_key] = {
+        'product_id': bundle.id,
+        'is_bundle': True,
+        'bundle_id': bundle.id,
+        'name': bundle.title_ar,
+        'brand': 'Brand Veloura',
+        'price_yer': float(bundle.price_yer),
+        'image_url': bundle.primary_image_url,
+        'quantity': 1,
+        'variant_info': f"باقة جاهزة ({bundle.items.count()} عناصر)",
+        'grade': '',
+    }
+    request.session['cart'] = cart
+    
+    # حفظ بيانات الإهداء المرفقة إن وجدت في POST أو تعيين قيم افتراضية
+    recipient_name = request.POST.get('recipient_name', '').strip() if request.method == 'POST' else ''
+    recipient_phone = request.POST.get('recipient_phone', '').strip() if request.method == 'POST' else ''
+    gift_card_sender = request.POST.get('gift_card_sender', '').strip() if request.method == 'POST' else ''
+    gift_card_recipient = request.POST.get('gift_card_recipient', '').strip() or recipient_name
+    gift_card_message = request.POST.get('gift_card_message', '').strip() if request.method == 'POST' else ''
+    preferred_date = request.POST.get('preferred_delivery_date', '').strip() if request.method == 'POST' else None
+    
+    request.session['gift_data'] = {
+        'is_gift': True,
+        'recipient_name': recipient_name,
+        'recipient_phone': recipient_phone,
+        'gift_card_sender': gift_card_sender,
+        'gift_card_recipient': gift_card_recipient,
+        'gift_card_message': gift_card_message,
+        'is_luxury_gift_wrapping': bundle.includes_luxury_packaging,
+        'preferred_delivery_date': preferred_date or None,
+        'hide_invoice_prices': True,
+    }
+    request.session.modified = True
+    messages.success(request, f"تم اختيار ({bundle.title_ar}) كهدية، يرجى استكمال بيانات المستلم وتأكيد الطلب.")
+    return redirect('store:checkout')
+
+
+def gift_builder_view(request):
+    """صانع الهدية الملكي: معالج 4 خطوات تفاعلي أنيق مع شريط تقدم وخيارات التخصيص الكاملة"""
+    settings = StoreSettings.get_settings()
+    yer_per_sar = settings.yer_per_sar or Decimal('530.00')
+    wrapping_fee = settings.gift_wrapping_fee_yer or Decimal('2500.00')
+
+    bundle_slug = request.GET.get('bundle_slug') or request.GET.get('bundle')
     bundle_id = request.GET.get('bundle_id')
+    selected_gift_bundle = None
     selected_bundle = None
-    if bundle_id:
-        selected_bundle = Product.objects.filter(id=bundle_id, is_active=True).first()
+
+    if bundle_slug:
+        selected_gift_bundle = GiftBundle.objects.filter(slug=bundle_slug, is_active=True).prefetch_related('items__product').first()
+    elif bundle_id:
+        selected_gift_bundle = GiftBundle.objects.filter(id=bundle_id, is_active=True).prefetch_related('items__product').first()
+        if not selected_gift_bundle:
+            selected_bundle = Product.objects.filter(id=bundle_id, is_active=True).first()
 
     perfume_id = request.GET.get('perfume_id')
     selected_perfume = None
@@ -825,18 +909,32 @@ def gift_builder_view(request):
 
     perfumes = Product.objects.filter(
         category__category_type='perfumes', is_active=True, stock_quantity__gt=0
-    ).select_related('category').prefetch_related('images').order_by('-is_featured', '-is_best_seller')[:30]
+    ).select_related('category', 'brand').prefetch_related('images').order_by('-is_featured', '-is_best_seller')[:36]
 
     accessories = Product.objects.filter(
         category__category_type__in=['watches', 'cosmetics', 'care'], is_active=True, stock_quantity__gt=0
-    ).select_related('category').prefetch_related('images').order_by('-is_featured')[:30]
+    ).select_related('category', 'brand').prefetch_related('images').order_by('-is_featured', '-created_at')[:36]
 
-    gift_bundles = Product.objects.filter(
-        category__category_type='bundles', is_active=True
-    ).select_related('category').prefetch_related('images').order_by('-created_at')[:10]
+    ready_gift_bundles = list(GiftBundle.objects.filter(is_active=True).prefetch_related('items__product').order_by('display_order', '-created_at')[:12])
+    if not ready_gift_bundles:
+        ready_gift_bundles = list(Product.objects.filter(category__category_type='bundles', is_active=True).order_by('-created_at')[:10])
 
+    # استخراج الأصناف المحددة مسبقاً إذا تم اختيار باقة جاهزة لتخصيصها
+    preselected_perfume_ids = []
+    preselected_accessory_ids = []
+    preselected_grades = {}
+    if selected_gift_bundle:
+        for b_item in selected_gift_bundle.items.all():
+            p_obj = b_item.product
+            c_type = getattr(p_obj.category, 'category_type', '')
+            if c_type == 'perfumes':
+                preselected_perfume_ids.append(p_obj.id)
+                preselected_grades[str(p_obj.id)] = b_item.grade
+            else:
+                preselected_accessory_ids.append(p_obj.id)
 
     if request.method == 'POST':
+        post_bundle_id = request.POST.get('bundle_id')
         perfume_ids = request.POST.getlist('perfume_id')
         if not perfume_ids and request.POST.get('perfume_id'):
             perfume_ids = [request.POST.get('perfume_id')]
@@ -849,8 +947,6 @@ def gift_builder_view(request):
             accessory_ids = [request.POST.get('accessory_id')]
         accessory_ids = [a for a in accessory_ids if a]
 
-        post_bundle_id = request.POST.get('bundle_id')
-        
         recipient_name = request.POST.get('recipient_name', '').strip()
         recipient_phone = request.POST.get('recipient_phone', '').strip()
         gift_card_sender = request.POST.get('gift_card_sender', '').strip()
@@ -862,18 +958,35 @@ def gift_builder_view(request):
         cart = request.session.get('cart', {})
 
         if post_bundle_id:
-            bundle_obj = get_object_or_404(Product, id=post_bundle_id, is_active=True)
-            b_key = f"bundle_{bundle_obj.id}"
-            cart[b_key] = {
-                'product_id': bundle_obj.id,
-                'name': bundle_obj.name_ar,
-                'brand': bundle_obj.brand_name or 'Brand Veloura',
-                'price_yer': float(bundle_obj.price_yer),
-                'image_url': bundle_obj.primary_image_url,
-                'quantity': 1,
-                'variant_info': 'باقة جاهزة',
-                'grade': '',
-            }
+            # التحقق أولاً من نموذج GiftBundle الجديد
+            bundle_obj = GiftBundle.objects.filter(id=post_bundle_id, is_active=True).first()
+            if bundle_obj:
+                b_key = f"bundle_{bundle_obj.id}"
+                cart[b_key] = {
+                    'product_id': bundle_obj.id,
+                    'is_bundle': True,
+                    'bundle_id': bundle_obj.id,
+                    'name': bundle_obj.title_ar,
+                    'brand': 'Brand Veloura',
+                    'price_yer': float(bundle_obj.price_yer),
+                    'image_url': bundle_obj.primary_image_url,
+                    'quantity': 1,
+                    'variant_info': f"باقة جاهزة ({bundle_obj.items.count()} عناصر)",
+                    'grade': '',
+                }
+            else:
+                bundle_prod = get_object_or_404(Product, id=post_bundle_id, is_active=True)
+                b_key = f"bundle_{bundle_prod.id}"
+                cart[b_key] = {
+                    'product_id': bundle_prod.id,
+                    'name': bundle_prod.name_ar,
+                    'brand': bundle_prod.brand_name or 'Brand Veloura',
+                    'price_yer': float(bundle_prod.price_yer),
+                    'image_url': bundle_prod.primary_image_url,
+                    'quantity': 1,
+                    'variant_info': 'باقة جاهزة',
+                    'grade': '',
+                }
         else:
             if not perfume_ids:
                 messages.warning(request, 'يرجى اختيار عطر واحد على الأقل لتجهيز باقة الإهداء.')
@@ -928,9 +1041,13 @@ def gift_builder_view(request):
     context = {
         'perfumes': perfumes,
         'accessories': accessories,
-        'gift_bundles': gift_bundles,
+        'gift_bundles': ready_gift_bundles,
+        'selected_gift_bundle': selected_gift_bundle,
         'selected_bundle': selected_bundle,
         'selected_perfume': selected_perfume,
+        'preselected_perfume_ids': preselected_perfume_ids,
+        'preselected_accessory_ids': preselected_accessory_ids,
+        'preselected_grades': preselected_grades,
         'wrapping_fee': wrapping_fee,
         'yer_per_sar': yer_per_sar,
     }
@@ -962,11 +1079,14 @@ def gift_calculate_live(request):
     items_breakdown = []
 
     if bundle_id:
-        bundle_obj = Product.objects.filter(id=bundle_id, is_active=True).first()
+        bundle_obj = GiftBundle.objects.filter(id=bundle_id, is_active=True).first()
+        if not bundle_obj:
+            bundle_obj = Product.objects.filter(id=bundle_id, is_active=True).first()
         if bundle_obj:
+            b_title = getattr(bundle_obj, 'title_ar', getattr(bundle_obj, 'name_ar', 'باقة جاهزة'))
             total_yer += bundle_obj.price_yer
             items_breakdown.append({
-                'title': bundle_obj.name_ar,
+                'title': b_title,
                 'type': 'باقة جاهزة',
                 'price_yer': bundle_obj.price_yer
             })
@@ -1119,16 +1239,36 @@ def checkout_view(request):
             # فحص كفاية المخزون لجميع المنتجات وحجز الأسطر لمنع البيع الزائد (select_for_update)
             insufficient_items = []
             locked_products = []
+            locked_bundle_items = []
             for item_data in cart.values():
-                p_id = item_data.get('product_id')
                 p_qty = int(item_data.get('quantity', 1))
-                prod = Product.objects.select_for_update().filter(id=p_id, is_active=True).first()
-                if not prod or prod.stock_quantity < p_qty:
-                    avail = prod.stock_quantity if prod else 0
-                    p_name = item_data.get('name', 'منتج')
-                    insufficient_items.append(f"{p_name} (المتوفر: {avail})")
+                if item_data.get('is_bundle'):
+                    b_id = item_data.get('bundle_id') or item_data.get('product_id')
+                    bundle_obj = GiftBundle.objects.filter(id=b_id, is_active=True).first()
+                    if bundle_obj:
+                        bundle_ok = True
+                        for b_item in bundle_obj.items.select_related('product'):
+                            needed = b_item.quantity * p_qty
+                            b_prod = Product.objects.select_for_update().filter(id=b_item.product_id, is_active=True).first()
+                            if not b_prod or b_prod.stock_quantity < needed:
+                                avail = b_prod.stock_quantity if b_prod else 0
+                                insufficient_items.append(f"{b_item.product.name_ar} (ضمن {bundle_obj.title_ar} - المتوفر: {avail})")
+                                bundle_ok = False
+                            else:
+                                locked_bundle_items.append((b_prod, needed))
+                        if bundle_ok:
+                            locked_products.append((None, p_qty, item_data))
+                    else:
+                        insufficient_items.append("الباقة المختارة غير متوفرة")
                 else:
-                    locked_products.append((prod, p_qty, item_data))
+                    p_id = item_data.get('product_id')
+                    prod = Product.objects.select_for_update().filter(id=p_id, is_active=True).first()
+                    if not prod or prod.stock_quantity < p_qty:
+                        avail = prod.stock_quantity if prod else 0
+                        p_name = item_data.get('name', 'منتج')
+                        insufficient_items.append(f"{p_name} (المتوفر: {avail})")
+                    else:
+                        locked_products.append((prod, p_qty, item_data))
 
             if insufficient_items:
                 items_str = '، '.join(insufficient_items)
@@ -1184,16 +1324,29 @@ def checkout_view(request):
                     total_price_yer=p_price * p_qty,
                 )
                 
-                # خصم الكمية من المخزون
-                prod.stock_quantity = max(0, prod.stock_quantity - p_qty)
-                prod.save(update_fields=['stock_quantity'])
-                # تنبيه انخفاض المخزون للإدارة عند وصول الرصيد إلى 3 قطع أو أقل
-                if prod.stock_quantity <= 3:
+                if prod:
+                    # خصم الكمية من المخزون للمنتجات العادية
+                    prod.stock_quantity = max(0, prod.stock_quantity - p_qty)
+                    prod.save(update_fields=['stock_quantity'])
+                    # تنبيه انخفاض المخزون للإدارة عند وصول الرصيد إلى 3 قطع أو أقل
+                    if prod.stock_quantity <= 3:
+                        Notification.notify_admin(
+                            title=f"تنبيه انخفاض المخزون: {prod.name_ar}",
+                            message=f"الكمية المتبقية من المنتج ({prod.name_ar}) أصبحت {prod.stock_quantity} فقط. يرجى مراجعة المخزون.",
+                            notification_type='low_stock',
+                            link=f"/admin/store/product/{prod.id}/change/"
+                        )
+
+            # خصم الكمية من المخزون لمحتويات باقات الهدايا
+            for b_prod, needed in locked_bundle_items:
+                b_prod.stock_quantity = max(0, b_prod.stock_quantity - needed)
+                b_prod.save(update_fields=['stock_quantity'])
+                if b_prod.stock_quantity <= 3:
                     Notification.notify_admin(
-                        title=f"تنبيه انخفاض المخزون: {prod.name_ar}",
-                        message=f"الكمية المتبقية من المنتج ({prod.name_ar}) أصبحت {prod.stock_quantity} فقط. يرجى مراجعة المخزون.",
+                        title=f"تنبيه انخفاض المخزون: {b_prod.name_ar}",
+                        message=f"الكمية المتبقية من المنتج ({b_prod.name_ar}) أصبحت {b_prod.stock_quantity} فقط. يرجى مراجعة المخزون.",
                         notification_type='low_stock',
-                        link=f"/admin/store/product/{prod.id}/change/"
+                        link=f"/admin/store/product/{b_prod.id}/change/"
                     )
 
         # 1. إرسال إشعار تأكيد للعميل (إذا كان مسجلاً الدخول)
