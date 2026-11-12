@@ -138,9 +138,9 @@ class ControlPanelIntegrityAndSliderTests(TestCase):
         self.assertIn('id="watches-scroll"', content)
         self.assertIn('id="cosmetics-scroll"', content)
 
-        # فحص شريط الثقة والضمانات
+        # فحص شريط الثقة والضمانات المعتمد
         self.assertIn('أصالة وجودة مضمونة', content)
-        self.assertIn('توصيل لكافة المحافظات', content)
-        self.assertIn('تغليف إهداء فاخر', content)
-        self.assertIn('دفع ميسر بعدة عملات', content)
+        self.assertIn('توصيل سريع معتمد', content)
+        self.assertIn('تغليف ملكي فاخر', content)
+        self.assertIn('خدمة عملاء واستشارات', content)
 
