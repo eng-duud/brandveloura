@@ -129,7 +129,7 @@
                 <span class="font-bold text-slate-900 text-sm">المجموع الإجمالي:</span>
                 <div class="text-left">
                     <span class="font-bold text-slate-950 text-base font-num">{{ order.total_yer|floatformat:0 }} ر.ي</span>
-                    <span class="text-xs font-medium text-brand-600 block font-num">({{ order.total_sar }} ريال سعودي)</span>
+                    <span class="text-xs font-medium text-brand-600 block font-num">({{ order.total_sar|floatformat:0 }} ريال سعودي)</span>
                 </div>
             </div>
         </div>

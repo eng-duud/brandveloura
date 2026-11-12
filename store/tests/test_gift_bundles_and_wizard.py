@@ -91,12 +91,71 @@ class GiftBundlesAndWizardTests(TestCase):
         )
 
     def test_gift_bundle_properties(self):
-        """التحقق من صحة دوال الحساب والخصائص في باقة الهدايا"""
+        """التحقق من صحة دوال الحساب والخصائص في باقة الهدايا وتقريب السعر السعودي للأعلى كرقم صحيح"""
+        import math
         self.assertEqual(self.bundle.items_count, 2)
         self.assertEqual(self.bundle.discount_percentage, 12)  # (85000-75000)/85000 = ~11.76% -> 12%
-        self.assertEqual(self.bundle.price_sar, round(Decimal('75000.00') / Decimal('530.00'), 1))
+        expected_sar = int(math.ceil(Decimal('75000.00') / Decimal('530.00')))
+        self.assertEqual(self.bundle.price_sar, expected_sar)
+        self.assertIsInstance(self.bundle.price_sar, int)
         self.assertEqual(str(self.bundle), 'باقة الفخامة الملكية')
         self.assertIn('عطر سوفاج ديور', str(self.item1))
+
+    def test_sar_prices_rounded_up_to_whole_integers(self):
+        """التحقق من أن كافة أسعار الريال السعودي أرقام طبيعية مقربة للأعلى بدون كسور"""
+        import math
+        # سعر العطر: 50,000 / 530 = 94.3396 -> تقريب للأعلى = 95
+        self.assertEqual(self.perfume.price_sar, 95)
+        self.assertIsInstance(self.perfume.price_sar, int)
+
+        # سعر الماستر: 35,000 / 530 = 66.0377 -> تقريب للأعلى = 67
+        self.assertEqual(self.perfume.price_master_sar, 67)
+        self.assertIsInstance(self.perfume.price_master_sar, int)
+
+    def test_default_category_controlled_from_store_settings_only(self):
+        """التحقق من أن القسم الافتراضي يتحدد من مكان واحد فقط (إعدادات المتجر)"""
+        # تعيين قسم الساعات كقسم افتراضي من إعدادات المتجر
+        self.settings.default_category = self.cat_watches
+        self.settings.save()
+
+        # عند فتح صفحة الأقسام بدون معلمات، يجب أن يفتح قسم الساعات تلقائياً
+        response = self.client.get(reverse('store:product_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['main_category'], self.cat_watches)
+
+        # التحقق من أن CategoryAdmin لا يعرض is_default في حقول التعديل لمنع التضارب
+        from store.admin import CategoryAdmin
+        admin_instance = CategoryAdmin(Category, None)
+        fieldset_fields = []
+        for name, opts in admin_instance.fieldsets:
+            for f in opts.get('fields', ()):
+                if isinstance(f, (list, tuple)):
+                    fieldset_fields.extend(f)
+                else:
+                    fieldset_fields.append(f)
+        self.assertNotIn('is_default', fieldset_fields)
+        self.assertNotIn('is_default', admin_instance.list_display)
+        self.assertNotIn('is_default', admin_instance.list_editable)
+
+    def test_homepage_sliders_limited_to_8_items(self):
+        """التحقق من أن جميع أشرطة الصفحة الرئيسية مقيدة بحد أقصى 8 عناصر"""
+        # إضافة 10 منتجات عطور إضافية
+        for i in range(10):
+            Product.objects.create(
+                category=self.cat_perfumes,
+                brand=self.brand,
+                name_ar=f'عطر إضافي {i}',
+                slug=f'extra-perfume-{i}',
+                price_yer=Decimal('40000.00'),
+                stock_quantity=5,
+                is_active=True,
+                is_featured=True
+            )
+
+        response = self.client.get(reverse('store:home'))
+        self.assertEqual(response.status_code, 200)
+        self.assertLessEqual(len(response.context['featured_products']), 8)
+        self.assertLessEqual(len(response.context['perfume_products']), 8)
 
     def test_home_view_includes_ready_gift_bundles(self):
         """التحقق من أن الصفحة الرئيسية تعرض الباقات الجاهزة المنسقة"""
@@ -204,3 +263,4 @@ class GiftBundlesAndWizardTests(TestCase):
         # 2. صفحة صانع الإهداء: يختفي الزر العائم تلقائياً
         gifting_resp = self.client.get(reverse('store:gift_builder'))
         self.assertNotContains(gifting_resp, 'id="floating-gift-cta"')
+

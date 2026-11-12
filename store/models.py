@@ -183,6 +183,12 @@ class StoreSettings(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
+        if self.default_category_id:
+            try:
+                Category.objects.filter(id=self.default_category_id).update(is_default=True)
+                Category.objects.exclude(id=self.default_category_id).update(is_default=False)
+            except Exception:
+                pass
         try:
             from django.core.cache import cache
             cache.delete('bv_yer_per_sar')
@@ -560,51 +566,55 @@ class Product(models.Model):
 
     @property
     def price_sar(self):
-        """حساب السعر بالريال السعودي آلياً بناءً على سعر الصرف اليومي المعتمد بالمتجر"""
+        """حساب السعر بالريال السعودي آلياً بناءً على سعر الصرف اليومي المعتمد بالمتجر مقرباً للأعلى بدون كسور"""
         rate = StoreSettings.get_exchange_rate()
         if rate and rate > 0:
-            sar_val = self.price_yer / rate
-            return round(sar_val, 1)
-        return Decimal('0.00')
+            import math
+            return int(math.ceil(self.price_yer / rate))
+        return 0
 
     @property
     def price_original_sar(self):
-        """سعر الأصلي بالريال السعودي"""
+        """سعر الأصلي بالريال السعودي مقرباً للأعلى بدون كسور"""
         if not self.price_original_yer:
             return None
         rate = StoreSettings.get_exchange_rate()
         if rate and rate > 0:
-            return round(self.price_original_yer / rate, 1)
+            import math
+            return int(math.ceil(self.price_original_yer / rate))
         return None
 
     @property
     def price_master_sar(self):
-        """سعر الماستر / طبق الأصل بالريال السعودي"""
+        """سعر الماستر / طبق الأصل بالريال السعودي مقرباً للأعلى بدون كسور"""
         if not self.price_master_yer:
             return None
         rate = StoreSettings.get_exchange_rate()
         if rate and rate > 0:
-            return round(self.price_master_yer / rate, 1)
+            import math
+            return int(math.ceil(self.price_master_yer / rate))
         return None
 
     @property
     def compare_at_price_original_sar(self):
-        """سعر الأصلي قبل الخصم بالريال السعودي"""
+        """سعر الأصلي قبل الخصم بالريال السعودي مقرباً للأعلى بدون كسور"""
         if not self.compare_at_price_original_yer:
             return None
         rate = StoreSettings.get_exchange_rate()
         if rate and rate > 0:
-            return round(self.compare_at_price_original_yer / rate, 1)
+            import math
+            return int(math.ceil(self.compare_at_price_original_yer / rate))
         return None
 
     @property
     def compare_at_price_master_sar(self):
-        """سعر الماستر قبل الخصم بالريال السعودي"""
+        """سعر الماستر قبل الخصم بالريال السعودي مقرباً للأعلى بدون كسور"""
         if not self.compare_at_price_master_yer:
             return None
         rate = StoreSettings.get_exchange_rate()
         if rate and rate > 0:
-            return round(self.compare_at_price_master_yer / rate, 1)
+            import math
+            return int(math.ceil(self.compare_at_price_master_yer / rate))
         return None
 
     @property
@@ -625,13 +635,13 @@ class Product(models.Model):
 
     @property
     def compare_at_price_sar(self):
-        """حساب سعر الشطب بالسعودي آلياً"""
+        """حساب سعر الشطب بالسعودي آلياً مقرباً للأعلى بدون كسور"""
         if not self.compare_at_price_yer:
             return None
         rate = StoreSettings.get_exchange_rate()
         if rate and rate > 0:
-            sar_val = self.compare_at_price_yer / rate
-            return round(sar_val, 1)
+            import math
+            return int(math.ceil(self.compare_at_price_yer / rate))
         return None
 
     @property
@@ -768,7 +778,8 @@ class GiftBundle(models.Model):
     def price_sar(self):
         settings = StoreSettings.get_settings()
         rate = settings.yer_per_sar or Decimal('530.00')
-        return round(self.price_yer / rate, 1)
+        import math
+        return int(math.ceil(self.price_yer / rate))
 
     @property
     def compare_at_price_sar(self):
@@ -776,7 +787,8 @@ class GiftBundle(models.Model):
             return None
         settings = StoreSettings.get_settings()
         rate = settings.yer_per_sar or Decimal('530.00')
-        return round(self.compare_at_price_yer / rate, 1)
+        import math
+        return int(math.ceil(self.compare_at_price_yer / rate))
 
     @property
     def discount_percentage(self):

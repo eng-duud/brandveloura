@@ -136,7 +136,7 @@
                         <td>{{ ord.shipping_city }}</td>
                         <td>
                             {% if ord.payment_currency_selected == 'SAR' %}
-                            <span style="font-weight: 700; color: #047857; font-family: var(--bv-font-num);">{{ ord.total_sar }} ر.س</span>
+                            <span style="font-weight: 700; color: #047857; font-family: var(--bv-font-num);">{{ ord.total_sar|floatformat:0 }} ر.س</span>
                             {% else %}
                             <span style="font-weight: 700; color: #0f172a; font-family: var(--bv-font-num);">{{ ord.total_yer|floatformat:0 }} ر.ي</span>
                             {% endif %}

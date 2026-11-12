@@ -1,6 +1,7 @@
 import os
 import uuid
 import logging
+import math
 from decimal import Decimal
 from urllib.parse import urlencode, quote
 import requests
@@ -73,22 +74,22 @@ def validate_receipt_file(uploaded_file):
 
 
 def home_view(request):
-    """الصفحة الرئيسية للمتجر بتصميم فاخر وقنوات أفقية تفاعلية تغطي كافة الأقسام باختصار وتنظيم"""
+    """الصفحة الرئيسية للمتجر بتصميم فاخر وقنوات أفقية تفاعلية بحد أقصى 8 عناصر لكل شريط"""
     from django.db.models import Count, Q
     banners = HeroBanner.objects.filter(is_active=True).order_by('display_order')
-    categories = Category.objects.filter(is_active=True).order_by('display_order')
+    categories = Category.objects.filter(is_active=True, parent__isnull=True).order_by('display_order')[:8]
     
-    # 1. المنتجات المميزة لشريط التمرير الأفقي
+    # 1. المنتجات المميزة لشريط التمرير الأفقي (بحد أقصى 8 منتجات)
     featured_products = Product.objects.filter(
         is_active=True, is_featured=True
-    ).select_related('category', 'brand').prefetch_related('images').order_by('-created_at')[:12]
+    ).select_related('category', 'brand').prefetch_related('images').order_by('-created_at')[:8]
     if not featured_products.exists():
         featured_products = Product.objects.filter(
             is_active=True
-        ).select_related('category', 'brand').prefetch_related('images').order_by('-created_at')[:12]
+        ).select_related('category', 'brand').prefetch_related('images').order_by('-created_at')[:8]
 
-    # دالة مساعدة سريعة لجلب أفضل منتجات كل قسم هرمياً (القسم وفروعه)
-    def get_category_products(type_keys, limit=10):
+    # دالة مساعدة سريعة لجلب أفضل منتجات كل قسم هرمياً (القسم وفروعه) بحد أقصى 8
+    def get_category_products(type_keys, limit=8):
         if isinstance(type_keys, str):
             type_keys = [type_keys]
         q_filter = Q(category_type__in=type_keys) | Q(parent__category_type__in=type_keys)
@@ -105,28 +106,28 @@ def home_view(request):
             '-is_featured', '-is_best_seller', '-created_at'
         )[:limit]
 
-    # 2. أشرطة الأقسام الرئيسية
-    perfume_products = get_category_products('perfumes', limit=10)
-    watch_products = get_category_products('watches', limit=10)
-    cosmetic_products = get_category_products(['cosmetics', 'care'], limit=10)
-    ready_gift_bundles = list(GiftBundle.objects.filter(is_active=True).prefetch_related('items__product').order_by('display_order', '-created_at')[:10])
+    # 2. أشرطة الأقسام الرئيسية (بحد أقصى 8 منتجات لكل قسم)
+    perfume_products = get_category_products('perfumes', limit=8)
+    watch_products = get_category_products('watches', limit=8)
+    cosmetic_products = get_category_products(['cosmetics', 'care'], limit=8)
+    ready_gift_bundles = list(GiftBundle.objects.filter(is_active=True).prefetch_related('items__product').order_by('display_order', '-created_at')[:8])
     if ready_gift_bundles:
         gift_bundles = ready_gift_bundles
     else:
-        gift_bundles = get_category_products('bundles', limit=10)
+        gift_bundles = get_category_products('bundles', limit=8)
         
-    # 3. الماركات والبراندات الفاخرة المسجلة في لوحة التحكم (مع استعلام تجميعي لعدد المنتجات)
+    # 3. الماركات والبراندات الفاخرة المسجلة في لوحة التحكم (بحد أقصى 8 براندات)
     featured_brands = Brand.objects.filter(is_active=True).annotate(
         products_count=Count('products', filter=Q(products__is_active=True))
-    ).order_by('display_order', '-products_count', 'name_ar')
+    ).order_by('display_order', '-products_count', 'name_ar')[:8]
 
-    # براندات العطور الفاخرة مع بيانات مخصصة لشريط التمرير (استعلام تجميعي واحد سريع للتوافق)
+    # براندات العطور الفاخرة مع بيانات مخصصة لشريط التمرير (استعلام تجميعي واحد سريع للتوافق) بحد أقصى 8
     brand_counts = dict(
         Product.objects.filter(category__category_type='perfumes', is_active=True)
         .exclude(brand_name='')
         .values('brand_name')
         .annotate(total=Count('id'))
-        .values_list('brand_name', 'total')
+        .values_list('brand_name', 'total')[:8]
     )
     
     brand_emblems = {
@@ -149,6 +150,7 @@ def home_view(request):
             'badge': meta['badge'],
             'count': count,
         })
+    perfume_brands_data = perfume_brands_data[:8]
 
     context = {
         'banners': banners,
@@ -345,22 +347,21 @@ def product_list_view(request):
                 category_subcategories = list(main_category.subcategories.filter(is_active=True).order_by('display_order', 'name_ar'))
                 products = products.filter(category=active_subcategory)
 
-    # إذا لم يتم تحديد قسم، نعتمد القسم الافتراضي المحدد من قبل الإدارة
+    # إذا لم يتم تحديد قسم، نعتمد القسم الافتراضي المحدد من قبل الإدارة من مكان واحد (إعدادات المتجر)
     if not main_category and all_main_categories:
-        # 1. فحص هل هناك قسم تم تعيينه كـ is_default=True
-        default_cat = next((c for c in all_main_categories if getattr(c, 'is_default', False)), None)
-        # 2. فحص إعدادات المتجر العامة
+        default_cat = None
+        try:
+            settings_obj = StoreSettings.get_settings()
+            if settings_obj and settings_obj.default_category_id:
+                default_cat = next((c for c in all_main_categories if c.id == settings_obj.default_category_id), None)
+        except Exception:
+            pass
+
+        # في حال لم يتم تحديد قسم في إعدادات المتجر، نتحقق من وجود قسم افتراضي مسبق أو قسم العطور أو أول قسم
         if not default_cat:
-            try:
-                settings_obj = StoreSettings.get_settings()
-                if settings_obj and settings_obj.default_category_id:
-                    default_cat = next((c for c in all_main_categories if c.id == settings_obj.default_category_id), None)
-            except Exception:
-                pass
-        # 3. محاولة البحث عن قسم العطور كخيار تقليدي
+            default_cat = next((c for c in all_main_categories if getattr(c, 'is_default', False)), None)
         if not default_cat:
             default_cat = next((c for c in all_main_categories if c.slug == 'perfumes' or 'عطور' in c.name_ar), None)
-        # 4. اختيار أول قسم رئيسي مسجل
         main_category = default_cat or all_main_categories[0]
         current_category = main_category
         category_subcategories = list(main_category.subcategories.filter(is_active=True).order_by('display_order', 'name_ar'))
@@ -667,9 +668,9 @@ def _render_cart_response(request):
         line_total_yer = price_yer * qty
         subtotal_yer += line_total_yer
         
-        # حساب المعادل بالسعودي
-        price_sar = round(price_yer / yer_per_sar, 1)
-        line_total_sar = round(line_total_yer / yer_per_sar, 1)
+        # حساب المعادل بالسعودي بدون كسور مقرباً للأعلى
+        price_sar = int(math.ceil(price_yer / yer_per_sar))
+        line_total_sar = int(math.ceil(line_total_yer / yer_per_sar))
         
         items.append({
             'key': key,
@@ -685,7 +686,7 @@ def _render_cart_response(request):
             'line_total_sar': line_total_sar,
         })
         
-    subtotal_sar = round(subtotal_yer / yer_per_sar, 1) if yer_per_sar else Decimal('0.00')
+    subtotal_sar = int(math.ceil(subtotal_yer / yer_per_sar)) if yer_per_sar else 0
     
     context = {
         'cart_items': items,
@@ -723,12 +724,12 @@ def cart_view(request):
             'variant_info': data.get('variant_info'),
             'quantity': qty,
             'price_yer': price_yer,
-            'price_sar': round(price_yer / yer_per_sar, 1),
+            'price_sar': int(math.ceil(price_yer / yer_per_sar)),
             'line_total_yer': line_total_yer,
-            'line_total_sar': round(line_total_yer / yer_per_sar, 1),
+            'line_total_sar': int(math.ceil(line_total_yer / yer_per_sar)),
         })
         
-    subtotal_sar = round(subtotal_yer / yer_per_sar, 1) if yer_per_sar else Decimal('0.00')
+    subtotal_sar = int(math.ceil(subtotal_yer / yer_per_sar)) if yer_per_sar else 0
     
     context = {
         'cart_items': items,
@@ -798,7 +799,7 @@ def get_shipping_fee(request):
     total_yer = subtotal_yer + shipping_fee + gift_wrapping_fee
     
     yer_per_sar = settings.yer_per_sar or Decimal('530.00')
-    total_sar = round(total_yer / yer_per_sar, 1)
+    total_sar = int(math.ceil(total_yer / yer_per_sar))
     
     return render(request, 'store/partials/checkout_totals.html', {
         'shipping_fee': shipping_fee,
@@ -1122,7 +1123,7 @@ def gift_calculate_live(request):
             'price_yer': wrapping_fee
         })
 
-    total_sar = round(total_yer / yer_per_sar, 1)
+    total_sar = int(math.ceil(total_yer / yer_per_sar))
 
     return render(request, 'store/partials/gift_builder_summary.html', {
         'total_yer': total_yer,
@@ -1169,7 +1170,7 @@ def checkout_view(request):
     default_zone = shipping_zones.first()
     shipping_fee_yer = default_zone.delivery_fee_yer if default_zone else Decimal('0.00')
     total_yer = subtotal_yer + shipping_fee_yer + gift_wrapping_fee_yer
-    total_sar = round(total_yer / yer_per_sar, 1)
+    total_sar = int(math.ceil(total_yer / yer_per_sar))
 
     if request.method == 'POST':
         order_type = request.POST.get('order_type', 'personal')
@@ -1228,7 +1229,7 @@ def checkout_view(request):
             payment_currency_selected = 'SAR'
             
         order_total_yer = subtotal_yer + actual_shipping_fee + gift_wrapping_fee_yer
-        order_total_sar = round(order_total_yer / yer_per_sar, 1)
+        order_total_sar = int(math.ceil(order_total_yer / yer_per_sar))
         
         amount_due = order_total_sar if payment_currency_selected == 'SAR' else order_total_yer
         
@@ -2114,7 +2115,7 @@ def account_profile_view(request):
     total_spent_yer = sum(o.total_yer for o in orders.exclude(status='cancelled'))
     settings = StoreSettings.get_settings()
     yer_per_sar = settings.yer_per_sar or Decimal('530.00')
-    total_spent_sar = round(total_spent_yer / yer_per_sar, 1) if yer_per_sar else Decimal('0.00')
+    total_spent_sar = int(math.ceil(total_spent_yer / yer_per_sar)) if yer_per_sar else 0
     
     shipping_zones = ShippingZone.objects.filter(is_active=True).order_by('city_name')
     

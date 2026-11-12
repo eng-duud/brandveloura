@@ -1083,7 +1083,7 @@
 
         const trayPriceSarEl = document.getElementById('tray-price-sar');
         if (trayPriceSarEl) {
-            const sarVal = (totalYer / yerPerSar).toFixed(1);
+            const sarVal = Math.ceil(totalYer / yerPerSar);
             trayPriceSarEl.innerText = `(${sarVal} ر.س)`;
         }
 

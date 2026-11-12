@@ -173,7 +173,7 @@
             class="bv-slider-strip flex flex-nowrap items-stretch gap-3 sm:gap-4 overflow-x-auto pb-4 pt-1 select-none"
             style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; cursor: grab;"
         >
-            {% for cat in categories %}
+            {% for cat in categories|slice:":8" %}
             <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 185px !important; width: 185px !important; max-width: 215px !important; min-width: 170px !important;">
                 <a 
                     href="{% url 'store:product_list' %}?category={{ cat.slug }}" 
@@ -281,7 +281,7 @@
             class="bv-slider-strip flex flex-nowrap items-stretch gap-3 sm:gap-4 overflow-x-auto pb-4 pt-1 select-none"
             style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; cursor: grab;"
         >
-            {% for product in featured_products %}
+            {% for product in featured_products|slice:":8" %}
             <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 190px !important; width: 190px !important; max-width: 220px !important; min-width: 175px !important;">
                 {% include 'store/components/product_card.html' with product=product %}
             </div>
@@ -358,7 +358,7 @@
             class="bv-slider-strip flex flex-nowrap items-stretch gap-3 sm:gap-4 overflow-x-auto pb-4 pt-1 select-none"
             style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; cursor: grab;"
         >
-            {% for product in perfume_products %}
+            {% for product in perfume_products|slice:":8" %}
             <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 190px !important; width: 190px !important; max-width: 220px !important; min-width: 175px !important;">
                 {% include 'store/components/product_card.html' with product=product %}
             </div>
@@ -435,7 +435,7 @@
             class="bv-slider-strip flex flex-nowrap items-stretch gap-3 sm:gap-4 overflow-x-auto pb-4 pt-1 select-none"
             style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; cursor: grab;"
         >
-            {% for product in watch_products %}
+            {% for product in watch_products|slice:":8" %}
             <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 190px !important; width: 190px !important; max-width: 220px !important; min-width: 175px !important;">
                 {% include 'store/components/product_card.html' with product=product %}
             </div>
@@ -512,7 +512,7 @@
             class="bv-slider-strip flex flex-nowrap items-stretch gap-3 sm:gap-4 overflow-x-auto pb-4 pt-1 select-none"
             style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; cursor: grab;"
         >
-            {% for product in cosmetic_products %}
+            {% for product in cosmetic_products|slice:":8" %}
             <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 190px !important; width: 190px !important; max-width: 220px !important; min-width: 175px !important;">
                 {% include 'store/components/product_card.html' with product=product %}
             </div>
@@ -593,7 +593,7 @@
             style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; cursor: grab;"
         >
             {% if featured_brands %}
-                {% for b in featured_brands %}
+                {% for b in featured_brands|slice:":8" %}
                 <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 190px !important; width: 190px !important; max-width: 220px !important; min-width: 175px !important;">
                     <a 
                         href="{% url 'store:brand_detail' b.slug %}" 
@@ -630,7 +630,7 @@
                 </div>
                 {% endfor %}
             {% else %}
-                {% for b in perfume_brands %}
+                {% for b in perfume_brands|slice:":8" %}
                 <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 190px !important; width: 190px !important; max-width: 220px !important; min-width: 175px !important;">
                     <a 
                         href="{% url 'store:perfumes_catalog' %}?brand={{ b.brand_name }}" 

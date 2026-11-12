@@ -128,8 +128,8 @@ class SubCategoryInline(admin.TabularInline):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['image_preview', 'name_ar', 'hierarchy_badge', 'is_default', 'products_count', 'is_featured', 'is_active', 'display_order']
-    list_editable = ['is_default', 'is_featured', 'is_active', 'display_order']
+    list_display = ['image_preview', 'name_ar', 'hierarchy_badge', 'products_count', 'is_featured', 'is_active', 'display_order']
+    list_editable = ['is_featured', 'is_active', 'display_order']
     search_fields = ['name_ar', 'name_en']
     list_filter = ['parent', 'is_featured', 'is_active']
     autocomplete_fields = ['parent']
@@ -148,8 +148,8 @@ class CategoryAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('معلومات القسم وتصنيفه الهرمي', {
-            'description': 'حدد اسم القسم. إن كان قسماً رئيسياً كـ (العطور أو البخور) اترك حقل القسم الرئيسي فارغاً. وإن كان صنفاً فرعياً (مثل: بخور عدني) اختر القسم الرئيسي التابع له.',
-            'fields': (('name_ar', 'parent'), 'image', ('is_default', 'is_featured', 'is_active', 'display_order'))
+            'description': 'حدد اسم القسم. إن كان قسماً رئيسياً كـ (العطور أو الساعات) اترك حقل القسم الرئيسي فارغاً. وإن كان صنفاً فرعياً اختر القسم الرئيسي التابع له. (ملاحظة: يتم تحديد القسم الافتراضي الذي يفتح تلقائياً في المتجر من إعدادات المتجر فقط لمنع التضارب).',
+            'fields': (('name_ar', 'parent'), 'image', ('is_featured', 'is_active', 'display_order'))
         }),
         ('بيانات إضافية ورابط SEO (اختياري)', {
             'classes': ('collapse',),
@@ -827,7 +827,9 @@ class OrderAdmin(admin.ModelAdmin):
 
     @admin.display(description='الإجمالي (سعودي)')
     def formatted_total_sar(self, obj):
-        return f"{obj.total_sar:,.1f} ر.س" if obj.total_sar else "0 ر.س"
+        import math
+        val = int(math.ceil(obj.total_sar)) if obj.total_sar else 0
+        return f"{val:,} ر.س"
 
     @admin.display(description='حالة الطلب')
     def status_badge(self, obj):
@@ -941,11 +943,12 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(StoreSettings)
 class StoreSettingsAdmin(admin.ModelAdmin):
-    list_display = ['store_name', 'yer_per_sar', 'contact_phone', 'contact_whatsapp', 'updated_at']
+    list_display = ['store_name', 'yer_per_sar', 'default_category', 'contact_phone', 'contact_whatsapp', 'updated_at']
+    autocomplete_fields = ['default_category']
 
     fieldsets = (
-        ('هوية المتجر وسعر الصرف اليومي', {
-            'description': 'أي تعديل على سعر الصرف هنا سينعكس فوراً وتلقائياً على كافة أسعار المنتجات المحسوبة بالريال السعودي',
+        ('هوية المتجر وسعر الصرف اليومي والقسم الافتراضي الوحيد', {
+            'description': 'أي تعديل على سعر الصرف هنا سينعكس فوراً وتلقائياً على كافة أسعار المنتجات المحسوبة بالريال السعودي بدون كسور ومقربة للأعلى. القسم الافتراضي المحدد هنا هو المكان الوحيد المعتمد لتحديد أي قسم يفتح تلقائياً عند زيارة صفحة الأقسام بدون أي تضارب.',
             'fields': (('store_name', 'yer_per_sar'), 'default_category', 'store_tagline', 'store_logo')
         }),
         ('أرقام التواصل وشريط الإعلانات', {
