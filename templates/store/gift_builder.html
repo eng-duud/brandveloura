@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load image_optimization %}
+{% load l10n %}
 
 {% block title %}صانع الهدية الملكي | {{ store_settings.store_name }}{% endblock %}
 
@@ -302,8 +303,8 @@
                         data-is-oriental="{{ perfume.is_oriental_scent|yesno:'true,false' }}"
                         data-brand="{{ perfume.effective_brand_name|lower }}"
                         data-has-grades="{{ perfume.has_grades|yesno:'true,false' }}"
-                        data-price-original="{{ perfume.price_original_yer|default:perfume.price_yer|floatformat:0 }}"
-                        data-price-master="{{ perfume.price_master_yer|default:perfume.price_yer|floatformat:0 }}"
+                        data-price-original="{{ perfume.price_original_yer|default:perfume.price_yer|unlocalize|floatformat:0 }}"
+                        data-price-master="{{ perfume.price_master_yer|default:perfume.price_yer|unlocalize|floatformat:0 }}"
                         data-image="{{ perfume.primary_image_url }}"
                         data-title="{{ perfume.name_ar }}"
                         onclick="handleCardClick(event, 'perfume', '{{ perfume.id }}')"
@@ -314,7 +315,7 @@
                             name="perfume_id" 
                             id="perfume_check_{{ perfume.id }}"
                             value="{{ perfume.id }}" 
-                            {% if perfume.id in preselected_perfume_ids %}checked{% elif not selected_gift_bundle and selected_perfume and selected_perfume.id == perfume.id %}checked{% elif not selected_gift_bundle and not selected_perfume and forloop.first %}checked{% endif %}
+                            {% if perfume.id in preselected_perfume_ids %}checked{% elif not selected_gift_bundle and selected_perfume and selected_perfume.id == perfume.id %}checked{% endif %}
                             class="sr-only perfume-checkbox"
                             onchange="onItemSelectionChanged()"
                         >
@@ -360,7 +361,7 @@
                             <div class="pt-1.5 flex items-baseline justify-between border-t border-pink-100">
                                 <div>
                                     <span class="text-xs font-black text-slate-950 font-num perfume-price-display" id="perfume-price-{{ perfume.id }}">
-                                        {{ perfume.price_original_yer|default:perfume.price_yer|floatformat:0 }}
+                                        {{ perfume.price_original_yer|default:perfume.price_yer|unlocalize|floatformat:0 }}
                                     </span>
                                     <span class="text-[9px] text-slate-600 mr-0.5">ر.ي</span>
                                 </div>
@@ -501,7 +502,7 @@
                         data-category="{% if 'ساع' in acc.category.name_ar|lower or 'watch' in acc.category.slug|lower %}watches{% elif 'مكياج' in acc.category.name_ar|lower or 'تجميل' in acc.category.name_ar|lower or 'cosmetics' in acc.category.slug|lower %}cosmetics{% else %}care{% endif %}"
                         data-image="{{ acc.primary_image_url }}"
                         data-title="{{ acc.name_ar }}"
-                        data-price="{{ acc.price_yer|floatformat:0 }}"
+                        data-price="{{ acc.price_yer|unlocalize|floatformat:0 }}"
                         onclick="handleCardClick(event, 'accessory', '{{ acc.id }}')"
                     >
                         <!-- Hidden Checkbox -->
@@ -967,8 +968,8 @@
 
 <script>
     let currentStep = 1;
-    const yerPerSar = {{ yer_per_sar|default:"530" }};
-    const wrappingFee = {{ wrapping_fee|default:"2500" }};
+    const yerPerSar = parseFloat("{{ yer_per_sar|unlocalize }}") || 530;
+    const wrappingFee = parseFloat("{{ wrapping_fee|unlocalize }}") || 2500;
 
     // Step Navigation Function
     function getSelectedTotalCount() {
