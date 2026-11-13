@@ -64,7 +64,7 @@
 
             <!-- Gift Order Details Card (if applicable) -->
             {% if order.is_gift %}
-            <div class="p-4 rounded-xl bg-white border border-pink-200 space-y-2 text-right shadow-2xs">
+            <div class="p-5 rounded-2xl bg-white border border-pink-200 space-y-3 text-right shadow-2xs">
                 <div class="flex items-center justify-between text-xs font-bold text-slate-900 pb-2 border-b border-pink-100">
                     <span class="flex items-center gap-1.5">
                         <i data-lucide="gift" class="w-4 h-4 text-brand-600"></i>
@@ -72,7 +72,7 @@
                     </span>
                     <div class="flex items-center gap-1.5">
                         {% if order.hide_invoice_prices %}
-                        <span class="px-2 py-0.5 rounded-full bg-pink-50 text-brand-700 text-[10px] font-bold border border-pink-200">الأسعار محجوبة للمستلم</span>
+                        <span class="px-2 py-0.5 rounded-full bg-pink-50 text-brand-700 text-[10px] font-bold border border-pink-200">الأسعار محجوبة للمستلم 100%</span>
                         {% endif %}
                         {% if order.is_luxury_gift_wrapping %}
                         <span class="px-2 py-0.5 rounded-full bg-brand-500 text-white text-[10px] font-bold">تغليف هدايا فاخر</span>
@@ -88,13 +88,46 @@
                     {% endif %}
                 </div>
                 {% if order.gift_card_message %}
-                <div class="mt-2 p-2.5 rounded-lg bg-pink-50/40 border border-pink-100 text-[11px] text-slate-700">
+                <div class="mt-2 p-3 rounded-xl bg-pink-50/50 border border-pink-100 text-[11px] text-slate-700">
                     <div class="font-bold text-slate-900 mb-0.5">
                         كارت الإهداء (من: {{ order.gift_card_sender|default:order.customer_name }} إلى: {{ order.gift_card_recipient|default:order.recipient_name }}):
                     </div>
                     <div class="font-medium text-slate-900 italic">"{{ order.gift_card_message }}"</div>
                 </div>
                 {% endif %}
+
+                <!-- Recipient Price-Free Gift Slip & WhatsApp Links -->
+                <div class="pt-3 border-t border-pink-100/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                    <div class="flex items-center gap-2">
+                        <a 
+                            href="{{ gift_slip_url }}" 
+                            target="_blank" 
+                            class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-pink-100 hover:bg-pink-200 text-brand-800 text-xs font-bold transition shadow-2xs"
+                        >
+                            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                            <span>معاينة بوليصة الإهداء (بدون أسعار)</span>
+                        </a>
+                        <button 
+                            type="button" 
+                            onclick="navigator.clipboard.writeText('{{ gift_slip_url }}'); alert('تم نسخ رابط بوليصة المستلم بنجاح! يمكنك إرساله للمستلم بكل أمان، الرابط خالٍ تماماً من الأسعار.');" 
+                            class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-50 border border-pink-200 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer"
+                        >
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            <span>نسخ الرابط</span>
+                        </button>
+                    </div>
+
+                    {% if recipient_whatsapp_url %}
+                    <a 
+                        href="{{ recipient_whatsapp_url }}" 
+                        target="_blank" 
+                        class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-2xs"
+                    >
+                        <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+                        <span>تهنئة المستلم عبر واتساب</span>
+                    </a>
+                    {% endif %}
+                </div>
             </div>
             {% endif %}
 

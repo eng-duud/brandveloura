@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوليصة تسليم طرد الإهداء | طلب #{{ order.order_number }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #f1f5f9;
+            font-family: 'Cairo', sans-serif;
+            color: #0f172a;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .controls-bar {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffffff;
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        }
+        .btn-print {
+            background: #0f172a;
+            color: #ffffff;
+            border: none;
+            padding: 9px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .btn-back {
+            color: #64748b;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .slip-container {
+            width: 100%;
+            max-width: 800px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 14px;
+            padding: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 18px;
+            margin-bottom: 20px;
+        }
+        .logo-box h1 {
+            font-size: 22px;
+            font-weight: 900;
+            color: #be185d;
+        }
+        .logo-box p {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 600;
+        }
+        .slip-badge {
+            background: #fdf2f8;
+            border: 1px solid #fbcfe8;
+            color: #be185d;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 800;
+            display: inline-block;
+        }
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 24px;
+            font-size: 12px;
+        }
+        .meta-item span {
+            color: #64748b;
+            display: block;
+            margin-bottom: 2px;
+            font-size: 11px;
+        }
+        .meta-item strong {
+            font-size: 14px;
+            color: #0f172a;
+        }
+        .table-items {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+            font-size: 12px;
+        }
+        .table-items th {
+            background: #f1f5f9;
+            color: #334155;
+            padding: 10px 12px;
+            text-align: right;
+            border-bottom: 2px solid #cbd5e1;
+            font-weight: 800;
+        }
+        .table-items td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+        .card-preview-box {
+            background: #fff9fc;
+            border: 1px dashed #f472b6;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 20px;
+            font-size: 12px;
+        }
+        .footer {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: #64748b;
+        }
+        @media print {
+            body {
+                background: #ffffff;
+                padding: 0;
+            }
+            .controls-bar {
+                display: none;
+            }
+            .slip-container {
+                border: none;
+                box-shadow: none;
+                max-width: 100%;
+                padding: 0;
+            }
+            @page {
+                size: A4 portrait;
+                margin: 15mm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls-bar">
+        <a href="javascript:window.close()" class="btn-back">✕ إغلاق النافذة</a>
+        <div style="font-size: 12px; font-weight: bold; color: #475569;">
+            بوليصة استلام المستلم (بدون أسعار) — طلب #{{ order.order_number }}
+        </div>
+        <button type="button" onclick="window.print()" class="btn-print">
+            🖨️ طباعة بوليصة التسليم
+        </button>
+    </div>
+
+    <div class="slip-container">
+        
+        <div class="header">
+            <div class="logo-box">
+                <h1>{{ store_settings.store_name }}</h1>
+                <p>بوليصة تسليم باقة إهداء فاخرة (خاصة بالمستلم ومندوب التوصيل)</p>
+            </div>
+            <div style="text-align: left;">
+                <div class="slip-badge">🎁 طرد إهداء ملكي</div>
+                <div style="font-family: monospace; font-size: 12px; font-weight: bold; margin-top: 4px; color: #475569;">
+                    #{{ order.order_number }}
+                </div>
+            </div>
+        </div>
+
+        <div class="meta-grid">
+            <div class="meta-item">
+                <span>اسم المستلم (صاحب الهدية):</span>
+                <strong>{{ order.recipient_name|default:order.customer_name }}</strong>
+            </div>
+            <div class="meta-item">
+                <span>رقم هاتف المستلم:</span>
+                <strong dir="ltr">{{ order.recipient_phone|default:order.customer_phone }}</strong>
+            </div>
+            <div class="meta-item">
+                <span>المدينة والمحافظة:</span>
+                <strong>{{ order.shipping_city }}</strong>
+            </div>
+            <div class="meta-item">
+                <span>العنوان التفصيلي:</span>
+                <strong>{{ order.shipping_address|default:"التوصيل حسب اتصال المندوب" }}</strong>
+            </div>
+            {% if order.preferred_delivery_date %}
+            <div class="meta-item">
+                <span>تاريخ التسليم المطلوب (المناسبة):</span>
+                <strong style="color: #be185d;">{{ order.preferred_delivery_date|date:"Y/m/d" }}</strong>
+            </div>
+            {% endif %}
+            <div class="meta-item">
+                <span>مواصفات التغليف:</span>
+                <strong>{% if order.is_luxury_gift_wrapping %}تغليف هدايا ملكي فاخر + كرت تهنئة{% else %}تغليف قياسي{% endif %}</strong>
+            </div>
+        </div>
+
+        {% if order.gift_card_message %}
+        <div class="card-preview-box">
+            <div style="font-weight: 800; color: #9d174d; margin-bottom: 4px;">
+                مرفق كارت إهداء (من: {{ order.gift_card_sender|default:order.customer_name }} | إلى: {{ order.gift_card_recipient|default:order.recipient_name }}):
+            </div>
+            <div style="font-style: italic; color: #334155; font-size: 13px;">
+                "{{ order.gift_card_message }}"
+            </div>
+        </div>
+        {% endif %}
+
+        <table class="table-items">
+            <thead>
+                <tr>
+                    <th style="width: 45px;">تأكيد</th>
+                    <th>محتويات الطرد</th>
+                    <th>الدرجة / النوع</th>
+                    <th style="width: 70px; text-align: center;">الكمية</th>
+                    <th>ملاحظات الفحص</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items.all %}
+                <tr>
+                    <td style="text-align: center;">
+                        <input type="checkbox" style="width: 16px; height: 16px; cursor: pointer;">
+                    </td>
+                    <td>
+                        <strong style="font-size: 13px; color: #0f172a;">{{ item.product_name }}</strong>
+                    </td>
+                    <td>
+                        <span style="background: #f1f5f9; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">
+                            {{ item.variant_info|default:"صنف أصلي" }}
+                        </span>
+                    </td>
+                    <td style="text-align: center; font-weight: bold; font-size: 13px;">
+                        {{ item.quantity }}
+                    </td>
+                    <td style="color: #64748b; font-size: 11px;">
+                        تم الفحص والتغليف بعناية
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 14px; margin-bottom: 20px; font-size: 11px; color: #065f46; font-weight: bold;">
+            ✓ تنبيه لمندوب التوصيل: هذه شحنة إهداء خاصة مسددة القيمة مسبقاً بالكامل، لا يتم تحصيل أي مبالغ مالية من المستلم نهائياً.
+        </div>
+
+        <div class="footer">
+            <div>تاريخ الطباعة: {% now "Y/m/d - H:i" %}</div>
+            <div>خدمة العملاء: {{ store_settings.contact_phone }}</div>
+            <div>توقيع المستلم عند الاستلام: ________________________</div>
+        </div>
+
+    </div>
+
+</body>
+</html>
+

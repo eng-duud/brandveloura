@@ -791,7 +791,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_select_related = ['user', 'payment_method']
     readonly_fields = [
         'order_number', 'created_at', 'updated_at', 
-        'receipt_large_view', 'customer_whatsapp_link',
+        'receipt_large_view', 'customer_whatsapp_link', 'gift_print_actions',
         'formatted_total_yer', 'formatted_total_sar', 'currency_due_badge',
         'formatted_subtotal', 'formatted_shipping_fee', 'stock_deducted', 'exchange_rate_applied', 'user'
     ]
@@ -820,7 +820,15 @@ class OrderAdmin(admin.ModelAdmin):
         ('🎁 بيانات الهدية وكارت الإهداء (خاص بطلبات الهدايا فقط)', {
             'classes': ('collapse',),
             'description': 'تُملأ فقط إذا طلب العميل إرسال الطلب كهدية لشخص آخر مع كارت إهداء وتغليف فاخر',
-            'fields': ('is_gift', ('recipient_name', 'recipient_phone'), ('gift_card_sender', 'gift_card_recipient'), 'gift_card_message', ('is_luxury_gift_wrapping', 'gift_wrapping_fee_yer'))
+            'fields': (
+                'gift_print_actions',
+                'is_gift', 
+                ('recipient_name', 'recipient_phone'), 
+                ('gift_card_sender', 'gift_card_recipient'), 
+                'gift_card_message', 
+                ('is_luxury_gift_wrapping', 'gift_wrapping_fee_yer'),
+                ('preferred_delivery_date', 'hide_invoice_prices')
+            )
         }),
         ('بيانات النظام والمخزون المتقدمة', {
             'classes': ('collapse',),
@@ -828,6 +836,24 @@ class OrderAdmin(admin.ModelAdmin):
             'fields': (('formatted_subtotal', 'formatted_shipping_fee'), ('exchange_rate_applied', 'stock_deducted'), ('order_number', 'user'), ('created_at', 'updated_at'))
         }),
     )
+
+    @admin.display(description='أدوات طباعة الإهداء والتسليم')
+    def gift_print_actions(self, obj):
+        if not obj or not obj.id:
+            return '—'
+        card_url = reverse('store:admin_print_gift_card', kwargs={'order_id': obj.id})
+        slip_url = reverse('store:admin_print_recipient_slip', kwargs={'order_id': obj.id})
+        return format_html(
+            '<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0;">'
+            '<a href="{}" target="_blank" style="background: linear-gradient(135deg, #e83ab8 0%, #be185d 100%); color: white; padding: 7px 16px; border-radius: 8px; font-size: 12px; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(232,58,184,0.3);">'
+            '<span>🖨️ طباعة كرت الإهداء الملكي الفاخر</span>'
+            '</a>'
+            '<a href="{}" target="_blank" style="background: #0f172a; color: white; padding: 7px 16px; border-radius: 8px; font-size: 12px; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(15,23,42,0.2);">'
+            '<span>📄 طباعة بوليصة المستلم (خالية من الأسعار)</span>'
+            '</a>'
+            '</div>',
+            card_url, slip_url
+        )
 
     @admin.display(description='مراسلة العميل')
     def customer_whatsapp_link(self, obj):

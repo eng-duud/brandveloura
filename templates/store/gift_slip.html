@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}بوليصة إهداء فاخرة | {{ order.order_number }} — {{ store_settings.store_name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    @media print {
+        header, footer, nav, .no-print, .store-navbar, .floating-actions {
+            display: none !important;
+        }
+        body {
+            background-color: #ffffff !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .print-container {
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            max-width: 100% !important;
+        }
+        .luxury-card-container {
+            box-shadow: none !important;
+            border: 2px solid #e2e8f0 !important;
+            break-inside: avoid;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12 print-container">
+
+    <!-- Top Action Bar (hidden in print) -->
+    <div class="no-print mb-6 flex flex-wrap items-center justify-between gap-3 bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-pink-200 shadow-2xs">
+        <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-xs sm:text-sm font-bold text-slate-800">بوليصة وبطاقة إهداء ملكية خاصة (الأسعار محجوبة 100%)</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <button 
+                type="button" 
+                onclick="window.print()" 
+                class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+            >
+                <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                <span>طباعة البوليصة والكرت</span>
+            </button>
+            <a 
+                href="{% url 'store:home' %}" 
+                class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition"
+            >
+                زيارة المتجر
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Luxury Gift Slip Card -->
+    <div class="luxury-card-container bg-white rounded-3xl border border-pink-200 shadow-sm overflow-hidden text-right p-6 sm:p-10 space-y-8">
+        
+        <!-- Header: Veloura Monogram & Gift Badge -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b border-pink-100 text-center sm:text-right">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-pink-500 text-white flex items-center justify-center font-black text-xl shadow-xs">
+                    BV
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-black text-slate-900">{{ store_settings.store_name }}</h1>
+                    <p class="text-[11px] text-brand-600 font-medium tracking-wide">باقة الإهداء الملكي الفاخرة</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center sm:items-end gap-1">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-50 text-brand-700 border border-pink-200 text-xs font-bold">
+                    <i data-lucide="gift" class="w-3.5 h-3.5 text-brand-500"></i>
+                    <span>هدية خاصة مسلّمة بعناية</span>
+                </span>
+                <span class="text-[11px] text-slate-400 font-mono font-bold font-num">#{{ order.order_number }}</span>
+            </div>
+        </div>
+
+        <!-- Luxury Greeting Card Section (كرت الإهداء الفاخر) -->
+        <div class="relative overflow-hidden rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-rose-50/60 via-white to-pink-50/50 border-2 border-pink-200/90 shadow-2xs space-y-4">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-700 border-b border-pink-100 pb-3">
+                <span class="flex items-center gap-2 text-brand-700">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-brand-500"></i>
+                    <span class="text-sm font-black">كارت التهنئة الملكي</span>
+                </span>
+                <span class="text-slate-400 text-[11px]">Brand Veloura Royal Gift</span>
+            </div>
+
+            <div class="flex items-center justify-between text-xs sm:text-sm font-bold text-slate-800">
+                <div>
+                    <span class="text-slate-400 text-xs font-normal block mb-0.5">إلى العزيز/ة:</span>
+                    <span class="text-slate-950 font-black text-sm sm:text-base text-brand-700">
+                        {{ order.gift_card_recipient|default:order.recipient_name|default:"أعز الناس" }}
+                    </span>
+                </div>
+                <div class="text-left">
+                    <span class="text-slate-400 text-xs font-normal block mb-0.5">مقدّمة بكل حب من:</span>
+                    <span class="text-slate-950 font-black text-sm sm:text-base">
+                        {{ order.gift_card_sender|default:order.customer_name|default:"محبّك" }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="py-4 text-center sm:text-right">
+                <p class="text-sm sm:text-base font-bold text-slate-900 leading-relaxed italic bg-white/70 p-4 sm:p-5 rounded-2xl border border-pink-100/80 shadow-2xs">
+                    "{{ order.gift_card_message|default:"أجمل التهاني وأصدق التمنيات، هدية متواضعة تليق بمقامكم الرفيع." }}"
+                </p>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-2 text-[11px] text-slate-500 border-t border-pink-100/60">
+                <span class="flex items-center gap-1">
+                    <i data-lucide="heart" class="w-3.5 h-3.5 text-brand-500 fill-brand-500"></i>
+                    <span>مغلفة يدوياً بلمسات فيلورا الملكية</span>
+                </span>
+                {% if order.preferred_delivery_date %}
+                <span class="font-bold text-slate-700">
+                    تاريخ المناسبة: <span class="font-num text-brand-700">{{ order.preferred_delivery_date|date:"Y/m/d" }}</span>
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recipient & Delivery Information -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200">
+            <div>
+                <span class="text-slate-400 block mb-0.5">المستلم:</span>
+                <span class="font-bold text-slate-900 text-sm">{{ order.recipient_name|default:order.customer_name }}</span>
+            </div>
+            <div>
+                <span class="text-slate-400 block mb-0.5">المدينة والتوصيل:</span>
+                <span class="font-bold text-slate-900 text-sm">{{ order.shipping_city }}</span>
+            </div>
+            {% if order.is_luxury_gift_wrapping %}
+            <div>
+                <span class="text-slate-400 block mb-0.5">نوع التغليف:</span>
+                <span class="font-bold text-brand-700 flex items-center gap-1">
+                    <i data-lucide="package-check" class="w-3.5 h-3.5"></i>
+                    <span>صندوق هدايا ملكي فاخر مع شريط ساتان</span>
+                </span>
+            </div>
+            {% endif %}
+            <div>
+                <span class="text-slate-400 block mb-0.5">حالة الباقة:</span>
+                <span class="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 inline-block">
+                    {{ order.get_status_display }}
+                </span>
+            </div>
+        </div>
+
+        <!-- Package Contents Checklist (NO PRICES AT ALL) -->
+        <div class="space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-pink-100">
+                <h3 class="font-black text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                    <i data-lucide="package" class="w-4 h-4 text-brand-600"></i>
+                    <span>محتويات باقة الهدية</span>
+                </h3>
+                <span class="text-[11px] text-slate-400 font-bold font-num">{{ order.items.count }} عناصر فاخرة</span>
+            </div>
+
+            <div class="space-y-2.5">
+                {% for item in order.items.all %}
+                <div class="flex items-center justify-between p-3.5 rounded-2xl bg-white border border-pink-100 hover:border-pink-200 shadow-2xs transition">
+                    <div class="flex items-center gap-3.5">
+                        {% if item.product_image_url %}
+                        <img 
+                            src="{{ item.product_image_url }}" 
+                            alt="{{ item.product_name }}" 
+                            class="w-12 h-12 rounded-xl object-contain bg-pink-50/40 p-1 border border-pink-100 shrink-0"
+                        >
+                        {% else %}
+                        <div class="w-12 h-12 rounded-xl bg-pink-50 flex items-center justify-center text-brand-500 font-bold text-xs shrink-0">
+                            BV
+                        </div>
+                        {% endif %}
+                        <div>
+                            <h4 class="font-bold text-slate-900 text-xs sm:text-sm">{{ item.product_name }}</h4>
+                            <div class="flex flex-wrap items-center gap-2 mt-1">
+                                {% if item.variant_info %}
+                                <span class="px-2 py-0.5 rounded-full bg-pink-50 text-brand-700 text-[10px] font-bold border border-pink-200">
+                                    {{ item.variant_info }}
+                                </span>
+                                {% endif %}
+                                <span class="text-slate-400 text-[11px] font-bold font-num">
+                                    الكمية: {{ item.quantity }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1.5 text-emerald-600 font-bold text-xs bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-100 shrink-0">
+                        <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+                        <span>مشمول بالباقة</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Footer Seal & Brand Veloura Note -->
+        <div class="pt-6 border-t border-pink-100 text-center space-y-2">
+            <p class="text-xs font-bold text-slate-700">
+                ✨ شكراً لثقتكم بـ {{ store_settings.store_name }} — يسعدنا دائماً أن نكون جزءاً من لحظاتكم السعيدة
+            </p>
+            <p class="text-[11px] text-slate-400">
+                خدمة عملاء واستفسارات: {{ store_settings.contact_phone }}
+            </p>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+

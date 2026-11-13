@@ -17,8 +17,10 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout, update_session_auth_hash
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
+from datetime import datetime, date, timedelta
 
 from .models import (
     StoreSettings, PaymentAccount, ShippingZone, 
@@ -1014,6 +1016,23 @@ def gift_builder_view(request):
                     'variant_info': f"باقة جاهزة ({bundle_obj.items.count()} عناصر)",
                     'grade': '',
                 }
+                # دعم إضافة ملحقات إضافية مخصصة للباقة الجاهزة
+                bundle_pids = set(bundle_obj.items.values_list('product_id', flat=True))
+                for aid in accessory_ids:
+                    if int(aid) not in bundle_pids:
+                        acc_obj = Product.objects.filter(id=aid, is_active=True).first()
+                        if acc_obj:
+                            a_key = f"{acc_obj.id}_acc_gift"
+                            cart[a_key] = {
+                                'product_id': acc_obj.id,
+                                'name': acc_obj.name_ar,
+                                'brand': acc_obj.brand_name,
+                                'price_yer': float(acc_obj.price_yer),
+                                'image_url': acc_obj.primary_image_url,
+                                'quantity': 1,
+                                'variant_info': f"إضافة للباقة ({acc_obj.category.name_ar if acc_obj.category else 'ملحق'})",
+                                'grade': '',
+                            }
             else:
                 bundle_prod = get_object_or_404(Product, id=post_bundle_id, is_active=True)
                 b_key = f"bundle_{bundle_prod.id}"
@@ -1130,6 +1149,18 @@ def gift_calculate_live(request):
                 'type': 'باقة جاهزة',
                 'price_yer': bundle_obj.price_yer
             })
+            # حساب أي ملحقات إضافية مختارة مع الباقة
+            bundle_pids = set(bundle_obj.items.values_list('product_id', flat=True)) if hasattr(bundle_obj, 'items') else set()
+            for aid in accessory_ids:
+                if int(aid) not in bundle_pids:
+                    a_obj = Product.objects.filter(id=aid, is_active=True).first()
+                    if a_obj:
+                        total_yer += a_obj.price_yer
+                        items_breakdown.append({
+                            'title': a_obj.name_ar,
+                            'type': 'ملحق مضاف للباقة',
+                            'price_yer': a_obj.price_yer
+                        })
     else:
         for pid in perfume_ids:
             p_obj = Product.objects.filter(id=pid, is_active=True).first()
@@ -1241,9 +1272,22 @@ def checkout_view(request):
             gift_card_recipient = request.POST.get('gift_card_recipient', '').strip() or recipient_name
             gift_card_message = request.POST.get('gift_card_message', '').strip()
             is_luxury_gift_wrapping = request.POST.get('is_luxury_gift_wrapping') in ['true', '1', 'on']
-            preferred_delivery_date = request.POST.get('preferred_delivery_date', '').strip() or None
+            preferred_date_raw = request.POST.get('preferred_delivery_date', '').strip()
             hide_invoice_prices = request.POST.get('hide_invoice_prices') in ['true', '1', 'on']
             gift_wrapping_fee_yer = settings.gift_wrapping_fee_yer if is_luxury_gift_wrapping else Decimal('0.00')
+
+            preferred_delivery_date = None
+            if preferred_date_raw:
+                try:
+                    parsed_d = datetime.strptime(preferred_date_raw, '%Y-%m-%d').date()
+                    today = date.today()
+                    if parsed_d < today:
+                        preferred_delivery_date = today + timedelta(days=1)
+                        messages.info(request, 'تم تعديل موعد التسليم لأقرب تاريخ شحن متاح لتفادي التواريخ السابقة.')
+                    else:
+                        preferred_delivery_date = parsed_d
+                except (ValueError, TypeError):
+                    preferred_delivery_date = None
         else:
             recipient_name = ''
             recipient_phone = ''
@@ -1297,7 +1341,7 @@ def checkout_view(request):
                             else:
                                 locked_bundle_items.append((b_prod, needed))
                         if bundle_ok:
-                            locked_products.append((None, p_qty, item_data))
+                            locked_products.append((None, p_qty, item_data, bundle_obj))
                     else:
                         insufficient_items.append("الباقة المختارة غير متوفرة")
                 else:
@@ -1308,7 +1352,7 @@ def checkout_view(request):
                         p_name = item_data.get('name', 'منتج')
                         insufficient_items.append(f"{p_name} (المتوفر: {avail})")
                     else:
-                        locked_products.append((prod, p_qty, item_data))
+                        locked_products.append((prod, p_qty, item_data, None))
 
             if insufficient_items:
                 items_str = '، '.join(insufficient_items)
@@ -1351,11 +1395,12 @@ def checkout_view(request):
             )
             
             # حفظ عناصر الطلب وخصم المخزون
-            for prod, p_qty, item_data in locked_products:
+            for prod, p_qty, item_data, bundle_ref in locked_products:
                 p_price = Decimal(str(item_data.get('price_yer', 0)))
                 OrderItem.objects.create(
                     order=order,
                     product=prod,
+                    bundle=bundle_ref,
                     product_name=item_data.get('name', 'منتج'),
                     product_image_url=item_data.get('image_url', ''),
                     variant_info=item_data.get('variant_info', ''),
@@ -1489,11 +1534,62 @@ def order_success_view(request, order_number):
     )
     whatsapp_url = f"https://wa.me/{settings.contact_whatsapp}?text={quote(whatsapp_msg)}"
     
+    # رابط بوليصة المستلم خالية من الأسعار
+    gift_slip_url = request.build_absolute_uri(reverse('store:gift_slip', kwargs={'order_number': order.order_number}))
+    
+    # رابط واتساب خاص بالمستلم لتهنئته ومشاركته كرت الإهداء وتتبع الشحنة بدون أسعار
+    recipient_whatsapp_url = None
+    if order.is_gift and order.recipient_phone:
+        r_clean_phone = order.recipient_phone.replace('+', '').replace(' ', '')
+        sender_disp = order.gift_card_sender or order.customer_name
+        r_msg = (
+            f"مرحباً {order.recipient_name or 'عزيزنا'}،\n"
+            f"وصلتك هدية فاخرة مرسلة لك بكل حب من ({sender_disp}) عبر بوتيك {settings.store_name} 🎁✨\n\n"
+            f"يمكنك الاطلاع على بطاقة التهنئة وتتبع الشحنة عبر الرابط التالي:\n"
+            f"{gift_slip_url}\n\n"
+            f"نتمنى لك يوماً سعيداً ونسعد بخدمتك دائماً! 🌹"
+        )
+        recipient_whatsapp_url = f"https://wa.me/{r_clean_phone}?text={quote(r_msg)}"
+
     context = {
         'order': order,
         'whatsapp_url': whatsapp_url,
+        'gift_slip_url': gift_slip_url,
+        'recipient_whatsapp_url': recipient_whatsapp_url,
     }
     return render(request, 'store/order_success.html', context)
+
+
+def gift_slip_view(request, order_number):
+    """عرض بوليصة الإهداء وبطاقة التهنئة للمستلم خالية تماماً من الأسعار والمبالغ المالية"""
+    order = get_object_or_404(Order.objects.prefetch_related('items__product'), order_number=order_number)
+    settings = StoreSettings.get_settings()
+    return render(request, 'store/gift_slip.html', {
+        'order': order,
+        'store_settings': settings,
+    })
+
+
+@staff_member_required
+def admin_print_gift_card(request, order_id):
+    """صفحة طباعة كرت الإهداء الملكي الفاخر بقياس بطاقة الإهداء (10x15 سم) جاهزة للطباعة على ورق مقوى"""
+    order = get_object_or_404(Order, id=order_id)
+    settings = StoreSettings.get_settings()
+    return render(request, 'admin/print_gift_card.html', {
+        'order': order,
+        'store_settings': settings,
+    })
+
+
+@staff_member_required
+def admin_print_recipient_slip(request, order_id):
+    """صفحة طباعة بوليصة التوصيل للمستلم خالية 100% من الأسعار لمندوب الشحن والتسليم"""
+    order = get_object_or_404(Order.objects.prefetch_related('items__product'), id=order_id)
+    settings = StoreSettings.get_settings()
+    return render(request, 'admin/print_recipient_slip.html', {
+        'order': order,
+        'store_settings': settings,
+    })
 
 
 def track_order_view(request):

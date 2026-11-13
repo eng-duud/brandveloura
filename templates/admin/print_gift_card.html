@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>طباعة كرت الإهداء الملكي | طلب #{{ order.order_number }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #f8fafc;
+            font-family: 'Cairo', sans-serif;
+            color: #1e293b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px;
+        }
+        .controls-bar {
+            width: 100%;
+            max-width: 650px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffffff;
+            padding: 12px 20px;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+        .btn-print {
+            background: linear-gradient(135deg, #e83ab8 0%, #be185d 100%);
+            color: #ffffff;
+            border: none;
+            padding: 10px 22px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(232, 58, 184, 0.35);
+            transition: all 0.2s ease;
+        }
+        .btn-print:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+        }
+        .btn-back {
+            color: #64748b;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        /* The Luxury Physical Gift Card Layout (105mm x 148mm - A6 ratio) */
+        .card-sheet {
+            width: 148mm;
+            min-height: 105mm;
+            background: #fffdf9;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
+            padding: 12mm;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* Decorative Borders */
+        .card-inner-frame {
+            position: absolute;
+            top: 5mm;
+            bottom: 5mm;
+            right: 5mm;
+            left: 5mm;
+            border: 2px solid #dfb15b;
+            border-radius: 12px;
+            pointer-events: none;
+        }
+        .card-inner-frame-double {
+            position: absolute;
+            top: 7mm;
+            bottom: 7mm;
+            right: 7mm;
+            left: 7mm;
+            border: 1px solid #f3d79b;
+            border-radius: 10px;
+            pointer-events: none;
+        }
+
+        /* Monogram and Header */
+        .card-header {
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+        .monogram {
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: #be185d;
+            display: inline-block;
+            border-bottom: 2px solid #dfb15b;
+            padding-bottom: 2px;
+            margin-bottom: 4px;
+        }
+        .card-subtitle {
+            font-size: 10px;
+            font-weight: 700;
+            color: #94a3b8;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Recipient & Sender Names */
+        .names-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin: 6mm 0 4mm;
+            position: relative;
+            z-index: 2;
+        }
+        .name-box {
+            font-size: 13px;
+        }
+        .name-label {
+            font-size: 10px;
+            color: #94a3b8;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .name-val {
+            font-size: 15px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .name-recipient .name-val {
+            color: #be185d;
+        }
+
+        /* The Message Body */
+        .card-body {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            margin: auto 0;
+            padding: 4mm 2mm;
+        }
+        .message-text {
+            font-family: 'Amiri', serif;
+            font-size: 19px;
+            font-weight: 700;
+            line-height: 1.8;
+            color: #1e293b;
+            font-style: italic;
+        }
+
+        /* Footer */
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px dashed #cbd5e1;
+            padding-top: 3mm;
+            position: relative;
+            z-index: 2;
+        }
+        .footer-note {
+            font-size: 9px;
+            color: #64748b;
+            font-weight: 600;
+        }
+        .order-tag {
+            font-family: monospace;
+            font-size: 9px;
+            color: #94a3b8;
+            font-weight: bold;
+        }
+
+        @media print {
+            body {
+                background: #ffffff !important;
+                padding: 0 !important;
+            }
+            .controls-bar {
+                display: none !important;
+            }
+            .card-sheet {
+                border: none !important;
+                box-shadow: none !important;
+                width: 100% !important;
+                height: 100% !important;
+                page-break-inside: avoid;
+            }
+            @page {
+                size: landscape;
+                margin: 8mm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls-bar">
+        <a href="javascript:window.close()" class="btn-back">✕ إغلاق النافذة</a>
+        <div style="font-size: 12px; font-weight: bold; color: #475569;">
+            كرت إهداء طلب #{{ order.order_number }}
+        </div>
+        <button type="button" onclick="window.print()" class="btn-print">
+            🖨️ طباعة الكرت الآن
+        </button>
+    </div>
+
+    <div class="card-sheet">
+        <div class="card-inner-frame"></div>
+        <div class="card-inner-frame-double"></div>
+
+        <div class="card-header">
+            <div class="monogram">BRAND VELOURA</div>
+            <div class="card-subtitle">Luxury Royal Boutique</div>
+        </div>
+
+        <div class="names-row">
+            <div class="name-box name-recipient">
+                <div class="name-label">إلى العزيز/ة:</div>
+                <div class="name-val">{{ order.gift_card_recipient|default:order.recipient_name|default:"أعز الناس" }}</div>
+            </div>
+            <div class="name-box" style="text-align: left;">
+                <div class="name-label">مقدّمة بكل حب من:</div>
+                <div class="name-val">{{ order.gift_card_sender|default:order.customer_name|default:"محبّك" }}</div>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <div class="message-text">
+                "{{ order.gift_card_message|default:"أجمل التهاني وأصدق التمنيات، هدية متواضعة تليق بمقامكم الرفيع ونسعد بتقديمها لكم." }}"
+            </div>
+        </div>
+
+        <div class="card-footer">
+            <div class="footer-note">✨ عطور وساعات فاخرة مختارة بعناية فائقة</div>
+            {% if order.preferred_delivery_date %}
+            <div class="footer-note">المناسبة: {{ order.preferred_delivery_date|date:"Y/m/d" }}</div>
+            {% endif %}
+            <div class="order-tag">#{{ order.order_number }}</div>
+        </div>
+    </div>
+
+</body>
+</html>
+

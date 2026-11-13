@@ -918,22 +918,33 @@ class Order(models.Model):
         return f"طلب #{self.order_number}{gift_badge} — {self.customer_name} ({self.get_status_display()})"
 
     def restore_stock(self):
-        """إرجاع كميات هذا الطلب للمخزون إذا كان مخصوماً سابقاً"""
+        """إرجاع كميات هذا الطلب للمخزون إذا كان مخصوماً سابقاً (يشمل المنتجات العادية ومحتويات باقات الهدايا)"""
         if self.stock_deducted:
             for item in self.items.all():
                 if item.product:
                     item.product.stock_quantity += item.quantity
                     item.product.save(update_fields=['stock_quantity'])
+                elif item.bundle:
+                    for b_item in item.bundle.items.select_related('product'):
+                        if b_item.product:
+                            b_item.product.stock_quantity += (b_item.quantity * item.quantity)
+                            b_item.product.save(update_fields=['stock_quantity'])
             self.stock_deducted = False
             self.save(update_fields=['stock_deducted'])
 
     def deduct_stock(self):
-        """خصم كميات هذا الطلب من المخزون"""
+        """خصم كميات هذا الطلب من المخزون (يشمل المنتجات العادية ومحتويات باقات الهدايا)"""
         if not self.stock_deducted:
             for item in self.items.all():
                 if item.product:
                     item.product.stock_quantity = max(0, item.product.stock_quantity - item.quantity)
                     item.product.save(update_fields=['stock_quantity'])
+                elif item.bundle:
+                    for b_item in item.bundle.items.select_related('product'):
+                        if b_item.product:
+                            needed = b_item.quantity * item.quantity
+                            b_item.product.stock_quantity = max(0, b_item.product.stock_quantity - needed)
+                            b_item.product.save(update_fields=['stock_quantity'])
             self.stock_deducted = True
             self.save(update_fields=['stock_deducted'])
 
@@ -952,6 +963,11 @@ class Order(models.Model):
                         if item.product:
                             item.product.stock_quantity += item.quantity
                             item.product.save(update_fields=['stock_quantity'])
+                        elif item.bundle:
+                            for b_item in item.bundle.items.select_related('product'):
+                                if b_item.product:
+                                    b_item.product.stock_quantity += (b_item.quantity * item.quantity)
+                                    b_item.product.save(update_fields=['stock_quantity'])
                 elif self.status != 'cancelled' and not prev['stock_deducted']:
                     # تم إعادة تفعيل الطلب بعد الإلغاء -> خصم الكميات
                     self.stock_deducted = True
@@ -959,6 +975,12 @@ class Order(models.Model):
                         if item.product:
                             item.product.stock_quantity = max(0, item.product.stock_quantity - item.quantity)
                             item.product.save(update_fields=['stock_quantity'])
+                        elif item.bundle:
+                            for b_item in item.bundle.items.select_related('product'):
+                                if b_item.product:
+                                    needed = b_item.quantity * item.quantity
+                                    b_item.product.stock_quantity = max(0, b_item.product.stock_quantity - needed)
+                                    b_item.product.save(update_fields=['stock_quantity'])
         super().save(*args, **kwargs)
 
         try:
@@ -1026,6 +1048,7 @@ class OrderItem(models.Model):
     """عناصر كل طلب"""
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items', verbose_name='الطلب')
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='المنتج')
+    bundle = models.ForeignKey(GiftBundle, on_delete=models.SET_NULL, null=True, blank=True, related_name='order_items', verbose_name='باقة الهدية (إن وجدت)')
     product_name = models.CharField(max_length=250, verbose_name='اسم المنتج')
     product_image_url = models.URLField(blank=True, verbose_name='صورة المنتج')
     variant_info = models.CharField(max_length=150, blank=True, verbose_name='المقاس / الحجم / اللون')

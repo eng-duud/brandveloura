@@ -46,7 +46,12 @@ urlpatterns = [
     path('checkout/', views.checkout_view, name='checkout'),
     path('order-success/<str:order_number>/', views.order_success_view, name='order_success'),
     path('order/success/<str:order_number>/', views.order_success_view, name='order_success_alias'),
+    path('gift-slip/<str:order_number>/', views.gift_slip_view, name='gift_slip'),
     path('track-order/', views.track_order_view, name='track_order'),
+    
+    # بوالص وطباعة كروت الإهداء للإدارة
+    path('admin/order/<int:order_id>/print-gift-card/', views.admin_print_gift_card, name='admin_print_gift_card'),
+    path('admin/order/<int:order_id>/print-recipient-slip/', views.admin_print_recipient_slip, name='admin_print_recipient_slip'),
     
     # الحسابات والمصادقة (تسجيل الدخول، إنشاء حساب، ودخول Google)
     path('login/', views.login_view, name='login'),
