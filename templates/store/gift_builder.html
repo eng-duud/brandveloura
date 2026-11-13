@@ -268,7 +268,7 @@
                 </div>
 
                 <!-- Perfumes Grid -->
-                <div id="perfumes-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 max-h-[520px] overflow-y-auto p-1 scrollbar-thin">
+                <div id="perfumes-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 min-h-[160px] p-1">
                     {% for perfume in perfumes %}
                     <div 
                         class="gift-item-card product-gift-card group relative flex flex-col justify-between p-3 rounded-2xl border-2 border-pink-200 hover:border-brand-300 bg-white cursor-pointer transition-all duration-200 shadow-2xs select-none"
@@ -382,7 +382,21 @@
                         </div>
 
                     </div>
+                    {% empty %}
+                    <div class="col-span-full py-12 px-4 text-center bg-pink-50/40 rounded-3xl border border-pink-200">
+                        <div class="w-12 h-12 rounded-2xl bg-white border border-pink-200 mx-auto mb-3 flex items-center justify-center text-pink-400 shadow-2xs">
+                            <i data-lucide="package-search" class="w-6 h-6"></i>
+                        </div>
+                        <h4 class="text-sm font-bold text-slate-800">لا توجد عطور مسجلة حالياً</h4>
+                        <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">يمكنك تصفح الساعات ومستحضرات التجميل المتاحة في الخطوة التالية لإضافتها لهديتك.</p>
+                        <button type="button" onclick="goToStep(2)" class="mt-4 px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold shadow-xs transition cursor-pointer">
+                            الانتقال لاختيار الساعات والملحقات (خطوة 2)
+                        </button>
+                    </div>
                     {% endfor %}
+                    <div id="perfume-search-no-match" class="col-span-full py-8 text-center text-xs text-slate-500 hidden">
+                        لا توجد عطور مطابقة لعبارة البحث. جرب البحث باسم ماركة أخرى أو تصفح الساعات والمكياج في الخطوة 2.
+                    </div>
                 </div>
 
                 <!-- Step 1 Bottom Action -->
@@ -438,7 +452,7 @@
                 </div>
 
                 <!-- Accessories Grid -->
-                <div id="accessories-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 max-h-[500px] overflow-y-auto p-1 scrollbar-thin">
+                <div id="accessories-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 min-h-[160px] p-1">
                     {% for acc in accessories %}
                     <div 
                         class="gift-item-card product-gift-card group relative flex flex-col justify-between p-3 rounded-2xl border-2 border-pink-200 hover:border-brand-300 bg-white cursor-pointer transition-all duration-200 shadow-2xs select-none"
@@ -1271,15 +1285,21 @@
 
     // Filter Perfumes Grid by search
     function filterPerfumesGrid() {
-        const query = (document.getElementById('perfume-search-input')?.value || '').toLowerCase();
+        const query = (document.getElementById('perfume-search-input')?.value || '').trim().toLowerCase();
+        let matchCount = 0;
         document.querySelectorAll('.product-gift-card[data-perfume-id]').forEach(card => {
             const name = card.dataset.perfumeName || '';
-            if (name.includes(query)) {
+            if (!query || name.includes(query)) {
                 card.style.display = 'flex';
+                matchCount++;
             } else {
                 card.style.display = 'none';
             }
         });
+        const noMatchEl = document.getElementById('perfume-search-no-match');
+        if (noMatchEl) {
+            noMatchEl.style.display = (matchCount === 0 && query !== '') ? 'block' : 'none';
+        }
     }
 
     // Filter Accessories Category
@@ -1320,6 +1340,8 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        const searchInp = document.getElementById('perfume-search-input');
+        if (searchInp) searchInp.value = '';
         updateSelectionState();
         triggerLiveCalculation();
         updateLiveCardPreview();

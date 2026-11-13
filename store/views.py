@@ -908,13 +908,52 @@ def gift_builder_view(request):
     if perfume_id:
         selected_perfume = Product.objects.filter(id=perfume_id, is_active=True).first()
 
-    perfumes = Product.objects.filter(
-        category__category_type='perfumes', is_active=True, stock_quantity__gt=0
-    ).select_related('category', 'brand').prefetch_related('images').order_by('-is_featured', '-is_best_seller')[:36]
+    # 1. جلب العطور الفاخرة بشكل مرن وقوي يشمل الأقسام والـ slug والاسم مع ضمان عدم ظهور القائمة فارغة
+    from django.db.models import Q
+    perfume_q = (
+        Q(category__category_type='perfumes') |
+        Q(category__parent__category_type='perfumes') |
+        Q(category__slug__icontains='perfume') |
+        Q(category__name_ar__icontains='عطر') |
+        Q(category__name_ar__icontains='عطور') |
+        Q(name_ar__icontains='عطر')
+    )
 
-    accessories = Product.objects.filter(
-        category__category_type__in=['watches', 'cosmetics', 'care'], is_active=True, stock_quantity__gt=0
-    ).select_related('category', 'brand').prefetch_related('images').order_by('-is_featured', '-created_at')[:36]
+    perfumes_base = Product.objects.filter(
+        perfume_q, is_active=True
+    ).exclude(category__category_type='bundles').select_related('category', 'brand').prefetch_related('images')
+    
+    # محاولة جلب العطور التي لديها مخزون موجب أولاً، ثم جميع العطور النشطة كضمان
+    perfumes = list(perfumes_base.filter(stock_quantity__gt=0).order_by('-is_featured', '-is_best_seller', '-created_at')[:48])
+    if not perfumes:
+        perfumes = list(perfumes_base.order_by('-is_featured', '-is_best_seller', '-created_at')[:48])
+    
+    # في حال لم تتطابق أي فلاتر تصنيف (مثلاً في بيئة جديدة أو أسماء أقسام مختلفة)، نعرض كافة المنتجات النشطة بالمتجر كـ Fallback فوري
+    if not perfumes:
+        perfumes = list(Product.objects.filter(is_active=True).exclude(category__category_type='bundles').select_related('category', 'brand').prefetch_related('images').order_by('-is_featured', '-created_at')[:36])
+
+    # 2. جلب الملحقات (ساعات، مستحضرات تجميل، عناية) بشكل مرن وشامل
+    acc_q = (
+        Q(category__category_type__in=['watches', 'cosmetics', 'care']) |
+        Q(category__parent__category_type__in=['watches', 'cosmetics', 'care']) |
+        Q(category__slug__in=['watches', 'cosmetics', 'care']) |
+        Q(category__name_ar__icontains='ساع') |
+        Q(category__name_ar__icontains='مكياج') |
+        Q(category__name_ar__icontains='تجميل') |
+        Q(category__name_ar__icontains='عناية')
+    )
+    selected_perfume_pids = set(p.id for p in perfumes)
+    accessories_base = Product.objects.filter(
+        acc_q, is_active=True
+    ).exclude(category__category_type='bundles').exclude(id__in=selected_perfume_pids).select_related('category', 'brand').prefetch_related('images')
+    
+    accessories = list(accessories_base.filter(stock_quantity__gt=0).order_by('-is_featured', '-created_at')[:36])
+    if not accessories:
+        accessories = list(accessories_base.order_by('-is_featured', '-created_at')[:36])
+    
+    # Fallback للملحقات: أي منتجات إضافية نشطة لم تكن ضمن العطور
+    if not accessories:
+        accessories = list(Product.objects.filter(is_active=True).exclude(category__category_type='bundles').exclude(id__in=selected_perfume_pids).select_related('category', 'brand').prefetch_related('images')[:24])
 
     ready_gift_bundles = list(GiftBundle.objects.filter(is_active=True).prefetch_related('items__product').order_by('display_order', '-created_at')[:12])
     if not ready_gift_bundles:
