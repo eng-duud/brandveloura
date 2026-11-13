@@ -699,7 +699,8 @@
         </div>
     </footer>
 
-    <!-- Mobile Fixed Bottom Navigation Bar (شريط التنقل السفلي الفاخر مع بروز العنصر الأوسط) -->
+    <!-- Mobile Fixed Bottom Navigation Bar (شريط التنقل السفلي الفاخر مع بروز العنصر الأوسط - مخفي في صانع الهدايا لإتاحة المساحة للشريط العائم) -->
+    {% if 'gifting' not in request.path %}
     <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-pink-200/90 shadow-[0_-4px_25px_rgba(15,23,42,0.08)] px-1 h-16 flex items-center justify-around" aria-label="شريط التنقل السفلي">
         <!-- 1. الرئيسية -->
         <a href="{% url 'store:home' %}" class="flex-1 flex flex-col items-center justify-center gap-0.5 py-1 transition {% if request.path == '/' %}text-brand-600 font-bold{% else %}text-slate-500 hover:text-slate-900 font-medium{% endif %}">
@@ -740,6 +741,7 @@
             <span class="text-[10px]">حسابي</span>
         </a>
     </nav>
+    {% endif %}
 
     <!-- Mobile Sidebar Drawer (القائمة الجانبية المنظمة والموجزة) -->
     <div id="mobile-sidebar-drawer" class="fixed inset-0 z-50 pointer-events-none transition-all duration-300">

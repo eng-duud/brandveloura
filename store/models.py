@@ -565,6 +565,26 @@ class Product(models.Model):
         return self.brand_name or ''
 
     @property
+    def perfume_gender(self):
+        """تصنيف العطر (men, women, unisex) استناداً للمواصفات أو الاسم"""
+        g_raw = str(self.specifications.get('gender', '')).lower()
+        search_text = f"{self.name_ar} {self.name_en or ''} {self.description or ''}".lower()
+        if any(k in g_raw for k in ['women', 'woman', 'نسائي', 'نسائية', 'بناتي']) or any(k in search_text for k in ['نسائي', 'نسائية']):
+            return 'women'
+        if any(k in g_raw for k in ['unisex', 'للجنسين']) or any(k in search_text for k in ['للجنسين', 'نيش']):
+            return 'unisex'
+        if any(k in g_raw for k in ['men', 'man', 'رجالي', 'رجالية']) or any(k in search_text for k in ['رجالي', 'رجالية']):
+            return 'men'
+        return 'unisex'
+
+    @property
+    def is_oriental_scent(self):
+        """هل العطر ذو طابع شرقي أو عود أو عنبر أو بخور"""
+        search_text = f"{self.name_ar} {self.name_en or ''} {self.description or ''} {str(self.specifications)}".lower()
+        oriental_keywords = ['عود', 'بخور', 'عنبر', 'زعفران', 'مسك', 'توباكو', 'شرقي', 'oud', 'amber', 'tobacco', 'musk']
+        return any(k in search_text for k in oriental_keywords)
+
+    @property
     def price_sar(self):
         """حساب السعر بالريال السعودي آلياً بناءً على سعر الصرف اليومي المعتمد بالمتجر مقرباً للأعلى بدون كسور"""
         rate = StoreSettings.get_exchange_rate()

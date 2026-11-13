@@ -300,11 +300,13 @@ class GiftBundlesAndWizardTests(TestCase):
         self.assertIn(self.watch.id, included_product_ids)
 
     def test_gift_builder_explicit_toggle_buttons_and_badges(self):
-        """التحقق من ظهور أزرار الإضافة الصريحة ومربعات الاختيار المرئية في واجهة صانع الإهداء"""
+        """التحقق من ظهور أزرار الإضافة الصريحة ومربعات الاختيار المرئية وفلاتر التصنيف في واجهة صانع الإهداء"""
         resp = self.client.get(reverse('store:gift_builder'))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'toggle-btn')
         self.assertContains(resp, 'إضافة للصندوق')
         self.assertContains(resp, 'check-badge')
-        self.assertContains(resp, 'تصفح الأقسام:')
+        self.assertContains(resp, 'تصنيف العطور:')
+        self.assertContains(resp, 'كل العطور')
+        self.assertContains(resp, 'عطور رجالية')
 

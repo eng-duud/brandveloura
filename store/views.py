@@ -1097,8 +1097,17 @@ def gift_builder_view(request):
         request.session.modified = True
         return redirect('store:checkout')
 
+    seen_brands = set()
+    perfume_brands = []
+    for p in perfumes:
+        b_name = p.effective_brand_name
+        if b_name and b_name not in seen_brands:
+            seen_brands.add(b_name)
+            perfume_brands.append(b_name)
+
     context = {
         'perfumes': perfumes,
+        'perfume_brands': perfume_brands,
         'accessories': accessories,
         'gift_bundles': ready_gift_bundles,
         'selected_gift_bundle': selected_gift_bundle,

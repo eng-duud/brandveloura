@@ -208,61 +208,85 @@
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-pink-100">
                     <div>
                         <div class="flex items-center gap-2">
-                            <span class="w-6 h-6 rounded-full bg-brand-500 text-white font-black text-xs flex items-center justify-center font-num">1</span>
-                            <h2 class="font-black text-slate-900 text-base sm:text-lg">اختر عطور الباقة</h2>
+                            <span class="w-7 h-7 rounded-full bg-brand-500 text-white font-black text-xs flex items-center justify-center font-num shadow-xs">1</span>
+                            <h2 class="font-black text-slate-900 text-base sm:text-lg">اختر عطور الباقة الملكية</h2>
                         </div>
-                        <p class="text-xs text-slate-500 mt-0.5">
-                            انقر على بطاقة أي عطر لإضافته للصندوق (يمكنك اختيار عطر واحد أو أكثر، وتحديد الجودة أصلي أو ماستر).
+                        <p class="text-xs text-slate-500 mt-1">
+                            اختر عطراً أو أكثر لصندوق الإهداء، مع إمكانية تحديد الجودة (أصلي 100% أو ماستر) لكل عطر.
                         </p>
                     </div>
 
                     <!-- Counter Badge -->
                     <div class="flex items-center gap-2 self-start sm:self-auto">
-                        <span class="px-3 py-1.5 rounded-full bg-pink-50 border border-pink-200 text-brand-700 text-xs font-bold font-num" id="step1-perfumes-counter">
-                            تم اختيار <strong id="selected-perfumes-count" class="text-sm">0</strong> عطر
+                        <span class="px-3.5 py-1.5 rounded-full bg-pink-50 border border-pink-200 text-brand-700 text-xs font-bold font-num" id="step1-perfumes-counter">
+                            تم اختيار <strong id="selected-perfumes-count" class="text-sm font-black text-brand-600">0</strong> عطر
                         </span>
                     </div>
                 </div>
 
-                <!-- Category Switch Pills & Quick Filter in Step 1 -->
-                <div class="flex flex-wrap items-center justify-between gap-2 pb-1">
+                <!-- Step 1 Dedicated Perfume Category Filters & Brand Chips -->
+                <div class="space-y-2.5 pb-1">
+                    <!-- Perfume Classification Pills -->
                     <div class="flex flex-wrap items-center gap-1.5">
-                        <span class="text-xs font-bold text-slate-700 ml-1">تصفح الأقسام:</span>
-                        <span class="px-3 py-1.5 rounded-xl bg-brand-500 text-white text-xs font-bold shadow-2xs">العطور الملكية</span>
-                        <button type="button" onclick="goToStep(2); filterAccessoriesCategory('watches');" class="px-3 py-1.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-slate-700 border border-pink-200 text-xs font-medium transition cursor-pointer">ساعات فاخرة ⌚</button>
-                        <button type="button" onclick="goToStep(2); filterAccessoriesCategory('cosmetics');" class="px-3 py-1.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-slate-700 border border-pink-200 text-xs font-medium transition cursor-pointer">مستحضرات تجميل 💄</button>
-                        <button type="button" onclick="goToStep(2); filterAccessoriesCategory('care');" class="px-3 py-1.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-slate-700 border border-pink-200 text-xs font-medium transition cursor-pointer">عناية وإكسسوارات ✨</button>
+                        <span class="text-xs font-bold text-slate-700 ml-1">تصنيف العطور:</span>
+                        <button type="button" onclick="filterPerfumesCategory('all', this)" class="perfume-cat-btn px-3 py-1.5 rounded-xl bg-brand-500 text-white text-xs font-bold shadow-2xs transition cursor-pointer">كل العطور</button>
+                        <button type="button" onclick="filterPerfumesCategory('men', this)" class="perfume-cat-btn px-3 py-1.5 rounded-xl bg-pink-50 text-slate-700 hover:bg-pink-100 border border-pink-200 text-xs font-medium transition cursor-pointer">عطور رجالية 👔</button>
+                        <button type="button" onclick="filterPerfumesCategory('women', this)" class="perfume-cat-btn px-3 py-1.5 rounded-xl bg-pink-50 text-slate-700 hover:bg-pink-100 border border-pink-200 text-xs font-medium transition cursor-pointer">عطور نسائية 🌸</button>
+                        <button type="button" onclick="filterPerfumesCategory('unisex', this)" class="perfume-cat-btn px-3 py-1.5 rounded-xl bg-pink-50 text-slate-700 hover:bg-pink-100 border border-pink-200 text-xs font-medium transition cursor-pointer">للجنسين ونيش ✨</button>
+                        <button type="button" onclick="filterPerfumesCategory('oriental', this)" class="perfume-cat-btn px-3 py-1.5 rounded-xl bg-pink-50 text-slate-700 hover:bg-pink-100 border border-pink-200 text-xs font-medium transition cursor-pointer">شرقي وعود 👑</button>
                     </div>
+
+                    <!-- Luxury Brand Chips (Scrollable row) -->
+                    {% if perfume_brands %}
+                    <div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
+                        <span class="text-[11px] font-bold text-slate-500 shrink-0 ml-1">الماركة:</span>
+                        <button type="button" onclick="filterPerfumesBrand('all', this)" class="perfume-brand-btn px-2.5 py-1 rounded-lg bg-brand-500 text-white border border-brand-500 text-[11px] font-bold shadow-2xs shrink-0 cursor-pointer">كل الماركات</button>
+                        {% for b in perfume_brands %}
+                        <button type="button" onclick="filterPerfumesBrand('{{ b|escapejs }}', this)" class="perfume-brand-btn px-2.5 py-1 rounded-lg bg-white text-slate-600 hover:bg-pink-50 border border-pink-200 text-[11px] font-medium transition shrink-0 cursor-pointer">{{ b }}</button>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
 
                 <!-- Global Grade Switcher & Quick Search -->
                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 p-3.5 rounded-2xl bg-pink-50/50 border border-pink-200">
                     
                     <!-- Search Input -->
-                    <div class="sm:col-span-6 relative">
-                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2"></i>
+                    <div class="sm:col-span-7 relative">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
                         <input 
                             type="text" 
                             id="perfume-search-input" 
-                            onkeyup="filterPerfumesGrid()" 
-                            placeholder="ابحث عن عطر أو ماركة معينة..." 
+                            oninput="applyPerfumeFilters()" 
+                            placeholder="ابحث عن اسم عطر أو ماركة معينة..." 
                             class="w-full h-10 bg-white border border-pink-200 rounded-xl pr-9 pl-3 text-xs text-slate-900 focus:outline-none focus:border-brand-500 shadow-2xs"
                         >
                     </div>
 
-                    <!-- Global Grade Radio -->
-                    <div class="sm:col-span-6 flex items-center justify-end gap-2">
+                    <!-- Global Grade Switcher (Clean, explicit buttons) -->
+                    <div class="sm:col-span-5 flex items-center justify-end gap-2">
                         <span class="text-xs font-bold text-slate-700 hidden sm:inline">جودة العطور:</span>
-                        <label class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-pink-200 text-xs font-bold text-slate-700 cursor-pointer has-checked:bg-brand-500 has-checked:text-white has-checked:border-brand-500 shadow-2xs transition">
-                            <input type="radio" name="perfume_grade" value="original" checked class="sr-only" onchange="onGlobalGradeChanged('original')">
+                        <input type="hidden" name="perfume_grade" id="global_perfume_grade_input" value="original">
+                        <button 
+                            type="button" 
+                            id="global-grade-btn-original"
+                            data-grade="original"
+                            onclick="onGlobalGradeChanged('original')" 
+                            class="global-grade-btn flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold shadow-2xs transition cursor-pointer"
+                        >
                             <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
                             <span>أصلي 100%</span>
-                        </label>
-                        <label class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-pink-200 text-xs font-bold text-slate-700 cursor-pointer has-checked:bg-brand-500 has-checked:text-white has-checked:border-brand-500 shadow-2xs transition">
-                            <input type="radio" name="perfume_grade" value="master" class="sr-only" onchange="onGlobalGradeChanged('master')">
+                        </button>
+                        <button 
+                            type="button" 
+                            id="global-grade-btn-master"
+                            data-grade="master"
+                            onclick="onGlobalGradeChanged('master')" 
+                            class="global-grade-btn flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-pink-200 text-xs font-bold text-slate-700 hover:bg-pink-50 shadow-2xs transition cursor-pointer"
+                        >
                             <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
                             <span>ماستر طبق الأصل</span>
-                        </label>
+                        </button>
                     </div>
 
                 </div>
@@ -273,13 +297,16 @@
                     <div 
                         class="gift-item-card product-gift-card group relative flex flex-col justify-between p-3 rounded-2xl border-2 border-pink-200 hover:border-brand-300 bg-white cursor-pointer transition-all duration-200 shadow-2xs select-none"
                         data-perfume-id="{{ perfume.id }}"
-                        data-perfume-name="{{ perfume.name_ar|lower }} {{ perfume.brand_name|lower }}"
+                        data-perfume-name="{{ perfume.name_ar|lower }} {{ perfume.effective_brand_name|lower }}"
+                        data-gender="{{ perfume.perfume_gender }}"
+                        data-is-oriental="{{ perfume.is_oriental_scent|yesno:'true,false' }}"
+                        data-brand="{{ perfume.effective_brand_name|lower }}"
                         data-has-grades="{{ perfume.has_grades|yesno:'true,false' }}"
                         data-price-original="{{ perfume.price_original_yer|default:perfume.price_yer|floatformat:0 }}"
                         data-price-master="{{ perfume.price_master_yer|default:perfume.price_yer|floatformat:0 }}"
                         data-image="{{ perfume.primary_image_url }}"
                         data-title="{{ perfume.name_ar }}"
-                        onclick="togglePerfumeCard('{{ perfume.id }}')"
+                        onclick="handleCardClick(event, 'perfume', '{{ perfume.id }}')"
                     >
                         <!-- Hidden Checkbox for Multi-Selection -->
                         <input 
@@ -324,7 +351,7 @@
 
                         <!-- Title & Brand -->
                         <div class="space-y-1">
-                            <span class="text-[10px] text-slate-400 font-bold block truncate">{{ perfume.brand_name|default:"Brand Veloura" }}</span>
+                            <span class="text-[10px] text-slate-400 font-bold block truncate">{{ perfume.effective_brand_name|default:"Brand Veloura" }}</span>
                             <h3 class="text-xs font-bold text-slate-900 line-clamp-1 group-hover:text-brand-600 transition-colors leading-tight">
                                 {{ perfume.name_ar }}
                             </h3>
@@ -344,22 +371,22 @@
 
                             <!-- Per-Product Grade Selector -->
                             {% if perfume.has_grades %}
-                            <div class="pt-2 mt-1 border-t border-pink-100 flex items-center justify-between gap-1" onclick="event.stopPropagation()">
+                            <div class="pt-2 mt-1 border-t border-pink-100 flex items-center justify-between gap-1" onclick="if(event)event.stopPropagation()">
                                 <span class="text-[9px] text-slate-500 font-medium">الدرجة:</span>
                                 <div class="inline-flex rounded-lg p-0.5 bg-pink-100/70 border border-pink-200">
                                     <button 
                                         type="button" 
                                         id="grade-btn-orig-{{ perfume.id }}"
-                                        onclick="setPerfumeGrade('{{ perfume.id }}', 'original')"
-                                        class="grade-btn is-active px-2 py-0.5 rounded text-[9px] font-bold transition text-slate-700"
+                                        onclick="setPerfumeGrade('{{ perfume.id }}', 'original', false)"
+                                        class="grade-btn is-active px-2 py-0.5 rounded text-[9px] font-bold transition text-slate-700 cursor-pointer"
                                     >
                                         أصلي
                                     </button>
                                     <button 
                                         type="button" 
                                         id="grade-btn-mast-{{ perfume.id }}"
-                                        onclick="setPerfumeGrade('{{ perfume.id }}', 'master')"
-                                        class="grade-btn px-2 py-0.5 rounded text-[9px] font-bold transition text-slate-700"
+                                        onclick="setPerfumeGrade('{{ perfume.id }}', 'master', false)"
+                                        class="grade-btn px-2 py-0.5 rounded text-[9px] font-bold transition text-slate-700 cursor-pointer"
                                     >
                                         ماستر
                                     </button>
@@ -374,9 +401,9 @@
                             <button 
                                 type="button" 
                                 class="toggle-btn w-full py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border shadow-2xs cursor-pointer bg-pink-50 hover:bg-brand-500 hover:text-white text-brand-700 border-pink-200"
-                                onclick="event.stopPropagation(); togglePerfumeCard('{{ perfume.id }}')"
+                                onclick="handleToggleClick(event, 'perfume', '{{ perfume.id }}')"
                             >
-                                <i data-lucide="plus" class="w-3.5 h-3.5 btn-icon"></i>
+                                <span class="btn-indicator font-bold text-base leading-none">+</span>
                                 <span class="btn-text">إضافة للصندوق</span>
                             </button>
                         </div>
@@ -387,15 +414,15 @@
                         <div class="w-12 h-12 rounded-2xl bg-white border border-pink-200 mx-auto mb-3 flex items-center justify-center text-pink-400 shadow-2xs">
                             <i data-lucide="package-search" class="w-6 h-6"></i>
                         </div>
-                        <h4 class="text-sm font-bold text-slate-800">لا توجد عطور مسجلة حالياً</h4>
-                        <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">يمكنك تصفح الساعات ومستحضرات التجميل المتاحة في الخطوة التالية لإضافتها لهديتك.</p>
+                        <h4 class="text-sm font-bold text-slate-800">لا توجد عطور متوفرة حالياً</h4>
+                        <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">سيتم تحديث تشكيلة العطور قريباً، أو يمكنك المتابعة لاختيار الساعات والملحقات الفاخرة.</p>
                         <button type="button" onclick="goToStep(2)" class="mt-4 px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold shadow-xs transition cursor-pointer">
                             الانتقال لاختيار الساعات والملحقات (خطوة 2)
                         </button>
                     </div>
                     {% endfor %}
                     <div id="perfume-search-no-match" class="col-span-full py-8 text-center text-xs text-slate-500 hidden">
-                        لا توجد عطور مطابقة لعبارة البحث. جرب البحث باسم ماركة أخرى أو تصفح الساعات والمكياج في الخطوة 2.
+                        لا توجد عطور مطابقة للفلاتر المحددة. جرب اختيار قسم آخر أو إلغاء فلتر الماركة.
                     </div>
                 </div>
 
@@ -428,27 +455,41 @@
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-pink-100">
                     <div>
                         <div class="flex items-center gap-2">
-                            <span class="w-6 h-6 rounded-full bg-brand-500 text-white font-black text-xs flex items-center justify-center font-num">2</span>
-                            <h2 class="font-black text-slate-900 text-base sm:text-lg">إضافة ملحقات فاخرة (اختياري)</h2>
+                            <span class="w-7 h-7 rounded-full bg-brand-500 text-white font-black text-xs flex items-center justify-center font-num shadow-xs">2</span>
+                            <h2 class="font-black text-slate-900 text-base sm:text-lg">الساعات والمكياج والملحقات (اختياري)</h2>
                         </div>
-                        <p class="text-xs text-slate-500 mt-0.5">
-                            أضف لمسة تميز لصندوق الإهداء بساعة يد أنيقة، مستحضرات تجميل، أو إكسسوارات راقية.
+                        <p class="text-xs text-slate-500 mt-1">
+                            أضف لمسة تميز لصندوق الإهداء بساعة يد أنيقة، مستحضرات تجميل، أو إكسسوارات راقية، أو تابع مباشرة للخطوة التالية.
                         </p>
                     </div>
 
                     <div class="flex items-center gap-2 self-start sm:self-auto">
-                        <span class="px-3 py-1.5 rounded-full bg-pink-50 border border-pink-200 text-brand-700 text-xs font-bold font-num" id="step2-acc-counter">
-                            تم اختيار <strong id="selected-accessories-count" class="text-sm">0</strong> ملحق
+                        <span class="px-3.5 py-1.5 rounded-full bg-pink-50 border border-pink-200 text-brand-700 text-xs font-bold font-num" id="step2-acc-counter">
+                            تم اختيار <strong id="selected-accessories-count" class="text-sm font-black text-brand-600">0</strong> ملحق
                         </span>
                     </div>
                 </div>
 
-                <!-- Category Filters for Accessories -->
-                <div class="flex flex-wrap items-center gap-2 pb-1">
-                    <button type="button" onclick="filterAccessoriesCategory('all')" class="acc-cat-btn px-3 py-1.5 rounded-xl bg-brand-500 text-white text-xs font-bold shadow-2xs transition">الكل</button>
-                    <button type="button" onclick="filterAccessoriesCategory('watches')" class="acc-cat-btn px-3 py-1.5 rounded-xl bg-pink-50 text-slate-700 hover:bg-pink-100 border border-pink-200 text-xs font-medium transition">ساعات فاخرة</button>
-                    <button type="button" onclick="filterAccessoriesCategory('cosmetics')" class="acc-cat-btn px-3 py-1.5 rounded-xl bg-pink-50 text-slate-700 hover:bg-pink-100 border border-pink-200 text-xs font-medium transition">مستحضرات تجميل</button>
-                    <button type="button" onclick="filterAccessoriesCategory('care')" class="acc-cat-btn px-3 py-1.5 rounded-xl bg-pink-50 text-slate-700 hover:bg-pink-100 border border-pink-200 text-xs font-medium transition">عناية وإكسسوارات</button>
+                <!-- Category Filters & Search for Accessories -->
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center pb-1">
+                    <div class="sm:col-span-8 flex flex-wrap items-center gap-1.5">
+                        <span class="text-xs font-bold text-slate-700 ml-1">تصنيف الملحقات:</span>
+                        <button type="button" onclick="filterAccessoriesCategory('all', this)" class="acc-cat-btn px-3 py-1.5 rounded-xl bg-brand-500 text-white text-xs font-bold shadow-2xs transition cursor-pointer">الكل</button>
+                        <button type="button" onclick="filterAccessoriesCategory('watches', this)" class="acc-cat-btn px-3 py-1.5 rounded-xl bg-pink-50 text-slate-700 hover:bg-pink-100 border border-pink-200 text-xs font-medium transition cursor-pointer">ساعات فاخرة ⌚</button>
+                        <button type="button" onclick="filterAccessoriesCategory('cosmetics', this)" class="acc-cat-btn px-3 py-1.5 rounded-xl bg-pink-50 text-slate-700 hover:bg-pink-100 border border-pink-200 text-xs font-medium transition cursor-pointer">مستحضرات تجميل 💄</button>
+                        <button type="button" onclick="filterAccessoriesCategory('care', this)" class="acc-cat-btn px-3 py-1.5 rounded-xl bg-pink-50 text-slate-700 hover:bg-pink-100 border border-pink-200 text-xs font-medium transition cursor-pointer">عناية وإكسسوارات ✨</button>
+                    </div>
+
+                    <div class="sm:col-span-4 relative">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                        <input 
+                            type="text" 
+                            id="acc-search-input" 
+                            oninput="applyAccessoryFilters()" 
+                            placeholder="ابحث في الساعات والمكياج..." 
+                            class="w-full h-9 bg-white border border-pink-200 rounded-xl pr-9 pl-3 text-xs text-slate-900 focus:outline-none focus:border-brand-500 shadow-2xs"
+                        >
+                    </div>
                 </div>
 
                 <!-- Accessories Grid -->
@@ -457,11 +498,11 @@
                     <div 
                         class="gift-item-card product-gift-card group relative flex flex-col justify-between p-3 rounded-2xl border-2 border-pink-200 hover:border-brand-300 bg-white cursor-pointer transition-all duration-200 shadow-2xs select-none"
                         data-accessory-id="{{ acc.id }}"
-                        data-category="{{ acc.category.category_type|default:'other' }}"
+                        data-category="{% if 'ساع' in acc.category.name_ar|lower or 'watch' in acc.category.slug|lower %}watches{% elif 'مكياج' in acc.category.name_ar|lower or 'تجميل' in acc.category.name_ar|lower or 'cosmetics' in acc.category.slug|lower %}cosmetics{% else %}care{% endif %}"
                         data-image="{{ acc.primary_image_url }}"
                         data-title="{{ acc.name_ar }}"
                         data-price="{{ acc.price_yer|floatformat:0 }}"
-                        onclick="toggleAccessoryCard('{{ acc.id }}')"
+                        onclick="handleCardClick(event, 'accessory', '{{ acc.id }}')"
                     >
                         <!-- Hidden Checkbox -->
                         <input 
@@ -511,9 +552,9 @@
                             <button 
                                 type="button" 
                                 class="toggle-btn w-full py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border shadow-2xs cursor-pointer bg-pink-50 hover:bg-brand-500 hover:text-white text-brand-700 border-pink-200"
-                                onclick="event.stopPropagation(); toggleAccessoryCard('{{ acc.id }}')"
+                                onclick="handleToggleClick(event, 'accessory', '{{ acc.id }}')"
                             >
-                                <i data-lucide="plus" class="w-3.5 h-3.5 btn-icon"></i>
+                                <span class="btn-indicator font-bold text-base leading-none">+</span>
                                 <span class="btn-text">إضافة للصندوق</span>
                             </button>
                         </div>
@@ -521,6 +562,9 @@
                     {% empty %}
                     <p class="col-span-full text-center text-xs text-slate-400 py-6">لا توجد ملحقات إضافية حالياً، يمكنك المتابعة للخطوة التالية.</p>
                     {% endfor %}
+                    <div id="acc-search-no-match" class="col-span-full py-8 text-center text-xs text-slate-500 hidden">
+                        لا توجد ملحقات مطابقة للفلاتر المحددة.
+                    </div>
                 </div>
 
                 <!-- Step 2 Bottom Actions -->
@@ -538,6 +582,13 @@
                         <button 
                             type="button" 
                             onclick="goToStep(3)" 
+                            class="px-6 py-3 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition shadow-xs cursor-pointer active:scale-98"
+                        >
+                            <span>متابعة لكرت الإهداء والتغليف (خطوة 3)</span>
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div> 
                             class="px-6 py-3 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition shadow-xs cursor-pointer active:scale-98"
                         >
                             <span>متابعة لكرت الإهداء والتغليف (خطوة 3)</span>
@@ -1010,6 +1061,33 @@
         }
     }
 
+    // Bulletproof click handlers that prevent bubbling and double-toggling
+    function handleToggleClick(e, type, id) {
+        if (e) {
+            if (typeof e.stopPropagation === 'function') e.stopPropagation();
+            if (typeof e.preventDefault === 'function') e.preventDefault();
+        }
+        if (type === 'perfume') {
+            togglePerfumeCard(id);
+        } else {
+            toggleAccessoryCard(id);
+        }
+    }
+
+    function handleCardClick(e, type, id) {
+        if (e && e.target) {
+            // Ignore if the click came from button, input, anchor, or grade button
+            if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a') || e.target.closest('.grade-btn')) {
+                return;
+            }
+        }
+        if (type === 'perfume') {
+            togglePerfumeCard(id);
+        } else {
+            toggleAccessoryCard(id);
+        }
+    }
+
     // Toggle Perfume selection
     function togglePerfumeCard(perfumeId) {
         const checkbox = document.getElementById(`perfume_check_${perfumeId}`);
@@ -1031,7 +1109,7 @@
     }
 
     // Set individual perfume grade (أصلي / ماستر)
-    function setPerfumeGrade(perfumeId, grade) {
+    function setPerfumeGrade(perfumeId, grade, checkCard = false) {
         const card = document.querySelector(`.product-gift-card[data-perfume-id="${perfumeId}"]`);
         const gradeInput = document.getElementById(`grade_input_${perfumeId}`);
         const origBtn = document.getElementById(`grade-btn-orig-${perfumeId}`);
@@ -1053,20 +1131,43 @@
             if (labelEl) labelEl.innerText = 'أصلي';
         }
 
-        const checkbox = document.getElementById(`perfume_check_${perfumeId}`);
-        if (checkbox && !checkbox.checked) {
-            checkbox.checked = true;
+        if (checkCard) {
+            const checkbox = document.getElementById(`perfume_check_${perfumeId}`);
+            if (checkbox && !checkbox.checked) {
+                checkbox.checked = true;
+            }
         }
 
         updateSelectionState();
         triggerLiveCalculation();
     }
 
-    // Global grade switcher
+    // Global grade switcher: updates displayed grade without auto-checking unselected perfumes
     function onGlobalGradeChanged(grade) {
+        const origBtn = document.getElementById('global-grade-btn-original');
+        const mastBtn = document.getElementById('global-grade-btn-master');
+        const hiddenInput = document.getElementById('global_perfume_grade_input');
+        if (hiddenInput) hiddenInput.value = grade;
+
+        if (grade === 'master') {
+            if (mastBtn) {
+                mastBtn.className = 'global-grade-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold shadow-xs transition cursor-pointer';
+            }
+            if (origBtn) {
+                origBtn.className = 'global-grade-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-pink-200 text-xs font-bold text-slate-700 hover:bg-pink-50 shadow-2xs transition cursor-pointer';
+            }
+        } else {
+            if (origBtn) {
+                origBtn.className = 'global-grade-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold shadow-xs transition cursor-pointer';
+            }
+            if (mastBtn) {
+                mastBtn.className = 'global-grade-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-pink-200 text-xs font-bold text-slate-700 hover:bg-pink-50 shadow-2xs transition cursor-pointer';
+            }
+        }
+
         document.querySelectorAll('.product-gift-card[data-has-grades="true"]').forEach(card => {
             const pid = card.dataset.perfumeId;
-            setPerfumeGrade(pid, grade);
+            setPerfumeGrade(pid, grade, false);
         });
     }
 
@@ -1100,12 +1201,14 @@
             const img = card.dataset.image;
             const toggleBtn = card.querySelector('.toggle-btn');
             const btnText = toggleBtn ? toggleBtn.querySelector('.btn-text') : null;
+            const btnInd = toggleBtn ? toggleBtn.querySelector('.btn-indicator') : null;
 
             if (check && check.checked) {
                 card.classList.add('is-selected');
                 if (toggleBtn) {
-                    toggleBtn.className = 'toggle-btn w-full py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer bg-brand-500 text-white border-brand-500';
-                    if (btnText) btnText.innerText = '✓ مضاف بالصندوق';
+                    toggleBtn.className = 'toggle-btn w-full py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer bg-brand-500 text-white border border-brand-500';
+                    if (btnInd) btnInd.innerText = '✓';
+                    if (btnText) btnText.innerText = 'مضاف بالصندوق';
                 }
                 perfumeCount++;
                 totalYer += price;
@@ -1114,7 +1217,8 @@
                 card.classList.remove('is-selected');
                 if (toggleBtn) {
                     toggleBtn.className = 'toggle-btn w-full py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border shadow-2xs cursor-pointer bg-pink-50 hover:bg-brand-500 hover:text-white text-brand-700 border-pink-200';
-                    if (btnText) btnText.innerText = '+ إضافة للصندوق';
+                    if (btnInd) btnInd.innerText = '+';
+                    if (btnText) btnText.innerText = 'إضافة للصندوق';
                 }
             }
         });
@@ -1127,12 +1231,14 @@
             const img = card.dataset.image;
             const toggleBtn = card.querySelector('.toggle-btn');
             const btnText = toggleBtn ? toggleBtn.querySelector('.btn-text') : null;
+            const btnInd = toggleBtn ? toggleBtn.querySelector('.btn-indicator') : null;
 
             if (check && check.checked) {
                 card.classList.add('is-selected');
                 if (toggleBtn) {
-                    toggleBtn.className = 'toggle-btn w-full py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer bg-brand-500 text-white border-brand-500';
-                    if (btnText) btnText.innerText = '✓ مضاف بالصندوق';
+                    toggleBtn.className = 'toggle-btn w-full py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer bg-brand-500 text-white border border-brand-500';
+                    if (btnInd) btnInd.innerText = '✓';
+                    if (btnText) btnText.innerText = 'مضاف بالصندوق';
                 }
                 accessoryCount++;
                 totalYer += price;
@@ -1141,7 +1247,8 @@
                 card.classList.remove('is-selected');
                 if (toggleBtn) {
                     toggleBtn.className = 'toggle-btn w-full py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border shadow-2xs cursor-pointer bg-pink-50 hover:bg-brand-500 hover:text-white text-brand-700 border-pink-200';
-                    if (btnText) btnText.innerText = '+ إضافة للصندوق';
+                    if (btnInd) btnInd.innerText = '+';
+                    if (btnText) btnText.innerText = 'إضافة للصندوق';
                 }
             }
         });
@@ -1163,7 +1270,7 @@
         const totalCountBadge = document.getElementById('tray-total-count-badge');
         if (totalCountBadge) totalCountBadge.innerText = totalItemsCount;
 
-        // Tray Price and Text
+        // Tray Price and Text (rounded up without decimals for SAR)
         const trayPriceYerEl = document.getElementById('tray-price-yer');
         if (trayPriceYerEl) trayPriceYerEl.innerText = Math.round(totalYer).toLocaleString();
 
@@ -1283,42 +1390,112 @@
         document.getElementById('step4-msg-val').innerText = mVal;
     }
 
-    // Filter Perfumes Grid by search
-    function filterPerfumesGrid() {
+    // Step 1: Live Multi-criteria Filtering (Category, Brand, Search)
+    let currentPerfumeCategory = 'all';
+    let currentPerfumeBrand = 'all';
+
+    function filterPerfumesCategory(category, targetBtn) {
+        currentPerfumeCategory = category;
+        document.querySelectorAll('.perfume-cat-btn').forEach(btn => {
+            btn.className = 'perfume-cat-btn px-3 py-1.5 rounded-xl bg-pink-50 text-slate-700 hover:bg-pink-100 border border-pink-200 text-xs font-medium transition cursor-pointer';
+        });
+        if (targetBtn) {
+            targetBtn.className = 'perfume-cat-btn px-3 py-1.5 rounded-xl bg-brand-500 text-white text-xs font-bold shadow-2xs transition cursor-pointer';
+        }
+        applyPerfumeFilters();
+    }
+
+    function filterPerfumesBrand(brand, targetBtn) {
+        currentPerfumeBrand = brand;
+        document.querySelectorAll('.perfume-brand-btn').forEach(btn => {
+            btn.className = 'perfume-brand-btn px-2.5 py-1 rounded-lg bg-white text-slate-600 hover:bg-pink-50 border border-pink-200 text-[11px] font-medium transition shrink-0 cursor-pointer';
+        });
+        if (targetBtn) {
+            targetBtn.className = 'perfume-brand-btn px-2.5 py-1 rounded-lg bg-brand-500 text-white border border-brand-500 text-[11px] font-bold shadow-2xs shrink-0 cursor-pointer';
+        }
+        applyPerfumeFilters();
+    }
+
+    function applyPerfumeFilters() {
         const query = (document.getElementById('perfume-search-input')?.value || '').trim().toLowerCase();
         let matchCount = 0;
+
         document.querySelectorAll('.product-gift-card[data-perfume-id]').forEach(card => {
-            const name = card.dataset.perfumeName || '';
-            if (!query || name.includes(query)) {
+            const name = (card.dataset.perfumeName || '').toLowerCase();
+            const gender = card.dataset.gender || 'unisex';
+            const isOriental = card.dataset.isOriental === 'true';
+            const brand = (card.dataset.brand || '').toLowerCase();
+
+            const matchesQuery = !query || name.includes(query) || brand.includes(query);
+
+            let matchesCat = true;
+            if (currentPerfumeCategory === 'men') {
+                matchesCat = (gender === 'men');
+            } else if (currentPerfumeCategory === 'women') {
+                matchesCat = (gender === 'women');
+            } else if (currentPerfumeCategory === 'unisex') {
+                matchesCat = (gender === 'unisex');
+            } else if (currentPerfumeCategory === 'oriental') {
+                matchesCat = isOriental;
+            }
+
+            let matchesBrand = true;
+            if (currentPerfumeBrand !== 'all') {
+                matchesBrand = (brand === currentPerfumeBrand.toLowerCase());
+            }
+
+            if (matchesQuery && matchesCat && matchesBrand) {
                 card.style.display = 'flex';
                 matchCount++;
             } else {
                 card.style.display = 'none';
             }
         });
+
         const noMatchEl = document.getElementById('perfume-search-no-match');
         if (noMatchEl) {
-            noMatchEl.style.display = (matchCount === 0 && query !== '') ? 'block' : 'none';
+            noMatchEl.style.display = (matchCount === 0) ? 'block' : 'none';
         }
     }
 
-    // Filter Accessories Category
+    // Step 2: Live Filtering for Accessories
+    let currentAccessoryCategory = 'all';
+
     function filterAccessoriesCategory(category, targetBtn) {
+        currentAccessoryCategory = category;
         document.querySelectorAll('.acc-cat-btn').forEach(btn => {
             btn.className = 'acc-cat-btn px-3 py-1.5 rounded-xl bg-pink-50 text-slate-700 hover:bg-pink-100 border border-pink-200 text-xs font-medium transition cursor-pointer';
         });
-        const currentActive = targetBtn || (window.event && window.event.currentTarget) || document.querySelector(`.acc-cat-btn[data-category="${category}"]`);
-        if (currentActive && currentActive.classList) {
-            currentActive.className = 'acc-cat-btn px-3 py-1.5 rounded-xl bg-brand-500 text-white text-xs font-bold shadow-2xs transition cursor-pointer';
+        const activeBtn = targetBtn || (window.event && window.event.currentTarget) || document.querySelector(`.acc-cat-btn[data-category="${category}"]`);
+        if (activeBtn) {
+            activeBtn.className = 'acc-cat-btn px-3 py-1.5 rounded-xl bg-brand-500 text-white text-xs font-bold shadow-2xs transition cursor-pointer';
         }
+        applyAccessoryFilters();
+    }
+
+    function applyAccessoryFilters() {
+        const query = (document.getElementById('acc-search-input')?.value || '').trim().toLowerCase();
+        let matchCount = 0;
 
         document.querySelectorAll('.product-gift-card[data-accessory-id]').forEach(card => {
-            if (category === 'all' || card.dataset.category === category) {
+            const title = (card.dataset.title || '').toLowerCase();
+            const cat = card.dataset.category || 'other';
+
+            const matchesQuery = !query || title.includes(query);
+            const matchesCat = (currentAccessoryCategory === 'all' || cat === currentAccessoryCategory);
+
+            if (matchesQuery && matchesCat) {
                 card.style.display = 'flex';
+                matchCount++;
             } else {
                 card.style.display = 'none';
             }
         });
+
+        const noMatchEl = document.getElementById('acc-search-no-match');
+        if (noMatchEl) {
+            noMatchEl.style.display = (matchCount === 0) ? 'block' : 'none';
+        }
     }
 
     // Toggle Ready Bundles Modal
@@ -1342,6 +1519,8 @@
     document.addEventListener('DOMContentLoaded', () => {
         const searchInp = document.getElementById('perfume-search-input');
         if (searchInp) searchInp.value = '';
+        const accSearchInp = document.getElementById('acc-search-input');
+        if (accSearchInp) accSearchInp.value = '';
         updateSelectionState();
         triggerLiveCalculation();
         updateLiveCardPreview();
