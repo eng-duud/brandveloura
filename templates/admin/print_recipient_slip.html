@@ -1,12 +1,14 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بوليصة تسليم طرد الإهداء | طلب #{{ order.order_number }}</title>
+    <title>سند تسليم طرد الإهداء الملكي | طلب #{{ order.order_number }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Great+Vibes&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
     <style>
         * {
             box-sizing: border-box;
@@ -21,6 +23,10 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+        }
+        .font-brand-logo {
+            font-family: 'Milkshake', 'Great Vibes', cursive !important;
+            letter-spacing: 0.02em;
         }
         .controls-bar {
             width: 100%;
@@ -171,25 +177,36 @@
     <div class="controls-bar">
         <a href="javascript:window.close()" class="btn-back">✕ إغلاق النافذة</a>
         <div style="font-size: 12px; font-weight: bold; color: #475569;">
-            بوليصة استلام المستلم (بدون أسعار) — طلب #{{ order.order_number }}
+            سند وبوليصة تسليم باقة الإهداء الملكية (بدون أسعار) — طلب #{{ order.order_number }}
         </div>
         <button type="button" onclick="window.print()" class="btn-print">
-            🖨️ طباعة بوليصة التسليم
+            🖨️ طباعة سند التسليم
         </button>
     </div>
 
     <div class="slip-container">
         
         <div class="header">
-            <div class="logo-box">
-                <h1>{{ store_settings.store_name }}</h1>
-                <p>بوليصة تسليم باقة إهداء فاخرة (خاصة بالمستلم ومندوب التوصيل)</p>
+            <div class="logo-box" style="display: flex; align-items: center; gap: 12px;">
+                <img 
+                    src="{% static 'images/logo.webp' %}" 
+                    alt="Brand Veloura" 
+                    onerror="this.src='{{ store_settings.get_logo_url }}'"
+                    style="width: 44px; height: 44px; border-radius: 10px; object-fit: cover; border: 1.5px solid #dfb15b;"
+                >
+                <div>
+                    <h1 class="font-brand-logo" style="font-family: 'Milkshake', cursive; font-size: 26px; line-height: 1; color: #0f172a;">Brand Veloura</h1>
+                    <p style="font-size: 11px; color: #b45309; font-weight: 700; margin-top: 3px;">سند وبوليصة تسليم باقة إهداء فاخرة (خاصة بالمستلم ومندوب التوصيل)</p>
+                </div>
             </div>
             <div style="text-align: left;">
                 <div class="slip-badge">🎁 طرد إهداء ملكي</div>
                 <div style="font-family: monospace; font-size: 12px; font-weight: bold; margin-top: 4px; color: #475569;">
                     #{{ order.order_number }}
                 </div>
+                <a href="https://brandveloura.com" target="_blank" style="font-family: monospace; font-size: 10.5px; font-weight: bold; color: #be185d; text-decoration: none; display: block; margin-top: 2px;">
+                    www.brandveloura.com
+                </a>
             </div>
         </div>
 
@@ -274,6 +291,7 @@
 
         <div class="footer">
             <div>تاريخ الطباعة: {% now "Y/m/d - H:i" %}</div>
+            <div>المتجر: <strong style="color: #be185d;">www.brandveloura.com</strong></div>
             <div>خدمة العملاء: {{ store_settings.contact_phone }}</div>
             <div>توقيع المستلم عند الاستلام: ________________________</div>
         </div>

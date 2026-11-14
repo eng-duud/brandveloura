@@ -180,6 +180,12 @@ class GiftingEngineOverhaulTests(TestCase):
         self.assertIn('كل عام وأنتِ تاج راسي', content)
         self.assertIn('عطر سوفاج ديور', content)
 
+        # التحقق من هوية المتجر (الشعار، الخط الملكي، رابط الموقع)
+        self.assertIn('brandveloura.com', content)
+        self.assertIn('font-brand-logo', content)
+        self.assertIn('logo.', content)
+        self.assertIn('.webp', content)
+
         # يجب ألا تحتوي على أسعار أو أرقام مبالغ
         self.assertNotIn('53,500', content)
         self.assertNotIn('50,000', content)
@@ -220,13 +226,21 @@ class GiftingEngineOverhaulTests(TestCase):
         self.assertIn('ريم', card_content)
         self.assertIn('طارق', card_content)
         self.assertIn('إلى أجمل إنسانة في الكون', card_content)
+        self.assertIn('brandveloura.com', card_content)
+        self.assertIn('font-brand-logo', card_content)
+        self.assertIn('logo.', card_content)
+        self.assertIn('.webp', card_content)
 
-        # بوليصة المستلم للإدارة
+        # بوليصة وسند المستلم للإدارة
         res_slip = self.client.get(reverse('store:admin_print_recipient_slip', kwargs={'order_id': order.id}))
         self.assertEqual(res_slip.status_code, 200)
         slip_content = res_slip.content.decode('utf-8')
         self.assertIn('بوليصة تسليم باقة إهداء فاخرة', slip_content)
         self.assertIn('ريم خالد', slip_content)
+        self.assertIn('brandveloura.com', slip_content)
+        self.assertIn('font-brand-logo', slip_content)
+        self.assertIn('logo.', slip_content)
+        self.assertIn('.webp', slip_content)
 
     def test_past_preferred_delivery_date_correction(self):
         """التحقق من أن تاريخ التسليم في الماضي لا يسبب أخطاء ويتم تعديله تلقائياً لأقرب تاريخ متاح"""
