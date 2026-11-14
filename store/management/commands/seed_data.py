@@ -16,7 +16,7 @@ class Command(BaseCommand):
         # 1. إعدادات المتجر وسعر الصرف
         settings = StoreSettings.get_settings()
         settings.store_name = 'Brand Veloura'
-        settings.store_tagline = 'بوتيك الفخامة الأول للعطور والساعات ومستلزمات التجميل'
+        settings.store_tagline = 'متجر الفخامة الأول للعطور والساعات ومستلزمات التجميل'
         settings.yer_per_sar = Decimal('530.00')
         settings.contact_phone = '+967 770 123 456'
         settings.contact_whatsapp = '967770123456'

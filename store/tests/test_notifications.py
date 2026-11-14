@@ -59,7 +59,7 @@ class NotificationSystemTests(TestCase):
         )
         self.payment = PaymentAccount.objects.create(
             provider_name='كريمي جوال',
-            account_holder_name='بوتيك فيلورا',
+            account_holder_name='متجر فيلورا',
             account_number='12345678',
             currency='YER',
             is_active=True

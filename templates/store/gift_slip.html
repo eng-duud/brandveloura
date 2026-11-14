@@ -87,8 +87,8 @@
                 <div>
                     <span class="font-brand-logo text-2xl sm:text-3xl text-slate-900 tracking-wide block leading-tight">Brand Veloura</span>
                     <p class="text-xs text-amber-700 font-bold flex items-center justify-center sm:justify-start gap-1.5 mt-0.5">
-                        <i data-lucide="crown" class="w-3.5 h-3.5 text-amber-600"></i>
-                        <span>بوتيك فيلورا الملكي • وثيقة إهداء فاخرة</span>
+                        <i data-lucide="gift" class="w-3.5 h-3.5 text-amber-600"></i>
+                        <span>Brand Veloura — بطاقة إهداء رقمية</span>
                     </p>
                 </div>
             </div>
@@ -96,7 +96,7 @@
             <div class="flex flex-col items-center sm:items-end gap-1.5">
                 <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold">
                     <i data-lucide="gift" class="w-3.5 h-3.5 text-amber-600"></i>
-                    <span>هدية ملكية خاصة مسلّمة بعناية</span>
+                    <span>بطاقة إهداء رسمية</span>
                 </span>
                 <div class="flex items-center gap-2">
                     <span class="text-[11px] text-slate-400 font-mono font-bold font-num">#{{ order.order_number }}</span>
@@ -109,8 +109,8 @@
             </div>
         </div>
 
-        <!-- Luxury Greeting Card Section (كرت الإهداء الفاخر الملكي) -->
-        <div class="relative overflow-hidden rounded-3xl p-6 sm:p-9 bg-gradient-to-br from-[#fffdfa] via-[#fff5f8] to-[#fdf2f8] border-2 border-amber-300 shadow-md space-y-5">
+        <!-- Greeting Card Section (المرسل يمين، المستلم يسار، النص بالوسط) -->
+        <div class="relative overflow-hidden rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-[#fffdfa] via-[#fff5f8] to-[#fdf2f8] border-2 border-amber-300 shadow-md space-y-4 text-right">
             <!-- Inner Decorative Gold Foil Border -->
             <div class="absolute inset-2 sm:inset-2.5 rounded-2xl border border-amber-200/80 pointer-events-none"></div>
 
@@ -124,53 +124,51 @@
                     >
                     <span class="font-brand-logo text-base text-slate-900 leading-none">Brand Veloura</span>
                     <span class="text-slate-300 mx-1">|</span>
-                    <span class="text-xs font-black text-amber-800">بطاقة التهنئة الملكية</span>
+                    <span class="text-xs font-bold text-amber-800">بطاقة إهداء</span>
                 </div>
-                <div class="flex items-center gap-1.5 text-amber-700 bg-amber-50/80 px-2.5 py-0.5 rounded-full border border-amber-200 text-[10px] font-bold">
-                    <i data-lucide="sparkles" class="w-3 h-3 text-amber-600"></i>
-                    <span>Royal Special Edition</span>
+                <div class="text-[11px] text-slate-400 font-mono font-num">
+                    #{{ order.order_number }}
                 </div>
             </div>
 
-            <div class="relative z-1 flex items-center justify-between text-xs sm:text-sm font-bold text-slate-800">
-                <div>
-                    <span class="text-amber-800/80 text-xs font-semibold block mb-0.5">إلى العزيز/ة:</span>
-                    <span class="text-brand-700 font-black text-base sm:text-lg">
-                        {{ order.gift_card_recipient|default:order.recipient_name|default:"أعز الناس" }}
+            <!-- أسماء المرسل والمستلم (المرسل يمين، المستلم يسار) -->
+            <div class="relative z-1 flex items-center justify-between text-xs sm:text-sm font-bold text-slate-800 pt-1">
+                <div class="text-right">
+                    <span class="text-slate-400 text-xs font-semibold block mb-0.5">المرسل:</span>
+                    <span class="text-slate-900 font-bold text-base sm:text-lg">
+                        {{ order.gift_card_sender|default:order.customer_name }}
                     </span>
                 </div>
                 <div class="text-left">
-                    <span class="text-amber-800/80 text-xs font-semibold block mb-0.5">مقدّمة بكل حب من:</span>
-                    <span class="text-slate-900 font-black text-base sm:text-lg">
-                        {{ order.gift_card_sender|default:order.customer_name|default:"محبّك" }}
+                    <span class="text-slate-400 text-xs font-semibold block mb-0.5">المستلم:</span>
+                    <span class="text-brand-700 font-bold text-base sm:text-lg">
+                        {{ order.gift_card_recipient|default:order.recipient_name }}
                     </span>
                 </div>
             </div>
 
-            <div class="relative z-1 py-2 text-center sm:text-right">
-                <div class="bg-white/85 p-5 sm:p-6 rounded-2xl border border-amber-100 shadow-2xs">
-                    <p class="text-sm sm:text-base font-bold text-slate-900 leading-relaxed italic">
-                        "{{ order.gift_card_message|default:"أجمل التهاني وأصدق التمنيات، هدية متواضعة تليق بمقامكم الرفيع." }}"
+            <!-- نص رسالة الإهداء -->
+            <div class="relative z-1 py-1 text-right">
+                <span class="text-slate-400 text-xs font-semibold block mb-1">نص الإهداء:</span>
+                <div class="bg-white/90 p-4 sm:p-5 rounded-2xl border border-amber-100 shadow-2xs">
+                    <p class="text-sm sm:text-base font-bold text-slate-900 leading-relaxed">
+                        "{{ order.gift_card_message|default:"أجمل التهاني وأطيب التمنيات." }}"
                     </p>
                 </div>
             </div>
 
-            <div class="relative z-1 flex flex-wrap items-center justify-between gap-2 pt-3 text-[11px] text-slate-600 border-t border-amber-200/80">
-                <span class="flex items-center gap-1.5 text-amber-900 font-bold">
-                    <i data-lucide="heart" class="w-3.5 h-3.5 text-brand-500 fill-brand-500"></i>
-                    <span>مغلفة يدوياً ومختومة بلمسات فيلورا الملكية</span>
-                </span>
-                <div class="flex items-center gap-3">
+            <div class="relative z-1 flex flex-wrap items-center justify-between gap-2 pt-2 text-[11px] text-slate-600 border-t border-amber-200/80">
+                <div>
                     {% if order.preferred_delivery_date %}
                     <span class="font-bold text-slate-700">
                         تاريخ المناسبة: <span class="font-num text-brand-700">{{ order.preferred_delivery_date|date:"Y/m/d" }}</span>
                     </span>
                     {% endif %}
-                    <a href="https://brandveloura.com" target="_blank" class="font-mono text-slate-500 hover:text-brand-600 font-bold transition flex items-center gap-1">
-                        <i data-lucide="globe" class="w-3 h-3 text-slate-400"></i>
-                        <span>brandveloura.com</span>
-                    </a>
                 </div>
+                <a href="https://brandveloura.com" target="_blank" class="font-mono text-slate-500 hover:text-brand-600 font-bold transition flex items-center gap-1">
+                    <i data-lucide="globe" class="w-3 h-3 text-slate-400"></i>
+                    <span>brandveloura.com</span>
+                </a>
             </div>
         </div>
 
@@ -189,7 +187,7 @@
                 <span class="text-slate-400 block mb-0.5">نوع التغليف:</span>
                 <span class="font-bold text-brand-700 flex items-center gap-1">
                     <i data-lucide="package-check" class="w-3.5 h-3.5"></i>
-                    <span>صندوق هدايا ملكي فاخر مع شريط ساتان ومخمل</span>
+                    <span>تغليف هدايا فاخر</span>
                 </span>
             </div>
             {% endif %}
@@ -206,9 +204,9 @@
             <div class="flex items-center justify-between pb-2 border-b border-pink-100">
                 <h3 class="font-black text-slate-900 text-sm sm:text-base flex items-center gap-2">
                     <i data-lucide="package" class="w-4 h-4 text-brand-600"></i>
-                    <span>محتويات باقة الهدية</span>
+                    <span>محتويات الهدية</span>
                 </h3>
-                <span class="text-[11px] text-slate-400 font-bold font-num">{{ order.items.count }} عناصر فاخرة</span>
+                <span class="text-[11px] text-slate-400 font-bold font-num">{{ order.items.count }} عناصر</span>
             </div>
 
             <div class="space-y-2.5">
@@ -245,7 +243,7 @@
 
                     <div class="flex items-center gap-1.5 text-emerald-600 font-bold text-xs bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-100 shrink-0">
                         <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
-                        <span>مشمول بالباقة الملكية</span>
+                        <span>مشمول في الهدية</span>
                     </div>
                 </div>
                 {% endfor %}
@@ -271,10 +269,10 @@
 
             <div class="space-y-1 text-center sm:text-left">
                 <p class="text-xs font-bold text-slate-700">
-                    ✨ شكراً لثقتكم بـ بوتيك فيلورا — يسعدنا دائماً أن نكون جزءاً من لحظاتكم السعيدة
+                    شكراً لاختياركم متجر Brand Veloura
                 </p>
                 <p class="text-[11px] text-slate-400">
-                    خدمة العملاء والاستفسارات: <span class="font-num font-bold text-slate-700">{{ store_settings.contact_phone }}</span>
+                    خدمة العملاء: <span class="font-num font-bold text-slate-700">{{ store_settings.contact_phone }}</span>
                 </p>
             </div>
         </div>

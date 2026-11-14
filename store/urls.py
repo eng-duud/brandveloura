@@ -47,7 +47,6 @@ urlpatterns = [
     path('order-success/<str:order_number>/', views.order_success_view, name='order_success'),
     path('order/success/<str:order_number>/', views.order_success_view, name='order_success_alias'),
     path('gift-slip/<str:order_number>/', views.gift_slip_view, name='gift_slip'),
-    path('order/<str:order_number>/invoice/', views.order_invoice_view, name='order_invoice'),
     path('api/order/<str:order_number>/save-invoice-image/', views.save_order_invoice_image, name='save_order_invoice_image'),
     path('track-order/', views.track_order_view, name='track_order'),
     

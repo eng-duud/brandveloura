@@ -913,6 +913,10 @@ def gift_builder_view(request):
     if perfume_id:
         selected_perfume = Product.objects.filter(id=perfume_id, is_active=True).first()
 
+    initial_grade = request.GET.get('grade', 'all').strip().lower()
+    if initial_grade not in ['all', 'original', 'master']:
+        initial_grade = 'all'
+
     # 1. جلب العطور الفاخرة بشكل مرن وقوي يشمل الأقسام والـ slug والاسم مع ضمان عدم ظهور القائمة فارغة
     from django.db.models import Q
     perfume_q = (
@@ -1121,6 +1125,7 @@ def gift_builder_view(request):
         'preselected_grades': preselected_grades,
         'wrapping_fee': wrapping_fee,
         'yer_per_sar': yer_per_sar,
+        'initial_grade': initial_grade,
     }
     return render(request, 'store/gift_builder.html', context)
 
@@ -1556,7 +1561,7 @@ def order_success_view(request, order_number):
         sender_disp = order.gift_card_sender or order.customer_name
         r_msg = (
             f"مرحباً {order.recipient_name or 'عزيزنا'}،\n"
-            f"وصلتك هدية فاخرة مرسلة لك بكل حب من ({sender_disp}) عبر بوتيك {settings.store_name} 🎁✨\n\n"
+            f"وصلتك هدية فاخرة من ({sender_disp}) عبر {settings.store_name} 🎁✨\n\n"
             f"يمكنك الاطلاع على بطاقة التهنئة وتتبع الشحنة عبر الرابط التالي:\n"
             f"{gift_slip_url}\n\n"
             f"نتمنى لك يوماً سعيداً ونسعد بخدمتك دائماً! 🌹"
@@ -1599,22 +1604,6 @@ def admin_print_recipient_slip(request, order_id):
     order = get_object_or_404(Order.objects.prefetch_related('items__product'), id=order_id)
     settings = StoreSettings.get_settings()
     return render(request, 'admin/print_recipient_slip.html', {
-        'order': order,
-        'store_settings': settings,
-    })
-
-
-def order_invoice_view(request, order_number):
-    """عرض وطباعة فاتورة المبيعات الرسمية للطلب بمقاس A4 وحفظها كصورة PNG"""
-    order = get_object_or_404(Order.objects.prefetch_related('items__product'), order_number=order_number)
-    
-    # التحقق من صلاحية الوصول (العميل صاحب الطلب أو المسؤول)
-    if order.user and request.user.is_authenticated and order.user != request.user and not request.user.is_staff:
-        messages.error(request, 'غير مصرح لك بالاطلاع على هذه الفاتورة.')
-        return redirect('store:home')
-        
-    settings = StoreSettings.get_settings()
-    return render(request, 'store/print_invoice.html', {
         'order': order,
         'store_settings': settings,
     })
@@ -2580,9 +2569,9 @@ def llms_txt(request):
     settings = StoreSettings.get_settings()
     base_url = request.build_absolute_uri('/')[:-1]
     
-    content = f"""# {settings.store_name} — Luxury Boutique Knowledge File (llms.txt)
+    content = f"""# {settings.store_name} — Luxury Store Knowledge File (llms.txt)
 
-> {settings.store_tagline or 'بوتيك الفخامة الأول للعطور العالمية، الساعات الراقية، ومستحضرات التجميل الأصلية والماستر كواليتي.'}
+> {settings.store_tagline or 'متجر الفخامة الأول للعطور العالمية، الساعات الراقية، ومستحضرات التجميل الأصلية والماستر كواليتي.'}
 
 ## Overview
 - **Brand Name**: {settings.store_name}

@@ -2,6 +2,11 @@
 
 {% block title %}تم استلام طلبك بنجاح | {{ order.order_number }} — {{ store_settings.store_name }}{% endblock %}
 
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+{% include 'store/includes/invoice_styles.html' %}
+{% endblock %}
+
 {% block content %}
 <div class="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
     <div class="bg-white rounded-3xl border border-pink-200 shadow-2xs overflow-hidden text-center p-6 sm:p-10 space-y-6">
@@ -96,51 +101,37 @@
                 </div>
                 {% endif %}
 
-                <!-- Recipient Gift Card Sharing Experience (مشاركة بطاقة الإهداء الملكية) -->
-                <div class="pt-4 border-t border-pink-100/90 space-y-3">
-                    <div class="p-3.5 rounded-2xl bg-gradient-to-r from-pink-50 via-rose-50 to-amber-50 border border-pink-200/90 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-2xs">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-pink-500 text-white flex items-center justify-center shrink-0 shadow-xs">
-                                <i data-lucide="gift" class="w-5 h-5"></i>
-                            </div>
+                <!-- بطاقة الإهداء الرقمية -->
+                <div class="pt-4 border-t border-pink-100/90">
+                    <div class="p-4 rounded-2xl bg-pink-50/70 border border-pink-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                        <div class="flex items-center gap-4 text-xs text-right">
                             <div>
-                                <span class="font-black text-xs sm:text-sm text-slate-900 block">
-                                    هديتك جاهزة للمفاجأة! شارك بطاقة الإهداء مع <span class="text-brand-700">{{ order.gift_card_recipient|default:order.recipient_name|default:"المهدى إليه" }}</span> 🎁
-                                </span>
-                                <span class="text-[11px] text-slate-500 block mt-0.5">
-                                    رابط رقمي خاص خالٍ 100% من الأسعار مع أنميشن احتفالي ملكي مبهر ✨
-                                </span>
+                                <span class="text-slate-400 block text-[10px]">المرسل:</span>
+                                <span class="font-bold text-slate-900">{{ order.gift_card_sender|default:order.customer_name }}</span>
+                            </div>
+                            <div class="w-px h-6 bg-pink-200"></div>
+                            <div>
+                                <span class="text-slate-400 block text-[10px]">المستلم:</span>
+                                <span class="font-bold text-brand-700">{{ order.gift_card_recipient|default:order.recipient_name }}</span>
                             </div>
                         </div>
 
-                        <!-- Web Share API Button + WhatsApp + Copy -->
+                        <!-- أزرار مشاركة ومعاينة ونسخ البطاقة -->
                         <div class="flex flex-wrap items-center gap-2">
                             <button 
                                 type="button" 
-                                onclick="shareGiftCard('{{ order.order_number }}', '{{ order.gift_card_recipient|default:order.recipient_name|default:"أعز الناس" }}', '{{ gift_slip_url }}')"
+                                onclick="shareGiftCard('{{ order.order_number }}', '{{ order.gift_card_recipient|default:order.recipient_name }}', '{{ gift_slip_url }}')"
                                 class="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
                             >
                                 <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
                                 <span>مشاركة البطاقة</span>
                             </button>
 
-                            {% if recipient_whatsapp_url %}
-                            <a 
-                                href="{{ recipient_whatsapp_url }}" 
-                                target="_blank" 
-                                class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-2xs"
-                                title="مشاركة عبر واتساب"
-                            >
-                                <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
-                                <span>واتساب</span>
-                            </a>
-                            {% endif %}
-
                             <a 
                                 href="{{ gift_slip_url }}" 
                                 target="_blank" 
                                 class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-50 border border-pink-200 text-brand-700 text-xs font-bold transition shadow-2xs"
-                                title="معاينة بطاقة الإهداء الملكية"
+                                title="معاينة بطاقة الإهداء"
                             >
                                 <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                                 <span>معاينة</span>
@@ -196,26 +187,31 @@
                 </div>
             </div>
 
-            <!-- Official Sales Invoice Action Card -->
+            <!-- معاينة الفاتورة -->
             <div class="pt-3 border-t border-pink-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-pink-100 shadow-2xs">
                 <div class="flex items-center gap-2.5">
                     <div class="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0">
                         <i data-lucide="receipt" class="w-4 h-4"></i>
                     </div>
-                    <div>
-                        <span class="font-bold text-xs text-slate-900 block">فاتورة الشراء الرسمية المعتمدة (A4 / PNG)</span>
-                        <span class="text-[10px] text-slate-400 block">يمكنك معاينة الفاتورة، طباعتها أو حفظها صورة PNG لجهازك</span>
+                    <div class="text-right">
+                        <span class="font-bold text-xs text-slate-900 block">فاتورة الشراء الرسمية</span>
+                        <span class="text-[10px] text-slate-400 block">معاينة الفاتورة وحفظها أو مشاركتها كصورة PNG</span>
                     </div>
                 </div>
-                <a 
-                    href="{% url 'store:order_invoice' order_number=order.order_number %}" 
-                    target="_blank" 
-                    class="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 transition shrink-0"
+                <button 
+                    type="button" 
+                    onclick="openInvoiceModal()" 
+                    class="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 transition shrink-0 cursor-pointer"
                 >
-                    <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-                    <span>معاينة وطباعة الفاتورة</span>
-                </a>
+                    <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
+                    <span>معاينة الفاتورة</span>
+                </button>
             </div>
+        </div>
+
+        <!-- Hidden Invoice Source for Modal Rendering -->
+        <div id="order-invoice-source" class="hidden">
+            {% include 'store/includes/order_invoice_sheet.html' with order=order store_settings=store_settings %}
         </div>
 
         <!-- Links -->
@@ -234,11 +230,200 @@
     </div>
 </div>
 
+<!-- Invoice Preview Modal (3 Controls Only: Save PNG, Share, Close) -->
+<div id="invoice-modal-backdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-5">
+    <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+        <!-- Modal Header Bar (Only: Save PNG, Share, Close) -->
+        <div class="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
+            <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-lg bg-pink-500/20 text-pink-300 flex items-center justify-center">
+                    <i data-lucide="receipt" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <span class="font-bold text-xs sm:text-sm block">معاينة الفاتورة</span>
+                    <span class="text-[10px] text-slate-400 font-mono block">#{{ order.order_number }}</span>
+                </div>
+            </div>
+
+            <!-- The ONLY 3 controls -->
+            <div class="flex items-center gap-2">
+                <!-- 1. حفظ PNG -->
+                <button 
+                    type="button" 
+                    id="modal-btn-download-png" 
+                    onclick="downloadModalInvoicePNG()" 
+                    class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-pink-500 to-rose-600 hover:opacity-90 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs cursor-pointer transition"
+                >
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                    <span>حفظ PNG</span>
+                </button>
+
+                <!-- 2. مشاركة -->
+                <button 
+                    type="button" 
+                    id="modal-btn-share" 
+                    onclick="shareModalInvoice()" 
+                    class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition"
+                >
+                    <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+                    <span>مشاركة</span>
+                </button>
+
+                <!-- 3. إغلاق -->
+                <button 
+                    type="button" 
+                    onclick="closeInvoiceModal()" 
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-rose-900/60 transition cursor-pointer"
+                    title="إغلاق النافذة"
+                >
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Modal Body (Inline Render Area) -->
+        <div class="flex-1 bg-slate-100 overflow-y-auto p-4 sm:p-6">
+            <div id="modal-invoice-render-content" class="w-full flex justify-center"></div>
+        </div>
+    </div>
+</div>
+
 <script>
+    function openInvoiceModal() {
+        const modal = document.getElementById('invoice-modal-backdrop');
+        const container = document.getElementById('modal-invoice-render-content');
+        const source = document.getElementById('order-invoice-source');
+
+        if (!modal || !container || !source) return;
+
+        container.innerHTML = source.innerHTML;
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function closeInvoiceModal() {
+        const modal = document.getElementById('invoice-modal-backdrop');
+        const container = document.getElementById('modal-invoice-render-content');
+        if (modal) modal.classList.add('hidden');
+        if (container) container.innerHTML = '';
+        document.body.style.overflow = '';
+    }
+
+    async function downloadModalInvoicePNG() {
+        const btn = document.getElementById('modal-btn-download-png');
+        const originalText = btn.innerHTML;
+        const sheet = document.querySelector('#modal-invoice-render-content .invoice-sheet');
+
+        if (!sheet) return;
+
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳ جارٍ التوليد...</span>';
+
+            const canvas = await html2canvas(sheet, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                windowWidth: 1000
+            });
+
+            const link = document.createElement('a');
+            link.download = `فاتورة-${'{{ order.order_number }}'}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+
+            // Background sync with Cloudinary
+            uploadInvoiceToCloudinary(canvas.toDataURL('image/png'));
+
+            btn.innerHTML = '<span>✓ تم الحفظ</span>';
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }, 2500);
+
+        } catch (err) {
+            console.error('Error generating invoice PNG:', err);
+            alert('حدث خطأ أثناء حفظ الفاتورة، يرجى المحاولة مرة أخرى.');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+
+    async function shareModalInvoice() {
+        const sheet = document.querySelector('#modal-invoice-render-content .invoice-sheet');
+        if (!sheet) return;
+
+        try {
+            const canvas = await html2canvas(sheet, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                windowWidth: 1000
+            });
+
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            const file = new File([blob], `فاتورة-${'{{ order.order_number }}'}.png`, { type: 'image/png' });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: `فاتورة مبيعات #${'{{ order.order_number }}'}`,
+                    text: `فاتورة مبيعات طلب #${'{{ order.order_number }}'} من Brand Veloura`,
+                    files: [file]
+                });
+                return;
+            }
+
+            downloadModalInvoicePNG();
+            copyGiftLink('{{ order.order_number }}');
+
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                console.warn('Share invoice error:', err);
+                downloadModalInvoicePNG();
+            }
+        }
+    }
+
+    async function uploadInvoiceToCloudinary(base64Data) {
+        try {
+            const csrfToken = getCookie('csrftoken');
+            await fetch('/api/order/{{ order.order_number }}/save-invoice-image/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ image_data: base64Data })
+            });
+        } catch (e) {
+            console.warn('Cloudinary upload:', e);
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
     async function shareGiftCard(orderNumber, recipientName, slipUrl) {
         const fullUrl = slipUrl.startsWith('http') ? slipUrl : window.location.origin + slipUrl;
-        const shareTitle = `بطاقة إهداء ملكية خاصة إلى ${recipientName}`;
-        const shareText = `مرحباً ${recipientName}، وصلتك هدية ملكية خاصة مرسلة لك بكل حب من بوتيك Brand Veloura 🎁✨\nيمكنك فتح بطاقة التهنئة وتتبع باقتك عبر الرابط:`;
+        const shareTitle = `بطاقة إهداء إلى ${recipientName}`;
+        const shareText = `مرحباً ${recipientName}، تم إرسال هدية خاصة لك من Brand Veloura 🎁\nيمكنك الاطلاع على تفاصيل بطاقة الإهداء عبر الرابط:\n${fullUrl}`;
 
         if (navigator.share) {
             try {
@@ -257,17 +442,16 @@
             }
         }
 
-        // Fallback to WhatsApp
-        const waText = encodeURIComponent(`${shareText}\n${fullUrl}`);
+        const waText = encodeURIComponent(shareText);
         window.open(`https://api.whatsapp.com/send?text=${waText}`, '_blank');
     }
 
     function copyGiftLink(url) {
         const fullUrl = url.startsWith('http') ? url : window.location.origin + url;
         navigator.clipboard.writeText(fullUrl).then(() => {
-            alert('تم نسخ رابط بطاقة الإهداء الملكية بنجاح! يمكنك إرساله للمستلم، الرابط خالٍ تماماً من الأسعار ويحتوي على الأنميشن الاحتفالي 🎁');
+            alert('تم نسخ رابط بطاقة الإهداء بنجاح!');
         }).catch(() => {
-            prompt('انسخ الرابط التالي:', fullUrl);
+            prompt('انسخ الرابط:', fullUrl);
         });
     }
 </script>

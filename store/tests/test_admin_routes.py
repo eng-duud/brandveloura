@@ -218,8 +218,8 @@ class AdminRoutesAndOperationsTests(TestCase):
         settings_obj = StoreSettings.get_settings()
         change_url = reverse('admin:store_storesettings_change', args=[settings_obj.id])
         settings_data = {
-            'store_name': 'Brand Veloura Boutique',
-            'store_tagline': 'بوتيك الفخامة الأول للعطور والساعات ومستلزمات التجميل',
+            'store_name': 'Brand Veloura',
+            'store_tagline': 'متجر الفخامة الأول للعطور والساعات ومستلزمات التجميل',
             'yer_per_sar': '410.00',
             'contact_phone': '+967 770 000 000',
             'contact_whatsapp': '967770000000',

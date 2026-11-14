@@ -23,7 +23,7 @@ def sanitize_image_url(url, fallback=''):
 class StoreSettings(models.Model):
     """إعدادات المتجر العامة وسعر الصرف والهوية"""
     store_name = models.CharField(max_length=200, default='Brand Veloura', verbose_name='اسم المتجر')
-    store_tagline = models.CharField(max_length=250, default='بوتيك الفخامة الأول للعطور والساعات ومستلزمات التجميل', verbose_name='الشعار النصي')
+    store_tagline = models.CharField(max_length=250, default='متجر الفخامة الأول للعطور والساعات ومستلزمات التجميل', verbose_name='الشعار النصي')
     store_logo = models.ImageField(upload_to='settings/', null=True, blank=True, verbose_name='شعار المتجر')
     
     # سعر صرف الريال السعودي مقابل اليمني (كم ريال يمني يساوي 1 ريال سعودي)

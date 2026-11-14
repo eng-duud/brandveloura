@@ -145,7 +145,7 @@ def send_product_promotion_push(product, custom_title=None, custom_body=None):
         discount = product.discount_percentage
         title = f"🔥 تخفيض حصري: {product.name_ar} (خصم {discount}%)"
     elif product.is_new:
-        title = f"✨ وصل حديثاً إلى البوتيك: {product.name_ar}"
+        title = f"✨ وصل حديثاً إلى المتجر: {product.name_ar}"
     else:
         title = f"⭐ متاح الآن: {product.name_ar}"
 

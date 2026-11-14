@@ -92,7 +92,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('store_name', models.CharField(default='Brand Veloura', max_length=200, verbose_name='اسم المتجر')),
-                ('store_tagline', models.CharField(default='بوتيك الفخامة الأول للعطور والساعات ومستلزمات التجميل', max_length=250, verbose_name='الشعار النصي')),
+                ('store_tagline', models.CharField(default='متجر الفخامة الأول للعطور والساعات ومستلزمات التجميل', max_length=250, verbose_name='الشعار النصي')),
                 ('store_logo', models.ImageField(blank=True, null=True, upload_to='settings/', verbose_name='شعار المتجر')),
                 ('yer_per_sar', models.DecimalField(decimal_places=2, default=Decimal('530.00'), help_text='مثال: 530 يعني كل 1 ريال سعودي = 530 ريال يمني. سيتم قسمة السعر اليمني على هذا الرقم تلقائياً', max_digits=10, verbose_name='سعر صرف 1 ريال سعودي بالريال اليمني')),
                 ('contact_phone', models.CharField(default='+967 770 000 000', max_length=50, verbose_name='رقم الهاتف')),

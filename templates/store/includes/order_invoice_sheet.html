@@ -1,0 +1,183 @@
+{% load static %}
+<div class="invoice-sheet" id="invoice-sheet-container-{{ order.order_number }}">
+    <!-- Watermark -->
+    <div class="invoice-watermark">BRAND VELOURA</div>
+
+    <!-- Header -->
+    <div class="invoice-header">
+        <div class="brand-section">
+            <img 
+                src="{% static 'images/logo.webp' %}" 
+                alt="Brand Veloura" 
+                onerror="this.src='{{ store_settings.get_logo_url }}'"
+                class="brand-logo"
+            >
+            <div>
+                <h1 class="brand-name font-brand-logo">Brand Veloura</h1>
+                <div class="brand-tagline">
+                    <span>متجر Brand Veloura للعطور والساعات الفاخرة</span>
+                </div>
+                <div class="store-contact-sub">
+                    <span>هاتف وخدمة عملاء: {{ store_settings.contact_phone }}</span>
+                    <span> • </span>
+                    <span>www.brandveloura.com</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="invoice-meta">
+            <div class="invoice-title">فاتورة مبيعات</div>
+            <div class="invoice-title-en">Sales Invoice</div>
+            <div class="meta-pills">
+                <span class="meta-pill font-num">رقم الفاتورة: #{{ order.order_number }}</span>
+                <span class="meta-pill font-num">تاريخ الطلب: {{ order.created_at|date:"Y/m/d - H:i" }}</span>
+                <div>
+                    <span class="status-badge">{{ order.get_status_display }}</span>
+                    {% if order.is_gift %}
+                    <span class="gift-tag">🎁 طلب كهدية</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2-Column Info Grid -->
+    <div class="info-grid">
+        <!-- Customer Info -->
+        <div class="info-box">
+            <h4>👤 بيانات المشتري</h4>
+            <div class="info-row">
+                <span class="info-label">اسم العميل:</span>
+                <span class="info-value">{{ order.customer_name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">رقم الهاتف:</span>
+                <span class="info-value font-num" dir="ltr">{{ order.customer_phone }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">المدينة:</span>
+                <span class="info-value">{{ order.shipping_city }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">عنوان التوصيل:</span>
+                <span class="info-value">{{ order.shipping_address }}</span>
+            </div>
+        </div>
+
+        <!-- Payment & Delivery Info -->
+        <div class="info-box">
+            <h4>💳 وسيلة الدفع والتوصيل</h4>
+            <div class="info-row">
+                <span class="info-label">طريقة السداد:</span>
+                <span class="info-value">{{ order.payment_method_name|default:"تحويل بنكي" }}</span>
+            </div>
+            {% if order.payment_reference_no %}
+            <div class="info-row">
+                <span class="info-label">رقم الحوالة:</span>
+                <span class="info-value font-num">{{ order.payment_reference_no }}</span>
+            </div>
+            {% endif %}
+            <div class="info-row">
+                <span class="info-label">العملة المعتمدة:</span>
+                <span class="info-value">
+                    {% if order.payment_currency_selected == 'SAR' %}ريال سعودي (SAR){% else %}ريال يمني (YER){% endif %}
+                </span>
+            </div>
+            {% if order.is_gift and order.recipient_name %}
+            <div class="info-row" style="color: #be185d; border-top: 1px dashed #fbcfe8; padding-top: 4px; margin-top: 4px;">
+                <span class="info-label">المهدى إليه (المستلم):</span>
+                <span class="info-value">{{ order.recipient_name }} ({{ order.recipient_phone }})</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Table of Items -->
+    <div class="items-table-wrapper">
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px;" class="text-center">#</th>
+                    <th>المنتج والوصف</th>
+                    <th style="width: 120px;">الدرجة / النوع</th>
+                    <th style="width: 70px;" class="text-center">الكمية</th>
+                    <th style="width: 110px;" class="text-left">السعر (ر.ي)</th>
+                    <th style="width: 120px;" class="text-left">الإجمالي (ر.ي)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items.all %}
+                <tr>
+                    <td class="text-center font-num text-slate-400">{{ forloop.counter }}</td>
+                    <td>
+                        <div class="item-main-title">{{ item.product_name }}</div>
+                    </td>
+                    <td>
+                        <span class="item-badge">
+                            {{ item.variant_info|default:"صنف أصلي معتمد" }}
+                        </span>
+                    </td>
+                    <td class="text-center font-num font-bold">{{ item.quantity }}</td>
+                    <td class="text-left font-num">{{ item.unit_price_yer|floatformat:0 }}</td>
+                    <td class="text-left font-num font-bold text-slate-900">{{ item.total_price_yer|floatformat:0 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-slate-400 py-4">لا توجد عناصر</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Summary & Totals -->
+    <div class="summary-section">
+        <div class="payment-notes-box">
+            <strong>ملاحظات الضمان والتوصيل:</strong>
+            <p>• كافة عطور وساعات متجر Brand Veloura مشمولة بضمان الجودة والأصالة التامة.</p>
+            <p>• في حال وجود أي استفسار أو طلب دعم، يسعدنا تواصلكم عبر خدمة العملاء الرسمية.</p>
+            <p>• هذه الفاتورة صادرة إلكترونياً ومسجلة في النظام وموثقة برقم الطلب الرسمي.</p>
+        </div>
+
+        <div class="totals-table-box">
+            <div class="total-row">
+                <span>مجموع المنتجات:</span>
+                <span class="font-num font-bold">{{ order.subtotal_yer|floatformat:0 }} ر.ي</span>
+            </div>
+            <div class="total-row">
+                <span>رسوم الشحن والتوصيل:</span>
+                <span class="font-num font-bold">
+                    {% if order.shipping_fee_yer > 0 %}{{ order.shipping_fee_yer|floatformat:0 }} ر.ي{% else %}مجاناً{% endif %}
+                </span>
+            </div>
+            {% if order.gift_wrapping_fee_yer > 0 %}
+            <div class="total-row">
+                <span>تغليف الهدايا:</span>
+                <span class="font-num font-bold">{{ order.gift_wrapping_fee_yer|floatformat:0 }} ر.ي</span>
+            </div>
+            {% endif %}
+
+            <div class="total-row grand-total">
+                <div>
+                    <span class="block font-bold">الإجمالي المستحق:</span>
+                    <span class="grand-sar font-num">(المعادل بالسعودي: {{ order.total_sar|floatformat:1 }} ر.س)</span>
+                </div>
+                <div class="grand-yer font-num">
+                    {{ order.total_yer|floatformat:0 }} <small style="font-size: 11px;">ر.ي</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="invoice-footer">
+        <div class="footer-seal">
+            <span>شكراً لتسوقكم من متجر Brand Veloura</span>
+            <span> • </span>
+            <span>صنعاء - عدن - كافة المحافظات</span>
+        </div>
+        <div>
+            <a href="https://brandveloura.com" target="_blank" class="footer-link">www.brandveloura.com</a>
+        </div>
+    </div>
+</div>

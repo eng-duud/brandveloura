@@ -254,7 +254,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 p-3.5 rounded-2xl bg-pink-50/50 border border-pink-200">
                     
                     <!-- Search Input -->
-                    <div class="sm:col-span-7 relative">
+                    <div class="sm:col-span-6 relative">
                         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
                         <input 
                             type="text" 
@@ -265,28 +265,37 @@
                         >
                     </div>
 
-                    <!-- Global Grade Switcher (Clean, explicit buttons) -->
-                    <div class="sm:col-span-5 flex items-center justify-end gap-2">
-                        <span class="text-xs font-bold text-slate-700 hidden sm:inline">جودة العطور:</span>
-                        <input type="hidden" name="perfume_grade" id="global_perfume_grade_input" value="original">
+                    <!-- Global Quality / Grade Filter (الكل / أصلي 100% / ماستر طبق الأصل) -->
+                    <div class="sm:col-span-6 flex items-center justify-end gap-1.5 flex-wrap">
+                        <span class="text-xs font-bold text-slate-700 hidden sm:inline ml-1">جودة العطور:</span>
+                        <input type="hidden" name="perfume_grade" id="global_perfume_grade_input" value="{{ initial_grade|default:'all' }}">
+                        <button 
+                            type="button" 
+                            id="global-grade-btn-all"
+                            data-grade="all"
+                            onclick="onGlobalGradeChanged('all', this)" 
+                            class="global-grade-btn flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs transition cursor-pointer {% if not initial_grade or initial_grade == 'all' %}bg-brand-500 text-white border border-brand-500{% else %}bg-white border border-pink-200 text-slate-700 hover:bg-pink-50{% endif %}"
+                        >
+                            <span>كل الجودات</span>
+                        </button>
                         <button 
                             type="button" 
                             id="global-grade-btn-original"
                             data-grade="original"
-                            onclick="onGlobalGradeChanged('original')" 
-                            class="global-grade-btn flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold shadow-2xs transition cursor-pointer"
+                            onclick="onGlobalGradeChanged('original', this)" 
+                            class="global-grade-btn flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs transition cursor-pointer {% if initial_grade == 'original' %}bg-brand-500 text-white border border-brand-500{% else %}bg-white border border-pink-200 text-slate-700 hover:bg-pink-50{% endif %}"
                         >
-                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5 {% if initial_grade == 'original' %}text-white{% else %}text-emerald-600{% endif %}"></i>
                             <span>أصلي 100%</span>
                         </button>
                         <button 
                             type="button" 
                             id="global-grade-btn-master"
                             data-grade="master"
-                            onclick="onGlobalGradeChanged('master')" 
-                            class="global-grade-btn flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-pink-200 text-xs font-bold text-slate-700 hover:bg-pink-50 shadow-2xs transition cursor-pointer"
+                            onclick="onGlobalGradeChanged('master', this)" 
+                            class="global-grade-btn flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs transition cursor-pointer {% if initial_grade == 'master' %}bg-brand-500 text-white border border-brand-500{% else %}bg-white border border-pink-200 text-slate-700 hover:bg-pink-50{% endif %}"
                         >
-                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5 {% if initial_grade == 'master' %}text-white{% else %}text-purple-600{% endif %}"></i>
                             <span>ماستر طبق الأصل</span>
                         </button>
                     </div>
@@ -304,6 +313,8 @@
                         data-is-oriental="{{ perfume.is_oriental_scent|yesno:'true,false' }}"
                         data-brand="{{ perfume.effective_brand_name|lower }}"
                         data-has-grades="{{ perfume.has_grades|yesno:'true,false' }}"
+                        data-has-master="{% if perfume.has_grades or perfume.price_master_yer %}true{% else %}false{% endif %}"
+                        data-has-original="true"
                         data-price-original="{{ perfume.price_original_yer|default:perfume.price_yer|unlocalize|floatformat:0 }}"
                         data-price-master="{{ perfume.price_master_yer|default:perfume.price_yer|unlocalize|floatformat:0 }}"
                         data-image="{{ perfume.primary_image_url }}"
@@ -1167,12 +1178,12 @@
             if (mastBtn) mastBtn.classList.add('is-active');
             if (origBtn) origBtn.classList.remove('is-active');
             if (priceEl && card && card.dataset.priceMaster) priceEl.innerText = card.dataset.priceMaster;
-            if (labelEl) labelEl.innerText = 'ماستر';
+            if (labelEl) labelEl.innerText = (card && card.dataset.hasGrades === 'true') ? 'ماستر' : 'معتمد';
         } else {
             if (origBtn) origBtn.classList.add('is-active');
             if (mastBtn) mastBtn.classList.remove('is-active');
             if (priceEl && card && card.dataset.priceOriginal) priceEl.innerText = card.dataset.priceOriginal;
-            if (labelEl) labelEl.innerText = 'أصلي';
+            if (labelEl) labelEl.innerText = (card && card.dataset.hasGrades === 'true') ? 'أصلي' : 'معتمد';
         }
 
         if (checkCard) {
@@ -1186,33 +1197,57 @@
         triggerLiveCalculation();
     }
 
-    // Global grade switcher: updates displayed grade without auto-checking unselected perfumes
-    function onGlobalGradeChanged(grade) {
-        const origBtn = document.getElementById('global-grade-btn-original');
-        const mastBtn = document.getElementById('global-grade-btn-master');
+    // Global grade switcher & filter: updates displayed grade and filters catalog items
+    function onGlobalGradeChanged(grade, targetBtn) {
+        if (currentPerfumeGrade === grade && grade !== 'all') {
+            grade = 'all';
+        }
+        currentPerfumeGrade = grade;
+
         const hiddenInput = document.getElementById('global_perfume_grade_input');
         if (hiddenInput) hiddenInput.value = grade;
 
-        if (grade === 'master') {
-            if (mastBtn) {
-                mastBtn.className = 'global-grade-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold shadow-xs transition cursor-pointer';
+        document.querySelectorAll('.global-grade-btn').forEach(btn => {
+            btn.className = 'global-grade-btn flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-pink-200 text-xs font-bold text-slate-700 hover:bg-pink-50 shadow-2xs transition cursor-pointer';
+            const icon = btn.querySelector('svg, i');
+            if (icon) {
+                if (btn.id === 'global-grade-btn-original') {
+                    icon.classList.remove('text-white');
+                    icon.classList.add('text-emerald-600');
+                } else if (btn.id === 'global-grade-btn-master') {
+                    icon.classList.remove('text-white');
+                    icon.classList.add('text-purple-600');
+                }
             }
-            if (origBtn) {
-                origBtn.className = 'global-grade-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-pink-200 text-xs font-bold text-slate-700 hover:bg-pink-50 shadow-2xs transition cursor-pointer';
-            }
-        } else {
-            if (origBtn) {
-                origBtn.className = 'global-grade-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold shadow-xs transition cursor-pointer';
-            }
-            if (mastBtn) {
-                mastBtn.className = 'global-grade-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-pink-200 text-xs font-bold text-slate-700 hover:bg-pink-50 shadow-2xs transition cursor-pointer';
+        });
+
+        const activeBtn = document.getElementById(`global-grade-btn-${grade}`) || targetBtn;
+        if (activeBtn) {
+            activeBtn.className = 'global-grade-btn flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-500 text-white border border-brand-500 text-xs font-bold shadow-2xs transition cursor-pointer';
+            const icon = activeBtn.querySelector('svg, i');
+            if (icon) {
+                icon.classList.remove('text-emerald-600', 'text-purple-600');
+                icon.classList.add('text-white');
             }
         }
 
-        document.querySelectorAll('.product-gift-card[data-has-grades="true"]').forEach(card => {
-            const pid = card.dataset.perfumeId;
-            setPerfumeGrade(pid, grade, false);
-        });
+        if (grade === 'master') {
+            document.querySelectorAll('.product-gift-card[data-perfume-id]').forEach(card => {
+                if (card.dataset.hasGrades === 'true' || card.dataset.hasMaster === 'true') {
+                    const pid = card.dataset.perfumeId;
+                    setPerfumeGrade(pid, 'master', false);
+                }
+            });
+        } else if (grade === 'original') {
+            document.querySelectorAll('.product-gift-card[data-perfume-id]').forEach(card => {
+                if (card.dataset.hasGrades === 'true' || card.dataset.hasMaster === 'true') {
+                    const pid = card.dataset.perfumeId;
+                    setPerfumeGrade(pid, 'original', false);
+                }
+            });
+        }
+
+        applyPerfumeFilters();
     }
 
     // Trigger HTMX Live Calculation
@@ -1434,9 +1469,10 @@
         document.getElementById('step4-msg-val').innerText = mVal;
     }
 
-    // Step 1: Live Multi-criteria Filtering (Category, Brand, Search)
+    // Step 1: Live Multi-criteria Filtering (Category, Brand, Grade, Search)
     let currentPerfumeCategory = 'all';
     let currentPerfumeBrand = 'all';
+    let currentPerfumeGrade = '{{ initial_grade|default:"all" }}';
 
     function filterPerfumesCategory(category, targetBtn) {
         currentPerfumeCategory = category;
@@ -1469,6 +1505,8 @@
             const gender = card.dataset.gender || 'unisex';
             const isOriental = card.dataset.isOriental === 'true';
             const brand = (card.dataset.brand || '').toLowerCase();
+            const hasMaster = (card.dataset.hasMaster === 'true' || card.dataset.hasGrades === 'true');
+            const hasOriginal = (card.dataset.hasOriginal === 'true');
 
             const matchesQuery = !query || name.includes(query) || brand.includes(query);
 
@@ -1488,7 +1526,14 @@
                 matchesBrand = (brand === currentPerfumeBrand.toLowerCase());
             }
 
-            if (matchesQuery && matchesCat && matchesBrand) {
+            let matchesGrade = true;
+            if (currentPerfumeGrade === 'master') {
+                matchesGrade = hasMaster;
+            } else if (currentPerfumeGrade === 'original') {
+                matchesGrade = hasOriginal;
+            }
+
+            if (matchesQuery && matchesCat && matchesBrand && matchesGrade) {
                 card.style.display = 'flex';
                 matchCount++;
             } else {
@@ -1565,6 +1610,11 @@
         if (searchInp) searchInp.value = '';
         const accSearchInp = document.getElementById('acc-search-input');
         if (accSearchInp) accSearchInp.value = '';
+        if (currentPerfumeGrade && currentPerfumeGrade !== 'all') {
+            onGlobalGradeChanged(currentPerfumeGrade);
+        } else {
+            applyPerfumeFilters();
+        }
         updateSelectionState();
         triggerLiveCalculation();
         updateLiveCardPreview();

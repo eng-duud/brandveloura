@@ -266,31 +266,30 @@
                 >
                 <div class="brand-title font-brand-logo">Brand Veloura</div>
             </div>
-            <div class="card-subtitle">بوتيك فيلورا الملكي • كرت إهداء فاخر • Royal Gift Card</div>
+            <div class="card-subtitle">متجر Brand Veloura • كرت إهداء</div>
         </div>
 
         <div class="names-row">
-            <div class="name-box name-recipient">
-                <div class="name-label">إلى العزيز/ة:</div>
-                <div class="name-val">{{ order.gift_card_recipient|default:order.recipient_name|default:"أعز الناس" }}</div>
+            <div class="name-box">
+                <div class="name-label">المرسل:</div>
+                <div class="name-val">{{ order.gift_card_sender|default:order.customer_name }}</div>
             </div>
-            <div class="name-box" style="text-align: left;">
-                <div class="name-label">مقدّمة بكل حب من:</div>
-                <div class="name-val">{{ order.gift_card_sender|default:order.customer_name|default:"محبّك" }}</div>
+            <div class="name-box name-recipient" style="text-align: left;">
+                <div class="name-label">المستلم:</div>
+                <div class="name-val">{{ order.gift_card_recipient|default:order.recipient_name }}</div>
             </div>
         </div>
 
         <div class="card-body">
             <div class="message-text">
-                "{{ order.gift_card_message|default:"أجمل التهاني وأصدق التمنيات، هدية متواضعة تليق بمقامكم الرفيع ونسعد بتقديمها لكم." }}"
+                "{{ order.gift_card_message|default:"أجمل التهاني وأطيب التمنيات." }}"
             </div>
         </div>
 
         <div class="card-footer">
-            <div class="footer-note">✨ مغلفة يدوياً بلمسات فيلورا الملكية</div>
             <a href="https://brandveloura.com" target="_blank" class="website-badge">www.brandveloura.com</a>
             {% if order.preferred_delivery_date %}
-            <div class="footer-note">المناسبة: {{ order.preferred_delivery_date|date:"Y/m/d" }}</div>
+            <div class="footer-note">تاريخ التسليم: {{ order.preferred_delivery_date|date:"Y/m/d" }}</div>
             {% endif %}
             <div class="order-tag">#{{ order.order_number }}</div>
         </div>

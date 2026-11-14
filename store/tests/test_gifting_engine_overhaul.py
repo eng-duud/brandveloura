@@ -298,20 +298,20 @@ class GiftingEngineOverhaulTests(TestCase):
             total_price_yer=Decimal('45000.00'),
         )
 
-        # 1. معاينة الفاتورة للعميل
-        res = self.client.get(reverse('store:order_invoice', kwargs={'order_number': order.order_number}))
-        self.assertEqual(res.status_code, 200)
-        content = res.content.decode('utf-8')
-        self.assertIn('فاتورة مبيعات', content)
-        self.assertIn('Brand Veloura', content)
-        self.assertIn('48000', content)
-        self.assertIn('سامي منصور', content)
-        self.assertIn('downloadInvoicePNG', content)
+        # 1. التحقق من إلغاء الرابط العام للفاتورة للحماية من التخمين والحقن (404)
+        res_public = self.client.get(f'/order/{order.order_number}/invoice/')
+        self.assertEqual(res_public.status_code, 404, "يجب ألا يوجد مسار عام للفاتورة")
 
-        # 2. طباعة الفاتورة للإدارة
+        # 2. طباعة الفاتورة للإدارة عبر لوحة التحكم
         self.client.login(username='admin_staff', password='Password123!')
         res_admin = self.client.get(reverse('store:admin_print_invoice', kwargs={'order_id': order.id}))
         self.assertEqual(res_admin.status_code, 200)
+        admin_content = res_admin.content.decode('utf-8')
+        self.assertIn('فاتورة مبيعات', admin_content)
+        self.assertIn('Brand Veloura', admin_content)
+        self.assertIn('48000', admin_content)
+        self.assertIn('سامي منصور', admin_content)
+        self.assertNotIn('بوتيك', admin_content, "يجب ألا تظهر كلمة بوتيك إطلاقاً في الفاتورة")
 
     def test_save_order_invoice_image_api(self):
         """التحقق من endpoint حفظ صورة الفاتورة المولدة كـ PNG وربطها بالطلب"""
@@ -373,4 +373,35 @@ class GiftingEngineOverhaulTests(TestCase):
         success_html = res_success.content.decode('utf-8')
         self.assertIn('shareGiftCard', success_html)
         self.assertIn('سعيد', success_html)
-        self.assertIn('فاتورة الشراء الرسمية المعتمدة', success_html)
+        self.assertIn('فاتورة الشراء الرسمية', success_html)
+        self.assertNotIn('بوتيك', slip_html, "يجب عدم وجود كلمة بوتيك في صفحة المستلم")
+        self.assertNotIn('بوتيك', success_html, "يجب عدم وجود كلمة بوتيك في صفحة النجاح")
+
+    def test_gift_builder_grade_filter_controls_and_rendering(self):
+        """التحقق من أن فلتر الماستر والأصلي في صانع الهدايا متوفر ويعمل بدقة مع أزرار الفلترة وبيانات البطاقات"""
+        res_default = self.client.get(reverse('store:gift_builder'))
+        self.assertEqual(res_default.status_code, 200)
+        html_default = res_default.content.decode('utf-8')
+        
+        # التأكد من وجود أزرار الفلترة الثلاثة
+        self.assertIn('global-grade-btn-all', html_default)
+        self.assertIn('global-grade-btn-original', html_default)
+        self.assertIn('global-grade-btn-master', html_default)
+        self.assertIn('كل الجودات', html_default)
+        self.assertIn('أصلي 100%', html_default)
+        self.assertIn('ماستر طبق الأصل', html_default)
+        self.assertIn('data-has-master="true"', html_default)
+        self.assertIn('data-has-original="true"', html_default)
+        self.assertIn('currentPerfumeGrade', html_default)
+
+        # فحص تمرير معيار grade عبر الرابط
+        res_master = self.client.get(reverse('store:gift_builder') + '?grade=master')
+        self.assertEqual(res_master.status_code, 200)
+        html_master = res_master.content.decode('utf-8')
+        self.assertIn('value="master"', html_master)
+
+        res_orig = self.client.get(reverse('store:gift_builder') + '?grade=original')
+        self.assertEqual(res_orig.status_code, 200)
+        html_orig = res_orig.content.decode('utf-8')
+        self.assertIn('value="original"', html_orig)
+
