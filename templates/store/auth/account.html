@@ -273,6 +273,41 @@
                     {% endfor %}
                 </div>
 
+                {% if order.is_gift %}
+                <!-- Gift Card Sharing Banner for Sender -->
+                <div class="p-3.5 rounded-xl bg-gradient-to-r from-pink-50 via-rose-50 to-amber-50 border border-pink-200/90 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-2xs">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-brand-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                            <i data-lucide="gift" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <span class="font-bold text-xs text-slate-900 block">
+                                باقة إهداء ملكية إلى: <strong class="text-brand-700">{{ order.gift_card_recipient|default:order.recipient_name|default:"أعز الناس" }}</strong> 🎁
+                            </span>
+                            <span class="text-[10px] text-slate-500 block">يمكنك مشاركة بطاقة التهنئة وتتبع الهدية مع المستلم (الأسعار محجوبة 100%)</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button 
+                            type="button" 
+                            onclick="shareGiftCard('{{ order.order_number }}', '{{ order.gift_card_recipient|default:order.recipient_name|default:"أعز الناس" }}', '{% url 'store:gift_slip' order_number=order.order_number %}')"
+                            class="px-3.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+                        >
+                            <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+                            <span>مشاركة البطاقة</span>
+                        </button>
+                        <a 
+                            href="{% url 'store:gift_slip' order_number=order.order_number %}" 
+                            target="_blank" 
+                            class="px-2.5 py-1.5 rounded-lg bg-white hover:bg-pink-50 border border-pink-200 text-slate-700 font-bold text-xs transition"
+                            title="معاينة بطاقة الإهداء الملكية"
+                        >
+                            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
                 <!-- Order Footer -->
                 <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
                     <div class="text-xs">
@@ -282,7 +317,17 @@
                         <span class="text-slate-400 mr-2">• طريقة الدفع: {{ order.payment_method_name|default:"تحويل بنكي" }}</span>
                     </div>
 
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- Invoice Preview Button (Modal) -->
+                        <button 
+                            type="button" 
+                            onclick="openInvoiceModal('{{ order.order_number }}')" 
+                            class="px-3 py-1.5 rounded-lg bg-pink-50 hover:bg-pink-100 text-brand-700 font-bold text-xs transition flex items-center gap-1.5 cursor-pointer border border-pink-200 shadow-2xs"
+                        >
+                            <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
+                            <span>فاتورة الطلب</span>
+                        </button>
+
                         <!-- Reorder Button -->
                         <form method="POST" action="{% url 'store:reorder' order_number=order.order_number %}">
                             {% csrf_token %}
@@ -608,5 +653,135 @@
             prompt("انسخ:", text);
         }
     }
+
+    // Modal Invoice Controls
+    function openInvoiceModal(orderNumber) {
+        const modal = document.getElementById('invoice-modal-backdrop');
+        const iframe = document.getElementById('invoice-modal-iframe');
+        const orderNoTag = document.getElementById('modal-invoice-order-no');
+        const newTabLink = document.getElementById('modal-link-open-new-tab');
+
+        if (!modal || !iframe) return;
+
+        const invoiceUrl = `/order/${orderNumber}/invoice/`;
+        orderNoTag.textContent = `#${orderNumber}`;
+        newTabLink.href = invoiceUrl;
+        iframe.src = invoiceUrl;
+
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function closeInvoiceModal() {
+        const modal = document.getElementById('invoice-modal-backdrop');
+        const iframe = document.getElementById('invoice-modal-iframe');
+        if (modal) modal.classList.add('hidden');
+        if (iframe) iframe.src = 'about:blank';
+        document.body.style.overflow = '';
+    }
+
+    function printModalInvoice() {
+        const iframe = document.getElementById('invoice-modal-iframe');
+        if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.print();
+        }
+    }
+
+    function downloadModalInvoicePNG() {
+        const iframe = document.getElementById('invoice-modal-iframe');
+        if (iframe && iframe.contentWindow && typeof iframe.contentWindow.downloadInvoicePNG === 'function') {
+            iframe.contentWindow.downloadInvoicePNG();
+        } else {
+            alert('يرجى الانتظار ثانية حتى يكتمل تحميل الفاتورة');
+        }
+    }
+
+    // Web Share API for Gift Orders
+    async function shareGiftCard(orderNumber, recipientName, slipUrl) {
+        const fullUrl = slipUrl.startsWith('http') ? slipUrl : window.location.origin + slipUrl;
+        const shareTitle = `بطاقة إهداء ملكية خاصة إلى ${recipientName}`;
+        const shareText = `مرحباً ${recipientName}، وصلتك هدية ملكية خاصة مرسلة لك بكل حب من بوتيك Brand Veloura 🎁✨\nيمكنك فتح بطاقة التهنئة وتتبع باقتك عبر الرابط:`;
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: shareTitle,
+                    text: shareText,
+                    url: fullUrl
+                });
+                return;
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.warn('Web Share failed, falling back:', err);
+                } else {
+                    return;
+                }
+            }
+        }
+
+        const waText = encodeURIComponent(`${shareText}\n${fullUrl}`);
+        window.open(`https://api.whatsapp.com/send?text=${waText}`, '_blank');
+    }
 </script>
+
+<!-- Invoice Preview Modal -->
+<div id="invoice-modal-backdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-5">
+    <div class="bg-white rounded-2xl max-w-4xl w-full h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+        <!-- Modal Header Bar -->
+        <div class="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
+            <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-lg bg-pink-500/20 text-pink-300 flex items-center justify-center">
+                    <i data-lucide="receipt" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <span class="font-bold text-xs sm:text-sm block">معاينة الفاتورة الرسمية</span>
+                    <span id="modal-invoice-order-no" class="text-[10px] text-slate-400 font-mono block"></span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button 
+                    type="button" 
+                    id="modal-btn-download-png" 
+                    onclick="downloadModalInvoicePNG()" 
+                    class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-pink-500 to-rose-600 hover:opacity-90 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs cursor-pointer transition"
+                >
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                    <span>حفظ PNG</span>
+                </button>
+                <button 
+                    type="button" 
+                    onclick="printModalInvoice()" 
+                    class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition"
+                >
+                    <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                    <span class="hidden sm:inline">طباعة</span>
+                </button>
+                <a 
+                    id="modal-link-open-new-tab" 
+                    href="#" 
+                    target="_blank" 
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" 
+                    title="فتح في تبويب مستقل"
+                >
+                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                </a>
+                <button 
+                    type="button" 
+                    onclick="closeInvoiceModal()" 
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-rose-900/60 transition cursor-pointer"
+                    title="إغلاق النافذة"
+                >
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Modal Body (Iframe) -->
+        <div class="flex-1 bg-slate-100 relative overflow-hidden">
+            <iframe id="invoice-modal-iframe" class="w-full h-full border-none" src="about:blank"></iframe>
+        </div>
+    </div>
+</div>
 {% endblock %}

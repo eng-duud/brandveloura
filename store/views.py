@@ -2,10 +2,13 @@ import os
 import uuid
 import logging
 import math
+import json
+import base64
 from decimal import Decimal
 from urllib.parse import urlencode, quote
 import requests
 
+from django.core.files.base import ContentFile
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
@@ -1599,6 +1602,64 @@ def admin_print_recipient_slip(request, order_id):
         'order': order,
         'store_settings': settings,
     })
+
+
+def order_invoice_view(request, order_number):
+    """عرض وطباعة فاتورة المبيعات الرسمية للطلب بمقاس A4 وحفظها كصورة PNG"""
+    order = get_object_or_404(Order.objects.prefetch_related('items__product'), order_number=order_number)
+    
+    # التحقق من صلاحية الوصول (العميل صاحب الطلب أو المسؤول)
+    if order.user and request.user.is_authenticated and order.user != request.user and not request.user.is_staff:
+        messages.error(request, 'غير مصرح لك بالاطلاع على هذه الفاتورة.')
+        return redirect('store:home')
+        
+    settings = StoreSettings.get_settings()
+    return render(request, 'store/print_invoice.html', {
+        'order': order,
+        'store_settings': settings,
+    })
+
+
+@staff_member_required
+def admin_print_invoice(request, order_id):
+    """صفحة طباعة الفاتورة الرسمية A4 الخاصة بلوحة الإدارة"""
+    order = get_object_or_404(Order.objects.prefetch_related('items__product'), id=order_id)
+    settings = StoreSettings.get_settings()
+    return render(request, 'store/print_invoice.html', {
+        'order': order,
+        'store_settings': settings,
+    })
+
+
+@require_POST
+def save_order_invoice_image(request, order_number):
+    """استلام صورة الفاتورة المولدة كـ PNG ورفعها وتخزينها سحابياً على Cloudinary وربطها بالطلب"""
+    try:
+        order = get_object_or_404(Order, order_number=order_number)
+        
+        # صلاحيات التحقق
+        if order.user and request.user.is_authenticated and order.user != request.user and not request.user.is_staff:
+            return JsonResponse({'status': 'error', 'message': 'غير مصرح'}, status=403)
+            
+        data = json.loads(request.body.decode('utf-8'))
+        image_data = data.get('image_data', '')
+        if not image_data or not image_data.startswith('data:image'):
+            return JsonResponse({'status': 'error', 'message': 'بيانات الصورة غير صالحة'}, status=400)
+            
+        format_prefix, b64_str = image_data.split(';base64,')
+        decoded_bytes = base64.b64decode(b64_str)
+        
+        file_name = f"invoice_{order.order_number}.png"
+        order.invoice_image.save(file_name, ContentFile(decoded_bytes), save=True)
+        
+        return JsonResponse({
+            'status': 'ok',
+            'url': order.invoice_image.url,
+            'message': 'تم حفظ ورفع الفاتورة بنجاح'
+        })
+    except Exception as e:
+        logger.error(f"Error saving invoice image for order {order_number}: {e}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
 def track_order_view(request):

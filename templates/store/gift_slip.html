@@ -30,7 +30,14 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12 print-container">
+<!-- Royal Celebration Animation Canvas (3-second Celebration Overlay) -->
+<canvas 
+    id="royal-celebration-canvas" 
+    class="fixed inset-0 w-full h-full pointer-events-none z-50 transition-opacity duration-1000"
+    style="opacity: 1; pointer-events: none;"
+></canvas>
+
+<div class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12 print-container relative z-10">
 
     <!-- Top Action Bar (hidden in print) -->
     <div class="no-print mb-6 flex flex-wrap items-center justify-between gap-3 bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-pink-200 shadow-2xs">
@@ -39,6 +46,15 @@
             <span class="text-xs sm:text-sm font-bold text-slate-800">بطاقة ووثيقة الإهداء الملكية الخاصة (الأسعار محجوبة 100%)</span>
         </div>
         <div class="flex items-center gap-2">
+            <button 
+                type="button" 
+                onclick="startRoyalCelebration()" 
+                class="px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-bold text-xs flex items-center gap-1.5 transition shadow-2xs cursor-pointer"
+                title="إعادة تشغيل الاحتفال الملكي"
+            >
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-600"></i>
+                <span>إعادة الاحتفال ✨</span>
+            </button>
             <button 
                 type="button" 
                 onclick="window.print()" 
@@ -266,5 +282,118 @@
     </div>
 
 </div>
+
+<script>
+    // Pure, High-Performance Canvas Celebration (Gold Flakes, Rose Petals, and Sparkles)
+    let celebrationAnimId = null;
+    let celebrationTimeout = null;
+
+    function startRoyalCelebration() {
+        const canvas = document.getElementById('royal-celebration-canvas');
+        if (!canvas) return;
+
+        if (celebrationAnimId) cancelAnimationFrame(celebrationAnimId);
+        if (celebrationTimeout) clearTimeout(celebrationTimeout);
+
+        canvas.style.display = 'block';
+        canvas.style.opacity = '1';
+
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        
+        function resize() {
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            ctx.scale(dpr, dpr);
+        }
+        resize();
+
+        const colors = [
+            '#dfb15b', '#f59e0b', '#fbbf24', '#fef08a', // Royal Gold
+            '#f472b6', '#fb7185', '#fda4af', '#be185d', // Velvet Rose Petals
+            '#ffffff', '#fffbeb'                        // Diamond Sparkles
+        ];
+
+        const particles = [];
+        const particleCount = 75;
+
+        for (let i = 0; i < particleCount; i++) {
+            particles.push({
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * -window.innerHeight * 0.5,
+                size: Math.random() * 8 + 5,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                type: Math.random() > 0.4 ? 'petal' : (Math.random() > 0.5 ? 'ribbon' : 'sparkle'),
+                speedY: Math.random() * 3 + 2,
+                speedX: (Math.random() - 0.5) * 2,
+                angle: Math.random() * 360,
+                spinSpeed: (Math.random() - 0.5) * 6,
+                oscillationSpeed: Math.random() * 0.04 + 0.02,
+                oscillationDistance: Math.random() * 40 + 15,
+                initialX: Math.random() * window.innerWidth,
+                opacity: 1
+            });
+        }
+
+        const startTime = performance.now();
+
+        function render(now) {
+            const elapsed = now - startTime;
+            ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+            // Start smooth fade-out after 2.5s
+            if (elapsed > 2500) {
+                const fadeProgress = (elapsed - 2500) / 800;
+                canvas.style.opacity = Math.max(0, 1 - fadeProgress).toString();
+            }
+
+            if (elapsed > 3400) {
+                canvas.style.display = 'none';
+                cancelAnimationFrame(celebrationAnimId);
+                celebrationAnimId = null;
+                return;
+            }
+
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+                p.y += p.speedY;
+                p.x = p.initialX + Math.sin(p.y * p.oscillationSpeed) * p.oscillationDistance;
+                p.angle += p.spinSpeed;
+
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate((p.angle * Math.PI) / 180);
+
+                ctx.fillStyle = p.color;
+
+                if (p.type === 'petal') {
+                    // Rose Petal shape
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, p.size, p.size * 0.6, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (p.type === 'ribbon') {
+                    // Golden Ribbon / Confetti bar
+                    ctx.fillRect(-p.size / 2, -p.size * 0.35, p.size, p.size * 0.7);
+                } else {
+                    // Diamond Sparkle Star
+                    ctx.beginPath();
+                    ctx.arc(0, 0, p.size * 0.35, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            }
+
+            celebrationAnimId = requestAnimationFrame(render);
+        }
+
+        celebrationAnimId = requestAnimationFrame(render);
+    }
+
+    // Auto-trigger on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(startRoyalCelebration, 300);
+    });
+</script>
 {% endblock %}
 

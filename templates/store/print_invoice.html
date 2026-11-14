@@ -1,0 +1,685 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>فاتورة مبيعات رسمية | طلب #{{ order.order_number }} — Brand Veloura</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Amiri:ital,wght@0,400;0,700;1,400&family=Great+Vibes&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #f1f5f9;
+            font-family: 'Cairo', system-ui, sans-serif;
+            color: #0f172a;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            -webkit-font-smoothing: antialiased;
+        }
+        .font-brand-logo {
+            font-family: 'Milkshake', 'Great Vibes', cursive !important;
+            letter-spacing: 0.02em;
+        }
+        .font-num {
+            font-family: system-ui, -apple-system, sans-serif;
+            font-feature-settings: "tnum";
+        }
+        
+        /* Top Action Bar (No Print) */
+        .controls-bar {
+            width: 100%;
+            max-width: 820px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            background: #ffffff;
+            padding: 12px 20px;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+        .controls-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 18px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            border: none;
+        }
+        .btn-print {
+            background: #0f172a;
+            color: #ffffff;
+        }
+        .btn-print:hover {
+            background: #1e293b;
+        }
+        .btn-png {
+            background: linear-gradient(135deg, #e83ab8 0%, #be185d 100%);
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(232, 58, 184, 0.3);
+        }
+        .btn-png:hover {
+            opacity: 0.93;
+            transform: translateY(-1px);
+        }
+        .btn-back {
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .btn-back:hover {
+            color: #0f172a;
+        }
+
+        /* The A4 Invoice Sheet */
+        .invoice-sheet {
+            width: 100%;
+            max-width: 820px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 36px 40px;
+            box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.06);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Watermark */
+        .invoice-sheet::before {
+            content: "BRAND VELOURA";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-30deg);
+            font-size: 68px;
+            font-weight: 900;
+            color: rgba(244, 114, 182, 0.035);
+            pointer-events: none;
+            z-index: 0;
+            white-space: nowrap;
+            font-family: 'Milkshake', sans-serif;
+        }
+
+        /* Top Header */
+        .invoice-header {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 24px;
+            border-bottom: 2px solid #fbcfe8;
+            margin-bottom: 24px;
+        }
+        .brand-section {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .brand-logo {
+            width: 58px;
+            height: 58px;
+            border-radius: 14px;
+            object-fit: cover;
+            border: 1.5px solid #dfb15b;
+            box-shadow: 0 2px 8px rgba(223, 177, 91, 0.25);
+        }
+        .brand-name {
+            font-size: 32px;
+            color: #0f172a;
+            line-height: 1;
+        }
+        .brand-tagline {
+            font-size: 11px;
+            color: #b45309;
+            font-weight: 700;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .store-contact-sub {
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 3px;
+        }
+
+        .invoice-meta {
+            text-align: left;
+        }
+        .invoice-title {
+            font-size: 20px;
+            font-weight: 900;
+            color: #be185d;
+            letter-spacing: -0.5px;
+        }
+        .invoice-title-en {
+            font-size: 10px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .meta-pills {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+            margin-top: 8px;
+        }
+        .meta-pill {
+            font-size: 11px;
+            font-weight: 700;
+            color: #334155;
+        }
+        .status-badge {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 800;
+            display: inline-block;
+        }
+        .gift-tag {
+            background: #fdf2f8;
+            color: #be185d;
+            border: 1px solid #fbcfe8;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        /* 2-Column Info Grid */
+        .info-grid {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            background: #fafaf9;
+            border: 1px solid #f5ebe0;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+        }
+        .info-box h4 {
+            font-size: 11px;
+            font-weight: 800;
+            color: #78350f;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #eedcc9;
+            padding-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        .info-label {
+            color: #64748b;
+        }
+        .info-value {
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        /* Table */
+        .items-table-wrapper {
+            position: relative;
+            z-index: 1;
+            margin-bottom: 24px;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .items-table th {
+            background: #0f172a;
+            color: #ffffff;
+            font-weight: 800;
+            padding: 10px 14px;
+            text-align: right;
+            border-radius: 0;
+        }
+        .items-table th:first-child {
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+        .items-table th:last-child {
+            border-top-left-radius: 8px;
+            border-bottom-left-radius: 8px;
+            text-align: left;
+        }
+        .items-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+        .items-table tbody tr:hover {
+            background-color: #fff9fb;
+        }
+        .item-main-title {
+            font-weight: 800;
+            color: #0f172a;
+            font-size: 13px;
+        }
+        .item-badge {
+            background: #fdf2f8;
+            color: #be185d;
+            border: 1px solid #fbcfe8;
+            padding: 2px 7px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 3px;
+        }
+        .text-left {
+            text-align: left !important;
+        }
+        .text-center {
+            text-align: center !important;
+        }
+
+        /* Summary & Totals */
+        .summary-section {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        .payment-notes-box {
+            flex: 1;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 18px;
+            font-size: 11px;
+            color: #475569;
+            line-height: 1.6;
+        }
+        .payment-notes-box strong {
+            color: #0f172a;
+            display: block;
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+        .totals-table-box {
+            width: 320px;
+            background: #fffdfa;
+            border: 1.5px solid #dfb15b;
+            border-radius: 12px;
+            padding: 14px 18px;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            padding: 4px 0;
+            color: #475569;
+        }
+        .total-row.grand-total {
+            border-top: 2px dashed #dfb15b;
+            margin-top: 8px;
+            padding-top: 8px;
+            color: #0f172a;
+        }
+        .grand-yer {
+            font-size: 18px;
+            font-weight: 900;
+            color: #be185d;
+        }
+        .grand-sar {
+            font-size: 11px;
+            font-weight: 700;
+            color: #047857;
+        }
+
+        /* Footer & Royal Seal */
+        .invoice-footer {
+            position: relative;
+            z-index: 1;
+            border-top: 1px solid #fbcfe8;
+            padding-top: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10.5px;
+            color: #64748b;
+        }
+        .footer-seal {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .footer-link {
+            font-family: monospace;
+            font-size: 11px;
+            font-weight: bold;
+            color: #be185d;
+            text-decoration: none;
+        }
+
+        @media print {
+            body {
+                background: #ffffff !important;
+                padding: 0 !important;
+            }
+            .controls-bar {
+                display: none !important;
+            }
+            .invoice-sheet {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                max-width: 100% !important;
+                page-break-inside: avoid;
+            }
+            @page {
+                size: A4 portrait;
+                margin: 12mm 15mm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Controls Bar (Hidden in Print & PNG Export) -->
+    <div class="controls-bar" id="invoice-controls">
+        <a href="javascript:window.history.back()" class="btn-back">✕ رجوع</a>
+        <div style="font-size: 12px; font-weight: 700; color: #475569;">
+            فاتورة مبيعات طلب #{{ order.order_number }}
+        </div>
+        <div class="controls-actions">
+            <button type="button" onclick="downloadInvoicePNG()" id="btn-save-png" class="btn-action btn-png">
+                <span>📥 حفظ كصورة PNG</span>
+            </button>
+            <button type="button" onclick="window.print()" class="btn-action btn-print">
+                <span>🖨️ طباعة الفاتورة A4</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- The Printable Invoice Sheet -->
+    <div class="invoice-sheet" id="invoice-sheet-container">
+        
+        <!-- Header -->
+        <div class="invoice-header">
+            <div class="brand-section">
+                <img 
+                    src="{% static 'images/logo.webp' %}" 
+                    alt="Brand Veloura" 
+                    onerror="this.src='{{ store_settings.get_logo_url }}'"
+                    class="brand-logo"
+                >
+                <div>
+                    <h1 class="brand-name font-brand-logo">Brand Veloura</h1>
+                    <div class="brand-tagline">
+                        <span>👑 بوتيك فيلورا الملكي للعطور والساعات الفاخرة</span>
+                    </div>
+                    <div class="store-contact-sub">
+                        <span>هاتف وخدمة عملاء: {{ store_settings.contact_phone }}</span>
+                        <span> • </span>
+                        <span>www.brandveloura.com</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="invoice-meta">
+                <div class="invoice-title">فاتورة مبيعات</div>
+                <div class="invoice-title-en">Sales Invoice</div>
+                <div class="meta-pills">
+                    <span class="meta-pill font-num">رقم الفاتورة: #{{ order.order_number }}</span>
+                    <span class="meta-pill font-num">تاريخ الطلب: {{ order.created_at|date:"Y/m/d - H:i" }}</span>
+                    <div>
+                        <span class="status-badge">{{ order.get_status_display }}</span>
+                        {% if order.is_gift %}
+                        <span class="gift-tag">🎁 باقة إهداء</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2-Column Info Grid -->
+        <div class="info-grid">
+            <!-- Customer Info -->
+            <div class="info-box">
+                <h4>👤 بيانات المشتري (العميل)</h4>
+                <div class="info-row">
+                    <span class="info-label">اسم العميل:</span>
+                    <span class="info-value">{{ order.customer_name }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">رقم الهاتف / الواتساب:</span>
+                    <span class="info-value font-num" dir="ltr">{{ order.customer_phone }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">المدينة والمحافظة:</span>
+                    <span class="info-value">{{ order.shipping_city }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">العنوان التفصيلي:</span>
+                    <span class="info-value">{{ order.shipping_address }}</span>
+                </div>
+            </div>
+
+            <!-- Payment & Delivery Info -->
+            <div class="info-box">
+                <h4>💳 وسيلة الدفع والتوصيل</h4>
+                <div class="info-row">
+                    <span class="info-label">طريقة السداد:</span>
+                    <span class="info-value">{{ order.payment_method_name|default:"تحويل بنكي" }}</span>
+                </div>
+                {% if order.payment_reference_no %}
+                <div class="info-row">
+                    <span class="info-label">رقم الحوالة / الإشعار:</span>
+                    <span class="info-value font-num">{{ order.payment_reference_no }}</span>
+                </div>
+                {% endif %}
+                <div class="info-row">
+                    <span class="info-label">العملة المعتمدة:</span>
+                    <span class="info-value">
+                        {% if order.payment_currency_selected == 'SAR' %}ريال سعودي (SAR){% else %}ريال يمني (YER){% endif %}
+                    </span>
+                </div>
+                {% if order.is_gift and order.recipient_name %}
+                <div class="info-row" style="color: #be185d; border-top: 1px dashed #fbcfe8; padding-top: 4px; margin-top: 4px;">
+                    <span class="info-label">المهدى إليه (المستلم):</span>
+                    <span class="info-value">{{ order.recipient_name }} ({{ order.recipient_phone }})</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Table of Items -->
+        <div class="items-table-wrapper">
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;" class="text-center">#</th>
+                        <th>المنتج والوصف</th>
+                        <th style="width: 120px;">الدرجة / النوع</th>
+                        <th style="width: 70px;" class="text-center">الكمية</th>
+                        <th style="width: 110px;" class="text-left">السعر (ر.ي)</th>
+                        <th style="width: 120px;" class="text-left">الإجمالي (ر.ي)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items.all %}
+                    <tr>
+                        <td class="text-center font-num text-slate-400">{{ forloop.counter }}</td>
+                        <td>
+                            <div class="item-main-title">{{ item.product_name }}</div>
+                        </td>
+                        <td>
+                            <span class="item-badge">
+                                {{ item.variant_info|default:"صنف أصلي معتمد" }}
+                            </span>
+                        </td>
+                        <td class="text-center font-num font-bold">{{ item.quantity }}</td>
+                        <td class="text-left font-num">{{ item.unit_price_yer|floatformat:0 }}</td>
+                        <td class="text-left font-num font-bold text-slate-900">{{ item.total_price_yer|floatformat:0 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-slate-400 py-4">لا توجد عناصر</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Summary & Totals -->
+        <div class="summary-section">
+            <div class="payment-notes-box">
+                <strong>✨ ملاحظات الضمان والتوصيل:</strong>
+                <p>• كافة عطور وساعات متجر Brand Veloura مشمولة بضمان الجودة والأصالة التامة.</p>
+                <p>• في حال وجود أي استفسار أو طلب دعم، يسعدنا تواصلكم عبر خدمة العملاء أو الواتساب الرسمي.</p>
+                <p>• هذه الفاتورة صادرة إلكترونياً ومسجلة في النظام وموثقة برقم الطلب الرسمي.</p>
+            </div>
+
+            <div class="totals-table-box">
+                <div class="total-row">
+                    <span>مجموع المنتجات:</span>
+                    <span class="font-num font-bold">{{ order.subtotal_yer|floatformat:0 }} ر.ي</span>
+                </div>
+                <div class="total-row">
+                    <span>رسوم الشحن والتوصيل:</span>
+                    <span class="font-num font-bold">
+                        {% if order.shipping_fee_yer > 0 %}{{ order.shipping_fee_yer|floatformat:0 }} ر.ي{% else %}مجاناً{% endif %}
+                    </span>
+                </div>
+                {% if order.gift_wrapping_fee_yer > 0 %}
+                <div class="total-row">
+                    <span>تغليف الهدايا الملكي:</span>
+                    <span class="font-num font-bold">{{ order.gift_wrapping_fee_yer|floatformat:0 }} ر.ي</span>
+                </div>
+                {% endif %}
+
+                <div class="total-row grand-total">
+                    <div>
+                        <span class="block font-bold">الإجمالي المستحق:</span>
+                        <span class="grand-sar font-num">(المعادل بالسعودي: {{ order.total_sar|floatformat:1 }} ر.س)</span>
+                    </div>
+                    <div class="grand-yer font-num">
+                        {{ order.total_yer|floatformat:0 }} <small style="font-size: 11px;">ر.ي</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="invoice-footer">
+            <div class="footer-seal">
+                <span>👑 شكراً لتسوقكم من بوتيك Brand Veloura</span>
+                <span> • </span>
+                <span>صنعاء - عدن - كافة المحافظات</span>
+            </div>
+            <div>
+                <a href="https://brandveloura.com" target="_blank" class="footer-link">www.brandveloura.com</a>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Script to export high-resolution PNG -->
+    <script>
+        async function downloadInvoicePNG() {
+            const btn = document.getElementById('btn-save-png');
+            const originalText = btn.innerHTML;
+            const sheet = document.getElementById('invoice-sheet-container');
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<span>⏳ جارٍ التوليد...</span>';
+
+                // Use html2canvas with scale 2 for retina / high-DPI quality
+                const canvas = await html2canvas(sheet, {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    windowWidth: 1000
+                });
+
+                // Trigger download
+                const link = document.createElement('a');
+                link.download = `فاتورة-فيلورا-${'{{ order.order_number }}'}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                // Also notify backend to save to Cloudinary in background
+                uploadInvoiceToCloudinary(canvas.toDataURL('image/png'));
+
+                btn.innerHTML = '<span>✓ تم الحفظ بنجاح</span>';
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }, 3000);
+
+            } catch (err) {
+                console.error('Error generating invoice PNG:', err);
+                alert('تعذر تنزيل الصورة تلقائياً، يمكنك استخدام زر الطباعة وحفظها كـ PDF.');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        // Upload generated base64 PNG to Cloudinary via backend endpoint
+        function uploadInvoiceToCloudinary(base64Data) {
+            fetch("{% url 'store:save_order_invoice_image' order_number=order.order_number %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ image_data: base64Data })
+            }).then(res => res.json()).then(data => {
+                if (data.status === 'ok') {
+                    console.log('Invoice successfully synced with Cloudinary:', data.url);
+                }
+            }).catch(e => console.warn('Cloudinary background sync skipped:', e));
+        }
+    </script>
+
+</body>
+</html>

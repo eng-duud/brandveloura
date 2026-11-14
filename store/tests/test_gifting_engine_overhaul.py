@@ -1,4 +1,5 @@
 import math
+import json
 from datetime import date, timedelta
 from decimal import Decimal
 from django.test import TestCase, Client
@@ -272,3 +273,104 @@ class GiftingEngineOverhaulTests(TestCase):
         order = Order.objects.latest('created_at')
         self.assertIsNotNone(order.preferred_delivery_date)
         self.assertGreaterEqual(order.preferred_delivery_date, date.today(), "تاريخ التسليم يجب ألا يكون في الماضي")
+
+    def test_order_invoice_view_and_admin_print(self):
+        """التحقق من عمل صفحة الفاتورة الرسمية A4 للعميل ولإدارة المتجر"""
+        order = Order.objects.create(
+            order_number='BV-INVOICE-TEST1',
+            customer_name='سامي منصور',
+            customer_phone='777112233',
+            shipping_city='صنعاء',
+            shipping_address='شارع بغداد',
+            subtotal_yer=Decimal('45000.00'),
+            total_yer=Decimal('48000.00'),
+            total_sar=Decimal('90.50'),
+            exchange_rate_applied=Decimal('530.00'),
+            is_gift=False,
+        )
+        OrderItem.objects.create(
+            order=order,
+            product=self.perfume1,
+            product_name='عطر رجالي ملكي',
+            variant_info='أصلي 100%',
+            unit_price_yer=Decimal('45000.00'),
+            quantity=1,
+            total_price_yer=Decimal('45000.00'),
+        )
+
+        # 1. معاينة الفاتورة للعميل
+        res = self.client.get(reverse('store:order_invoice', kwargs={'order_number': order.order_number}))
+        self.assertEqual(res.status_code, 200)
+        content = res.content.decode('utf-8')
+        self.assertIn('فاتورة مبيعات', content)
+        self.assertIn('Brand Veloura', content)
+        self.assertIn('48000', content)
+        self.assertIn('سامي منصور', content)
+        self.assertIn('downloadInvoicePNG', content)
+
+        # 2. طباعة الفاتورة للإدارة
+        self.client.login(username='admin_staff', password='Password123!')
+        res_admin = self.client.get(reverse('store:admin_print_invoice', kwargs={'order_id': order.id}))
+        self.assertEqual(res_admin.status_code, 200)
+
+    def test_save_order_invoice_image_api(self):
+        """التحقق من endpoint حفظ صورة الفاتورة المولدة كـ PNG وربطها بالطلب"""
+        order = Order.objects.create(
+            order_number='BV-INVOICE-IMG1',
+            customer_name='ماجد علي',
+            customer_phone='777223344',
+            shipping_city='تعز',
+            shipping_address='صالة',
+            subtotal_yer=Decimal('30000.00'),
+            total_yer=Decimal('30000.00'),
+            total_sar=Decimal('56.60'),
+            exchange_rate_applied=Decimal('530.00'),
+        )
+
+        sample_b64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+
+        res = self.client.post(
+            reverse('store:save_order_invoice_image', kwargs={'order_number': order.order_number}),
+            data=json.dumps({'image_data': sample_b64}),
+            content_type='application/json'
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data.get('status'), 'ok')
+
+        order.refresh_from_db()
+        self.assertTrue(bool(order.invoice_image))
+
+    def test_gift_slip_celebration_animation_and_share_card(self):
+        """التحقق من وجود كانفاس الاحتفال الملكي في صفحة المستلم وبطاقة المشاركة في صفحة النجاح"""
+        order = Order.objects.create(
+            order_number='BV-CELEBRATION1',
+            customer_name='مرسل الهدية',
+            customer_phone='777334455',
+            shipping_city='حضرموت',
+            shipping_address='المكلا',
+            subtotal_yer=Decimal('25000.00'),
+            total_yer=Decimal('25000.00'),
+            total_sar=Decimal('47.00'),
+            exchange_rate_applied=Decimal('530.00'),
+            is_gift=True,
+            recipient_name='سعيد بن مبارك',
+            recipient_phone='777889900',
+            gift_card_recipient='سعيد',
+            gift_card_message='مبروك يا بطل'
+        )
+
+        # فحص صفحة المستلم
+        res_slip = self.client.get(reverse('store:gift_slip', kwargs={'order_number': order.order_number}))
+        self.assertEqual(res_slip.status_code, 200)
+        slip_html = res_slip.content.decode('utf-8')
+        self.assertIn('royal-celebration-canvas', slip_html)
+        self.assertIn('startRoyalCelebration', slip_html)
+
+        # فحص صفحة نجاح الطلب
+        res_success = self.client.get(reverse('store:order_success', kwargs={'order_number': order.order_number}))
+        self.assertEqual(res_success.status_code, 200)
+        success_html = res_success.content.decode('utf-8')
+        self.assertIn('shareGiftCard', success_html)
+        self.assertIn('سعيد', success_html)
+        self.assertIn('فاتورة الشراء الرسمية المعتمدة', success_html)

@@ -921,6 +921,10 @@ class Order(models.Model):
     payment_receipt_url = models.URLField(blank=True, verbose_name='رابط صورة السند الخارجي')
     payment_reference_no = models.CharField(max_length=150, blank=True, verbose_name='رقم الحوالة أو العملية')
     
+    # الفاتورة الرسمية المخزنة سحابياً (Cloudinary)
+    invoice_image = models.ImageField(upload_to='invoices/', null=True, blank=True, verbose_name='صورة الفاتورة الرسمية')
+    invoice_pdf = models.FileField(upload_to='invoices/', null=True, blank=True, verbose_name='ملف الفاتورة PDF')
+    
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='pending_verification', verbose_name='حالة الطلب')
     admin_notes = models.TextField(blank=True, verbose_name='ملاحظات الإدارة الداخلية')
     customer_notes = models.TextField(blank=True, verbose_name='ملاحظات العميل')

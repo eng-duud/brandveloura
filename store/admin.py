@@ -791,7 +791,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_select_related = ['user', 'payment_method']
     readonly_fields = [
         'order_number', 'created_at', 'updated_at', 
-        'receipt_large_view', 'customer_whatsapp_link', 'gift_print_actions',
+        'receipt_large_view', 'customer_whatsapp_link', 'gift_print_actions', 'invoice_print_actions',
         'formatted_total_yer', 'formatted_total_sar', 'currency_due_badge',
         'formatted_subtotal', 'formatted_shipping_fee', 'stock_deducted', 'exchange_rate_applied', 'user'
     ]
@@ -811,7 +811,7 @@ class OrderAdmin(admin.ModelAdmin):
         }),
         ('تفاصيل الدفع والمبالغ المستحقة', {
             'description': 'المبالغ المحتسبة تلقائياً حسب عملة الدفع المختارة',
-            'fields': (('payment_method', 'payment_reference_no'), ('currency_due_badge', 'formatted_total_yer', 'formatted_total_sar'), 'payment_receipt')
+            'fields': (('payment_method', 'payment_reference_no'), ('currency_due_badge', 'formatted_total_yer', 'formatted_total_sar'), 'invoice_print_actions', 'payment_receipt')
         }),
         ('ملاحظات الإدارة الداخلية', {
             'description': 'ملاحظات خاصة بفريق العمل والمندوب (لا تظهر للعميل)',
@@ -849,11 +849,31 @@ class OrderAdmin(admin.ModelAdmin):
             '<span>🖨️ طباعة كرت الإهداء الملكي الفاخر</span>'
             '</a>'
             '<a href="{}" target="_blank" style="background: #0f172a; color: white; padding: 7px 16px; border-radius: 8px; font-size: 12px; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(15,23,42,0.2);">'
-            '<span>📄 طباعة بوليصة المستلم (خالية من الأسعار)</span>'
+            '<span>📄 طباعة سند تسليم الهدية (خالٍ من الأسعار)</span>'
             '</a>'
             '</div>',
             card_url, slip_url
         )
+
+    @admin.display(description='فاتورة المبيعات الرسمية')
+    def invoice_print_actions(self, obj):
+        if not obj or not obj.id:
+            return '—'
+        invoice_url = reverse('store:admin_print_invoice', kwargs={'order_id': obj.id})
+        html = (
+            f'<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0;">'
+            f'<a href="{invoice_url}" target="_blank" style="background: #0f172a; color: white; padding: 7px 16px; border-radius: 8px; font-size: 12px; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(15,23,42,0.25);">'
+            f'<span>🖨️ طباعة الفاتورة الرسمية (A4 / PNG)</span>'
+            f'</a>'
+        )
+        if obj.invoice_image:
+            html += (
+                f'<a href="{obj.invoice_image.url}" target="_blank" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 6px 14px; border-radius: 8px; font-size: 11px; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">'
+                f'<span>☁️ استعراض الفاتورة على Cloudinary</span>'
+                f'</a>'
+            )
+        html += '</div>'
+        return format_html(html)
 
     @admin.display(description='مراسلة العميل')
     def customer_whatsapp_link(self, obj):
