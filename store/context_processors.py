@@ -48,6 +48,15 @@ def store_context(request):
         cart = {}
     cart_count = sum(item.get('quantity', 1) for item in cart.values())
     
+    # مدة حجز السلة بالدقائق والثواني المتبقية
+    import time
+    cart_remaining_seconds = 0
+    res_minutes = getattr(settings, 'cart_reservation_minutes', 60)
+    if cart and res_minutes > 0:
+        expires_at = request.session.get('cart_expires_at')
+        if expires_at:
+            cart_remaining_seconds = max(0, expires_at - int(time.time()))
+    
     # العملة النشطة الحالية (الافتراضي YER، مع إمكانية التبديل إلى SAR)
     active_currency = request.session.get('active_currency', 'YER')
     
@@ -104,6 +113,8 @@ def store_context(request):
         'global_categories': categories,
         'main_categories': main_categories,
         'cart_count': cart_count,
+        'cart_remaining_seconds': cart_remaining_seconds,
+        'cart_reservation_minutes': res_minutes,
         'active_currency': active_currency,
         'yer_per_sar': settings.yer_per_sar or Decimal('530.00'),
         'google_client_id': google_client_id,

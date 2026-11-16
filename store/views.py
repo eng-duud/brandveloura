@@ -635,6 +635,102 @@ def sync_cart_to_profile(request):
             pass
 
 
+def check_and_expire_cart(request):
+    """فحص توقيت حجز السلة وإلغائها تلقائياً لتحرير المخزون لبقية العملاء في حال انتهاء المهلة"""
+    import time
+    settings = StoreSettings.get_settings()
+    res_minutes = getattr(settings, 'cart_reservation_minutes', 60)
+    
+    if res_minutes <= 0:
+        return False
+        
+    cart = request.session.get('cart', {})
+    if not cart:
+        request.session.pop('cart_expires_at', None)
+        return False
+        
+    expires_at = request.session.get('cart_expires_at')
+    now_ts = int(time.time())
+    
+    # إذا كانت السلة تحتوي منتجات لكن لا يوجد موعد انتهاء، نحدده الآن
+    if not expires_at:
+        request.session['cart_expires_at'] = now_ts + (res_minutes * 60)
+        request.session.modified = True
+        return False
+        
+    if now_ts > expires_at:
+        # انتهت مهلة الحجز! نقوم بتفريغ السلة لتحرير المخزون
+        request.session['cart'] = {}
+        request.session.pop('cart_expires_at', None)
+        request.session.pop('gift_data', None)
+        request.session.modified = True
+        
+        if request.user.is_authenticated:
+            try:
+                UserProfile.objects.filter(user=request.user).update(cart_data={})
+            except Exception:
+                pass
+                
+        messages.warning(
+            request, 
+            f'انتهت مهلة حجز المنتجات في السلة ({res_minutes} دقيقة) وتم تحريرها لإتاحتها للمتسوقين الآخرين. يمكنك اختيار منتجاتك من جديد.'
+        )
+        return True
+        
+    return False
+
+
+def refresh_cart_reservation(request):
+    """تحديث أو بدء توقيت حجز السلة عند إضافة أو تعديل منتجات"""
+    import time
+    settings = StoreSettings.get_settings()
+    res_minutes = getattr(settings, 'cart_reservation_minutes', 60)
+    
+    cart = request.session.get('cart', {})
+    if not cart:
+        request.session.pop('cart_expires_at', None)
+        return
+        
+    if res_minutes > 0:
+        now_ts = int(time.time())
+        request.session['cart_expires_at'] = now_ts + (res_minutes * 60)
+        request.session.modified = True
+
+
+def get_cart_timing_context(request):
+    """حساب الثواني المتبقية وتفاصيل المؤقت لتمريرها للقوالب والعداد التنازلي"""
+    import time
+    settings = StoreSettings.get_settings()
+    res_minutes = getattr(settings, 'cart_reservation_minutes', 60)
+    
+    cart = request.session.get('cart', {})
+    if not cart or res_minutes <= 0:
+        return {
+            'cart_remaining_seconds': 0,
+            'cart_remaining_minutes': 0,
+            'cart_remaining_seconds_str': '00',
+            'cart_reservation_minutes': res_minutes,
+        }
+        
+    expires_at = request.session.get('cart_expires_at')
+    now_ts = int(time.time())
+    if not expires_at:
+        expires_at = now_ts + (res_minutes * 60)
+        request.session['cart_expires_at'] = expires_at
+        request.session.modified = True
+        
+    remaining = max(0, expires_at - now_ts)
+    mins = remaining // 60
+    secs = remaining % 60
+    
+    return {
+        'cart_remaining_seconds': remaining,
+        'cart_remaining_minutes': mins,
+        'cart_remaining_seconds_str': f"{secs:02d}",
+        'cart_reservation_minutes': res_minutes,
+    }
+
+
 def merge_and_restore_user_cart(request, user):
     """دمج سلة الزائر السابقة مع السلة المحفوظة بحسابه في قاعدة البيانات واستعادتها كاملة"""
     try:
@@ -655,6 +751,8 @@ def merge_and_restore_user_cart(request, user):
         request.session.modified = True
         profile.cart_data = merged
         profile.save(update_fields=['cart_data'])
+        if merged:
+            refresh_cart_reservation(request)
         return merged
     except Exception:
         return request.session.get('cart', {})
@@ -732,6 +830,8 @@ def cart_add(request):
     request.session['cart'] = cart
     request.session.modified = True
     sync_cart_to_profile(request)
+    refresh_cart_reservation(request)
+    refresh_cart_reservation(request)
     
     cart_count = sum(item.get('quantity', 1) for item in cart.values())
     
@@ -767,6 +867,11 @@ def cart_update_quantity(request):
     request.session['cart'] = cart
     request.session.modified = True
     sync_cart_to_profile(request)
+    refresh_cart_reservation(request)
+    if cart:
+        refresh_cart_reservation(request)
+    else:
+        request.session.pop('cart_expires_at', None)
     
     return _render_cart_response(request)
 
@@ -782,6 +887,10 @@ def cart_remove_item(request):
         request.session['cart'] = cart
         request.session.modified = True
         sync_cart_to_profile(request)
+        if cart:
+            refresh_cart_reservation(request)
+        else:
+            request.session.pop('cart_expires_at', None)
         
     return _render_cart_response(request)
 
@@ -826,6 +935,7 @@ def _render_cart_response(request):
         'subtotal_yer': subtotal_yer,
         'subtotal_sar': subtotal_sar,
         'cart_count': sum(item['quantity'] for item in items),
+        **get_cart_timing_context(request),
     }
     
     response = render(request, 'store/partials/cart_table.html', context)
@@ -834,7 +944,10 @@ def _render_cart_response(request):
 
 
 def cart_view(request):
-    """صفحة سلة المشتريات الكاملة"""
+    """صفحة سلة المشتريات الكاملة مع فحص انتهاء حجز السلة"""
+    if check_and_expire_cart(request):
+        return redirect('store:cart_view')
+        
     cart = request.session.get('cart', {})
     settings = StoreSettings.get_settings()
     yer_per_sar = settings.yer_per_sar or Decimal('530.00')
@@ -868,6 +981,7 @@ def cart_view(request):
         'cart_items': items,
         'subtotal_yer': subtotal_yer,
         'subtotal_sar': subtotal_sar,
+        **get_cart_timing_context(request),
     }
     return render(request, 'store/cart.html', context)
 
@@ -995,6 +1109,7 @@ def gift_bundle_order_direct(request, slug):
     request.session['cart'] = cart
     request.session.modified = True
     sync_cart_to_profile(request)
+    refresh_cart_reservation(request)
     
     # حفظ بيانات الإهداء المرفقة إن وجدت في POST أو تعيين قيم افتراضية
     recipient_name = request.POST.get('recipient_name', '').strip() if request.method == 'POST' else ''
@@ -1353,7 +1468,10 @@ def gift_calculate_live(request):
 
 
 def checkout_view(request):
-    """صفحة إتمام الطلب، تدفق الهدايا والمغتربين، اختيار المدينة، ورفع السند"""
+    """صفحة إتمام الطلب، تدفق الهدايا والمغتربين، اختيار المدينة، ورفع السند مع فحص انتهاء حجز السلة"""
+    if check_and_expire_cart(request):
+        return redirect('store:cart_view')
+        
     cart = request.session.get('cart', {})
     if not cart:
         messages.warning(request, 'سلة المشتريات فارغة، يرجى إضافة منتجات أولاً.')
@@ -1639,6 +1757,7 @@ def checkout_view(request):
         # تفريغ السلة وبيانات الهدية بعد إتمام الطلب وتصفيرها بحساب العميل
         request.session['cart'] = {}
         request.session.pop('gift_data', None)
+        request.session.pop('cart_expires_at', None)
         request.session.modified = True
         if request.user.is_authenticated:
             UserProfile.objects.filter(user=request.user).update(cart_data={})
@@ -1663,6 +1782,7 @@ def checkout_view(request):
         'store_settings': settings,
         'user_profile': user_profile,
         'gift_data': gift_data,
+        **get_cart_timing_context(request),
     }
     return render(request, 'store/checkout.html', context)
 
@@ -2609,6 +2729,7 @@ def reorder_view(request, order_number):
     request.session['cart'] = cart
     request.session.modified = True
     sync_cart_to_profile(request)
+    refresh_cart_reservation(request)
     
     if added_count > 0:
         messages.success(request, f'تمت إضافة {added_count} قطعة من طلبكم السابق #{order.order_number} إلى سلة المشتريات بنجاح.')

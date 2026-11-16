@@ -226,6 +226,7 @@ class AdminRoutesAndOperationsTests(TestCase):
             'contact_instagram': 'brandveloura',
             'announcement_text': 'عروض تشكيلة 2026 متوفرة الآن',
             'is_announcement_active': 'on',
+            'cart_reservation_minutes': '60',
             '_save': 'Save'
         }
         res = self.client.post(change_url, settings_data, follow=True)

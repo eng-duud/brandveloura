@@ -958,6 +958,83 @@ class UserRoutesAndOperationsTests(TestCase):
         self.assertEqual(res.context['cart_count'], 3)
         self.assertEqual(len(self.client.session.get('cart', {})), 1)
 
+    def test_cart_reservation_timer_initiation_and_context(self):
+        """فحص بدء توقيت حجز السلة وتمرير الثواني المتبقية للقوالب"""
+        import time
+        # إضافة منتج للسلة
+        self.client.post(reverse('store:cart_add'), {
+            'product_id': self.perfume.id,
+            'quantity': 1,
+            'grade': 'master'
+        })
+        session = self.client.session
+        self.assertIn('cart_expires_at', session)
+        self.assertGreater(session['cart_expires_at'], int(time.time()))
+
+        # استعراض صفحة السلة وفحص تمرير الثواني المتبقية في السياق
+        cart_res = self.client.get(reverse('store:cart_view'))
+        self.assertEqual(cart_res.status_code, 200)
+        self.assertGreater(cart_res.context['cart_remaining_seconds'], 0)
+        self.assertEqual(cart_res.context['cart_reservation_minutes'], 60)
+        self.assertContains(cart_res, 'cart-timer-banner')
+
+        # استعراض صفحة الدفع وفحص وجود شريط العداد
+        checkout_res = self.client.get(reverse('store:checkout'))
+        self.assertEqual(checkout_res.status_code, 200)
+        self.assertGreater(checkout_res.context['cart_remaining_seconds'], 0)
+        self.assertContains(checkout_res, 'checkout-timer-banner')
+
+    def test_cart_reservation_expiration_and_release(self):
+        """فحص تفريغ السلة وتحرير المخزون تلقائياً عند انتهاء مهلة الحجز"""
+        import time
+        self.client.force_login(self.user)
+
+        # إضافة منتج للسلة
+        self.client.post(reverse('store:cart_add'), {
+            'product_id': self.perfume.id,
+            'quantity': 2,
+            'grade': 'master'
+        })
+        self.assertGreater(len(self.client.session.get('cart', {})), 0)
+
+        # محاكاة انقضاء وقت الحجز في الماضي (قبل 10 ثوانٍ)
+        session = self.client.session
+        session['cart_expires_at'] = int(time.time()) - 10
+        session.save()
+
+        # استعراض السلة يجب أن يكتشف انتهاء الوقت ويفرغها ويعيد التوجيه
+        res = self.client.get(reverse('store:cart_view'), follow=True)
+        self.assertEqual(res.status_code, 200)
+
+        # التحقق من تفريغ السلة في الجلسة وفي حساب العميل
+        self.assertEqual(len(self.client.session.get('cart', {})), 0)
+        self.user.store_profile.refresh_from_db()
+        self.assertEqual(self.user.store_profile.cart_data, {})
+        self.assertContains(res, 'انتهت مهلة حجز المنتجات في السلة')
+
+    def test_cart_reservation_disabled_when_zero(self):
+        """فحص تعطيل مؤقت حجز السلة عند وضع المدة 0 في إعدادات المتجر"""
+        import time
+        settings = StoreSettings.get_settings()
+        settings.cart_reservation_minutes = 0
+        settings.save()
+
+        # إضافة منتج
+        self.client.post(reverse('store:cart_add'), {
+            'product_id': self.perfume.id,
+            'quantity': 1,
+            'grade': 'master'
+        })
+        # عند تعطيل المؤقت لا يحدد cart_expires_at ولا يفرغ السلة
+        res = self.client.get(reverse('store:cart_view'))
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(self.client.session.get('cart', {})), 1)
+        self.assertEqual(res.context['cart_remaining_seconds'], 0)
+
+        # إعادة القيمة لـ 60
+        settings.cart_reservation_minutes = 60
+        settings.save()
+
 
 
 

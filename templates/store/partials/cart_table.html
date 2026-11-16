@@ -1,6 +1,32 @@
 {% load image_optimization %}
 <div id="cart-container" class="space-y-6">
     {% if cart_items %}
+
+    {% if cart_remaining_seconds and cart_remaining_seconds > 0 and store_settings.cart_reservation_minutes > 0 %}
+    <!-- Luxury Cart Reservation & Countdown Banner -->
+    <div id="cart-timer-banner" class="bg-gradient-to-r from-pink-50 via-rose-50/70 to-pink-50 border border-brand-200/90 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-brand-500/15 text-brand-600 flex items-center justify-center shrink-0">
+                <i data-lucide="timer" class="w-5 h-5 animate-pulse"></i>
+            </div>
+            <div>
+                <p class="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                    المنتجات في سلتك محجوزة لك مؤقتاً
+                </p>
+                <p class="text-[11px] text-slate-500">
+                    أكمل طلبك قبل انتهاء العداد لتحرير الحجز وإتاحة القطع للمتسوقين الآخرين
+                </p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 bg-white border border-brand-200 px-3.5 py-1.5 rounded-xl shrink-0 self-end sm:self-auto shadow-2xs">
+            <i data-lucide="clock" class="w-4 h-4 text-brand-500"></i>
+            <span id="cart-countdown-timer" data-seconds="{{ cart_remaining_seconds }}" class="font-mono font-extrabold text-sm sm:text-base text-brand-600 font-num">
+                {{ cart_remaining_minutes }}:{{ cart_remaining_seconds_str }}
+            </span>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         <!-- Cart Items List (8 Cols) -->
@@ -174,4 +200,37 @@
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }
+
+    // Cart Countdown Timer Logic
+    (function initCartTimer() {
+        var timerEl = document.getElementById('cart-countdown-timer');
+        if (!timerEl) return;
+        
+        var totalSec = parseInt(timerEl.getAttribute('data-seconds'), 10);
+        if (isNaN(totalSec) || totalSec <= 0) return;
+        
+        if (window._cartTimerInterval) {
+            clearInterval(window._cartTimerInterval);
+        }
+        
+        function updateDisplay() {
+            if (totalSec <= 0) {
+                clearInterval(window._cartTimerInterval);
+                timerEl.textContent = '00:00';
+                if (typeof htmx !== 'undefined') {
+                    htmx.ajax('GET', '{% url "store:cart_view" %}', {target: '#cart-container'});
+                } else {
+                    window.location.reload();
+                }
+                return;
+            }
+            var m = Math.floor(totalSec / 60);
+            var s = totalSec % 60;
+            timerEl.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+            totalSec--;
+        }
+        
+        updateDisplay();
+        window._cartTimerInterval = setInterval(updateDisplay, 1000);
+    })();
 </script>

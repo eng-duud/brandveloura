@@ -35,6 +35,31 @@
         <!-- Left Column: Order Type, Details, Gifting & Payment (7 Cols) -->
         <div class="lg:col-span-7 space-y-4">
             
+            {% if cart_remaining_seconds and cart_remaining_seconds > 0 and store_settings.cart_reservation_minutes > 0 %}
+            <!-- Luxury Cart Reservation & Countdown Banner -->
+            <div id="checkout-timer-banner" class="bg-gradient-to-r from-pink-50 via-rose-50/70 to-pink-50 border border-brand-200/90 rounded-2xl p-3.5 sm:p-4 flex items-center justify-between gap-3 shadow-2xs">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-brand-500/15 text-brand-600 flex items-center justify-center shrink-0">
+                        <i data-lucide="timer" class="w-4 h-4 animate-pulse"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-900 leading-snug">
+                            عناصر الطلب محجوزة لك مؤقتاً
+                        </p>
+                        <p class="text-[11px] text-slate-500">
+                            يرجى إتمام وتأكيد الدفع قبل انتهاء العداد لتحرير الحجز
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 bg-white border border-brand-200 px-3 py-1 rounded-xl shrink-0 shadow-2xs">
+                    <i data-lucide="clock" class="w-3.5 h-3.5 text-brand-500"></i>
+                    <span id="checkout-countdown-timer" data-seconds="{{ cart_remaining_seconds }}" class="font-mono font-extrabold text-xs sm:text-sm text-brand-600 font-num">
+                        {{ cart_remaining_minutes }}:{{ cart_remaining_seconds_str }}
+                    </span>
+                </div>
+            </div>
+            {% endif %}
+
             {% if not user.is_authenticated %}
             <!-- Fast Login Banner for Guests -->
             <div class="bg-pink-50/60 rounded-2xl p-3.5 border border-pink-200 flex items-center justify-between gap-3 text-xs shadow-2xs">
@@ -880,6 +905,27 @@
                 }
             });
         }
+
+        // Checkout Countdown Timer Logic
+        (function initCheckoutTimer() {
+            var timerEl = document.getElementById('checkout-countdown-timer');
+            if (!timerEl) return;
+            var totalSec = parseInt(timerEl.getAttribute('data-seconds'), 10);
+            if (isNaN(totalSec) || totalSec <= 0) return;
+            
+            var interval = setInterval(function() {
+                if (totalSec <= 0) {
+                    clearInterval(interval);
+                    timerEl.textContent = '00:00';
+                    window.location.href = "{% url 'store:cart_view' %}";
+                    return;
+                }
+                var m = Math.floor(totalSec / 60);
+                var s = totalSec % 60;
+                timerEl.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+                totalSec--;
+            }, 1000);
+        })();
     });
 </script>
 {% endblock %}

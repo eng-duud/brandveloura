@@ -63,6 +63,14 @@ class StoreSettings(models.Model):
         verbose_name='سعر خدمة التغليف الفاخر للهدايا (ريال يمني)'
     )
     
+    # مدة حجز السلة بالدقائق قبل انتهاء الصلاحية وتحرير المخزون
+    cart_reservation_minutes = models.PositiveIntegerField(
+        default=60,
+        blank=True,
+        verbose_name='مدة حجز السلة بالدقائق (المؤقت)',
+        help_text='المدة بالدقائق التي تظل فيها عناصر السلة محجوزة للعميل قبل انتهاء الصلاحية وتحرير المخزون (مثال: 30 أو 60 دقيقة. ضع 0 لتعطيل المؤقت).'
+    )
+    
     # إعدادات تسجيل الدخول السريع عبر Google OAuth
     google_client_id = models.CharField(
         max_length=255, 

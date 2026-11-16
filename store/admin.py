@@ -1061,13 +1061,17 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(StoreSettings)
 class StoreSettingsAdmin(admin.ModelAdmin):
-    list_display = ['store_name', 'yer_per_sar', 'default_category', 'contact_phone', 'contact_whatsapp', 'updated_at']
+    list_display = ['store_name', 'yer_per_sar', 'cart_reservation_minutes', 'default_category', 'contact_phone', 'contact_whatsapp', 'updated_at']
     autocomplete_fields = ['default_category']
 
     fieldsets = (
         ('هوية المتجر وسعر الصرف اليومي والقسم الافتراضي الوحيد', {
             'description': 'أي تعديل على سعر الصرف هنا سينعكس فوراً وتلقائياً على كافة أسعار المنتجات المحسوبة بالريال السعودي بدون كسور ومقربة للأعلى. القسم الافتراضي المحدد هنا هو المكان الوحيد المعتمد لتحديد أي قسم يفتح تلقائياً عند زيارة صفحة الأقسام بدون أي تضارب.',
             'fields': (('store_name', 'yer_per_sar'), 'default_category', 'store_tagline', 'store_logo')
+        }),
+        ('مؤقت حجز السلة وحماية المخزون', {
+            'description': 'المدة بالدقائق التي تظل فيها عناصر السلة محجوزة للعميل مع عداد تنازلي فاخر قبل تحرير المخزون تلقائياً للآخرين (ضع 0 لتعطيل المؤقت).',
+            'fields': ('cart_reservation_minutes',)
         }),
         ('أرقام التواصل وشريط الإعلانات', {
             'description': 'أرقام التواصل الظاهرة في واجهة المتجر للمحادثات السريعة',
