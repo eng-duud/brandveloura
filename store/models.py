@@ -1193,6 +1193,7 @@ class UserProfile(models.Model):
     preferred_city = models.CharField(max_length=100, blank=True, verbose_name='المدينة / المحافظة المفضلة')
     shipping_address = models.TextField(blank=True, verbose_name='عنوان التوصيل الافتراضي')
     avatar_url = models.URLField(blank=True, verbose_name='رابط الصورة الشخصية')
+    cart_data = models.JSONField(default=dict, blank=True, verbose_name='بيانات السلة المحفوظة في الحساب')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='آخر تحديث')
 

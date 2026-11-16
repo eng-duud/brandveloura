@@ -62,17 +62,21 @@ USE_X_FORWARDED_PORT = True
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
+# Global Session & Long-Lived Cookie Configuration (365-Day Rolling Session)
+SESSION_COOKIE_AGE = 86400 * 365  # 1 full year persistent shopping & auth session
+SESSION_SAVE_EVERY_REQUEST = True  # Automatically renews/slides cookie expiration on every visit
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+
 # Production Security Enhancements (Enabled when DEBUG=False and not running tests)
 if not DEBUG and 'test' not in sys.argv:
     SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True') == 'True'
     SECURE_REDIRECT_EXEMPT = [r'^health/?$']
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SESSION_COOKIE_HTTPONLY = True
     CSRF_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = 'Lax'
     CSRF_COOKIE_SAMESITE = 'Lax'
-    SESSION_COOKIE_AGE = 86400 * 30  # 30 days persistent luxury shopping session
     X_FRAME_OPTIONS = 'DENY'
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_BROWSER_XSS_FILTER = True

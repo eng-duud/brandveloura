@@ -33,8 +33,19 @@ def store_context(request):
         except Exception:
             pass
     
-    # حساب عدد عناصر السلة من الجلسة (Session-based cart)
-    cart = request.session.get('cart', {})
+    # حساب عدد عناصر السلة واستعادتها تلقائياً للمستخدم المسجل إن كانت الجلسة فارغة
+    cart = request.session.get('cart')
+    if (cart is None or len(cart) == 0) and request.user.is_authenticated:
+        try:
+            profile = getattr(request.user, 'store_profile', None)
+            if profile and profile.cart_data:
+                cart = profile.cart_data
+                request.session['cart'] = cart
+                request.session.modified = True
+        except Exception:
+            pass
+    if not cart:
+        cart = {}
     cart_count = sum(item.get('quantity', 1) for item in cart.values())
     
     # العملة النشطة الحالية (الافتراضي YER، مع إمكانية التبديل إلى SAR)

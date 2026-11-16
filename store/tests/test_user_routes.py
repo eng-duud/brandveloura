@@ -792,6 +792,173 @@ class UserRoutesAndOperationsTests(TestCase):
         self.assertEqual(res_after.status_code, 200)
         self.assertNotContains(res_after, 'أفخم الإكسسوارات والهدايا')
 
+    def test_user_dual_login_with_email_or_phone_or_username(self):
+        """فحص تسجيل الدخول المرن بالبريد الإلكتروني، برقم الهاتف بمختلف صيغه، وباسم المستخدم"""
+        # 1. إنشاء حساب بريد وهاتف
+        test_email = 'dual_test@brandveloura.com'
+        test_phone = '771234567'
+        test_pass = 'StrongPass2026!'
+        
+        reg_res = self.client.post(reverse('store:register'), {
+            'name': 'عميل فلوغ الفاخر',
+            'email': test_email,
+            'phone': test_phone,
+            'password': test_pass,
+            'password_confirm': test_pass
+        })
+        self.assertEqual(reg_res.status_code, 302)
+        created_user = User.objects.filter(email=test_email).first()
+        self.assertIsNotNone(created_user)
+        self.client.get(reverse('store:logout'))
+
+        # 2. تسجيل الدخول بالبريد الإلكتروني
+        login_res_email = self.client.post(reverse('store:login'), {
+            'identifier': test_email,
+            'password': test_pass
+        })
+        self.assertEqual(login_res_email.status_code, 302)
+        self.assertEqual(int(self.client.session['_auth_user_id']), created_user.id)
+        self.client.get(reverse('store:logout'))
+
+        # 3. تسجيل الدخول برقم الهاتف النظيف
+        login_res_phone = self.client.post(reverse('store:login'), {
+            'identifier': test_phone,
+            'password': test_pass
+        })
+        self.assertEqual(login_res_phone.status_code, 302)
+        self.assertEqual(int(self.client.session['_auth_user_id']), created_user.id)
+        self.client.get(reverse('store:logout'))
+
+        # 4. تسجيل الدخول برقم الهاتف بصيغة دولية وفواصل (+967 771234567)
+        login_res_phone_intl = self.client.post(reverse('store:login'), {
+            'identifier': '+967 771234567',
+            'password': test_pass
+        })
+        self.assertEqual(login_res_phone_intl.status_code, 302)
+        self.assertEqual(int(self.client.session['_auth_user_id']), created_user.id)
+        self.client.get(reverse('store:logout'))
+
+        # 5. تسجيل الدخول باسم المستخدم مباشرة
+        login_res_username = self.client.post(reverse('store:login'), {
+            'identifier': created_user.username,
+            'password': test_pass
+        })
+        self.assertEqual(login_res_username.status_code, 302)
+        self.assertEqual(int(self.client.session['_auth_user_id']), created_user.id)
+
+    def test_session_and_cookie_persistence_settings(self):
+        """فحص إعدادات دوام الكوكيز والجلسات السنوية المتجددة تلقائياً"""
+        from django.conf import settings
+        self.assertGreaterEqual(settings.SESSION_COOKIE_AGE, 86400 * 365)
+        self.assertTrue(settings.SESSION_SAVE_EVERY_REQUEST)
+        self.assertFalse(settings.SESSION_EXPIRE_AT_BROWSER_CLOSE)
+
+        # فحص أن تسجيل الدخول لا ينهي الجلسة عند إغلاق المتصفح (expiry > 0)
+        self.client.post(reverse('store:login'), {
+            'identifier': self.user.username,
+            'password': 'KhaledPassword2026!',
+            'remember_me': 'on'
+        })
+        # التحقق من أن مدة الجلسة تمتد لعام كامل
+        self.assertEqual(self.client.session.get_expiry_age(), 86400 * 365)
+
+    def test_cart_persistence_linked_to_user_profile(self):
+        """فحص مزامنة عناصر السلة مع حساب العميل في قاعدة البيانات لحظياً"""
+        self.client.force_login(self.user)
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        self.assertEqual(profile.cart_data, {})
+
+        # إضافة منتج للسلة
+        self.client.post(reverse('store:cart_add'), {
+            'product_id': self.perfume.id,
+            'quantity': 2,
+            'grade': 'master'
+        })
+        profile.refresh_from_db()
+        self.assertGreater(len(profile.cart_data), 0)
+        item_key = list(profile.cart_data.keys())[0]
+        self.assertEqual(profile.cart_data[item_key]['quantity'], 2)
+
+        # تعديل كمية المنتج
+        self.client.post(reverse('store:cart_update'), {
+            'item_key': item_key,
+            'action': 'increase'
+        })
+        profile.refresh_from_db()
+        self.assertEqual(profile.cart_data[item_key]['quantity'], 3)
+
+        # حذف المنتج من السلة
+        self.client.post(reverse('store:cart_remove'), {
+            'item_key': item_key
+        })
+        profile.refresh_from_db()
+        self.assertEqual(profile.cart_data, {})
+
+    def test_cart_merge_and_restoration_on_login(self):
+        """فحص دمج سلة الزائر مع سلة الحساب السابقة عند تسجيل الدخول دون فقدان أي عنصر"""
+        # 1. حفظ منتج مسبق في حساب العميل
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.cart_data = {
+            f"{self.perfume.id}_original": {
+                'product_id': self.perfume.id,
+                'name': self.perfume.name_ar,
+                'quantity': 1,
+                'price_yer': float(self.perfume.price_yer),
+            }
+        }
+        profile.save()
+
+        # 2. كزائر، إضافة منتج آخر (الساعة) في سلة الجلسة
+        self.client.get(reverse('store:logout'))
+        self.client.session.clear()
+        
+        self.client.post(reverse('store:cart_add'), {
+            'product_id': self.watch.id,
+            'quantity': 1,
+            'grade': 'master'
+        })
+        self.assertEqual(len(self.client.session['cart']), 1)
+
+        # 3. تسجيل دخول العميل
+        login_res = self.client.post(reverse('store:login'), {
+            'identifier': self.user.username,
+            'password': 'KhaledPassword2026!'
+        })
+        self.assertEqual(login_res.status_code, 302)
+
+        # 4. التأكد من دمج السلتين: تحتوي الآن على العطر والساعة معاً في الجلسة وفي DB
+        profile.refresh_from_db()
+        session_cart = self.client.session.get('cart', {})
+        self.assertGreaterEqual(len(session_cart), 2)
+        self.assertGreaterEqual(len(profile.cart_data), 2)
+
+    def test_cart_auto_restoration_in_context_processor(self):
+        """فحص استعادة السلة تلقائياً للمستخدم المسجل عندما تكون جلسته فارغة في متصفح جديد"""
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.cart_data = {
+            f"{self.perfume.id}_master": {
+                'product_id': self.perfume.id,
+                'name': self.perfume.name_ar,
+                'quantity': 3,
+                'price_yer': float(self.perfume.price_yer),
+            }
+        }
+        profile.save()
+
+        self.client.force_login(self.user)
+        # تفريغ جلسة الكلاينت لمحاكاة فتح جهاز أو متصفح جديد
+        session = self.client.session
+        session['cart'] = {}
+        session.save()
+
+        # زيارة الصفحة الرئيسية
+        res = self.client.get(reverse('store:home'))
+        self.assertEqual(res.status_code, 200)
+        # التحقق من أن معالج السياق استعاد السلة بنجاح وعرض عدد العناصر (3)
+        self.assertEqual(res.context['cart_count'], 3)
+        self.assertEqual(len(self.client.session.get('cart', {})), 1)
+
+
 
 
 

@@ -77,7 +77,7 @@
             <!-- Divider -->
             <div class="relative flex items-center justify-center">
                 <div class="border-t border-slate-200 w-full"></div>
-                <span class="bg-white px-3 text-[11px] font-semibold text-slate-400 shrink-0">أو عبر رقم الهاتف والرمز السري</span>
+                <span class="bg-white px-3 text-[11px] font-semibold text-slate-400 shrink-0">أو عبر رقم الهاتف / البريد الإلكتروني والرمز السري</span>
                 <div class="border-t border-slate-200 w-full"></div>
             </div>
 
@@ -87,18 +87,20 @@
                 <input type="hidden" name="next" value="{{ next_url|default:'' }}">
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف *</label>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف أو البريد الإلكتروني *</label>
                     <div class="relative">
                         <input 
-                            type="tel" 
+                            type="text" 
                             name="identifier" 
                             required 
                             dir="ltr"
+                            inputmode="email"
+                            autocomplete="username"
                             value="{{ identifier|default:'' }}"
-                            placeholder="770000000" 
-                            class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3.5 pr-9 text-xs font-medium text-slate-900 transition text-right font-num"
+                            placeholder="770000000 أو name@example.com" 
+                            class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3.5 pr-9 text-xs font-medium text-slate-900 transition text-right"
                         >
-                        <i data-lucide="phone" class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2"></i>
+                        <i data-lucide="user-check" class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2"></i>
                     </div>
                 </div>
 
@@ -128,8 +130,8 @@
 
                 <div class="flex items-center justify-between pt-0.5 text-xs">
                     <label class="flex items-center gap-2 cursor-pointer select-none">
-                        <input type="checkbox" name="remember_me" class="w-4 h-4 text-brand-600 rounded border-slate-300">
-                        <span class="text-slate-600 text-[11px]">تذكر تسجيل الدخول</span>
+                        <input type="checkbox" name="remember_me" checked class="w-4 h-4 text-brand-600 rounded border-slate-300">
+                        <span class="text-slate-600 text-[11px]">تذكر تسجيل الدخول (البقاء مسجلاً)</span>
                     </label>
                     <a href="https://wa.me/{{ store_settings.contact_whatsapp }}?text=استعادة+كلمة+المرور" 
                        target="_blank" 

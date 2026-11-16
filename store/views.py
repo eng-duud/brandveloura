@@ -623,6 +623,43 @@ def product_detail_view(request, slug):
     return render(request, 'store/product_detail.html', context)
 
 
+def sync_cart_to_profile(request):
+    """مزامنة سلة الجلسة الحالية مع الملف التعريفي للعميل بقاعدة البيانات لمنع فقدان المنتجات نهائياً"""
+    if request.user.is_authenticated:
+        try:
+            profile, _ = UserProfile.objects.get_or_create(user=request.user)
+            cart = request.session.get('cart', {})
+            profile.cart_data = cart
+            profile.save(update_fields=['cart_data'])
+        except Exception:
+            pass
+
+
+def merge_and_restore_user_cart(request, user):
+    """دمج سلة الزائر السابقة مع السلة المحفوظة بحسابه في قاعدة البيانات واستعادتها كاملة"""
+    try:
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        db_cart = profile.cart_data or {}
+        guest_cart = request.session.get('cart', {})
+
+        # دمج السلتين: إذا تواجد نفس العنصر نعتمد الكمية الأنسب للعميل
+        merged = dict(db_cart)
+        for key, item in guest_cart.items():
+            if key in merged:
+                # نعتمد الكمية الأكبر منعاً للتكرار العشوائي
+                merged[key]['quantity'] = max(merged[key].get('quantity', 1), item.get('quantity', 1))
+            else:
+                merged[key] = item
+
+        request.session['cart'] = merged
+        request.session.modified = True
+        profile.cart_data = merged
+        profile.save(update_fields=['cart_data'])
+        return merged
+    except Exception:
+        return request.session.get('cart', {})
+
+
 @require_POST
 def cart_add(request):
     """إضافة منتج للسلة لحظياً عبر HTMX مع فحص المخزون ودعم درجتي الأصلي والماستر"""
@@ -694,6 +731,7 @@ def cart_add(request):
         
     request.session['cart'] = cart
     request.session.modified = True
+    sync_cart_to_profile(request)
     
     cart_count = sum(item.get('quantity', 1) for item in cart.values())
     
@@ -704,7 +742,7 @@ def cart_add(request):
 
 @require_POST
 def cart_update_quantity(request):
-    """تعديل كمية عنصر في السلة مع احترام رصيد المخزون"""
+    """تعديل كمية عنصر في السلة مع احترام رصيد المخزون ومزامنة الحساب"""
     item_key = request.POST.get('item_key')
     action = request.POST.get('action') # 'increase' or 'decrease'
     
@@ -728,13 +766,14 @@ def cart_update_quantity(request):
                 
     request.session['cart'] = cart
     request.session.modified = True
+    sync_cart_to_profile(request)
     
     return _render_cart_response(request)
 
 
 @require_POST
 def cart_remove_item(request):
-    """حذف عنصر من السلة"""
+    """حذف عنصر من السلة ومزامنة الحساب"""
     item_key = request.POST.get('item_key')
     cart = request.session.get('cart', {})
     
@@ -742,6 +781,7 @@ def cart_remove_item(request):
         del cart[item_key]
         request.session['cart'] = cart
         request.session.modified = True
+        sync_cart_to_profile(request)
         
     return _render_cart_response(request)
 
@@ -953,6 +993,8 @@ def gift_bundle_order_direct(request, slug):
         'grade': '',
     }
     request.session['cart'] = cart
+    request.session.modified = True
+    sync_cart_to_profile(request)
     
     # حفظ بيانات الإهداء المرفقة إن وجدت في POST أو تعيين قيم افتراضية
     recipient_name = request.POST.get('recipient_name', '').strip() if request.method == 'POST' else ''
@@ -1178,6 +1220,8 @@ def gift_builder_view(request):
                 }
 
         request.session['cart'] = cart
+        request.session.modified = True
+        sync_cart_to_profile(request)
         request.session['gift_data'] = {
             'is_gift': True,
             'recipient_name': recipient_name,
@@ -1592,10 +1636,12 @@ def checkout_view(request):
                 
         # حفظ رقم الطلب في الجلسة لتوثيق ملكية رفع الفواتير والعمليات
         request.session['last_order_number'] = order.order_number
-        # تفريغ السلة وبيانات الهدية بعد إتمام الطلب
+        # تفريغ السلة وبيانات الهدية بعد إتمام الطلب وتصفيرها بحساب العميل
         request.session['cart'] = {}
         request.session.pop('gift_data', None)
         request.session.modified = True
+        if request.user.is_authenticated:
+            UserProfile.objects.filter(user=request.user).update(cart_data={})
         
         return redirect('store:order_success', order_number=order.order_number)
 
@@ -2113,7 +2159,7 @@ def login_view(request):
         next_url = request.POST.get('next', '')
         
         if not identifier or not password:
-            messages.error(request, 'يرجى إدخال رقم الهاتف والرمز السري.')
+            messages.error(request, 'يرجى إدخال رقم الهاتف أو البريد الإلكتروني والرمز السري.')
             return render(request, 'store/auth/login.html', {'identifier': identifier, 'next_url': next_url})
             
         # التحقق من نوع المدخل: رقم هاتف، بريد إلكتروني، أو اسم مستخدم
@@ -2123,26 +2169,34 @@ def login_view(request):
             if matched_user:
                 username = matched_user.username
         else:
-            # البحث أولاً برقم الهاتف كمعرف تسجيل دخول أساسي
-            clean_digits = re.sub(r'\D', '', identifier)
-            matched_profile = None
-            if clean_digits:
-                matched_profile = UserProfile.objects.filter(phone=identifier).first()
-                if not matched_profile:
-                    matched_profile = UserProfile.objects.filter(phone__endswith=clean_digits[-8:]).first()
-            if matched_profile:
-                username = matched_profile.user.username
+            # فحص إذا كان المدخل يطابق اسم مستخدم مباشرة
+            matched_user_by_name = User.objects.filter(username__iexact=identifier).first()
+            if matched_user_by_name:
+                username = matched_user_by_name.username
+            else:
+                # البحث برقم الهاتف كمعرف تسجيل دخول أساسي
+                clean_digits = re.sub(r'\D', '', identifier)
+                matched_profile = None
+                if clean_digits:
+                    matched_profile = UserProfile.objects.filter(phone=identifier).first()
+                    if not matched_profile:
+                        matched_profile = UserProfile.objects.filter(phone__endswith=clean_digits[-8:]).first()
+                if matched_profile:
+                    username = matched_profile.user.username
                 
         user = authenticate(request, username=username, password=password)
         if user is not None:
             if user.is_active:
                 cache.delete(throttle_key)
                 auth_login(request, user)
-                if remember_me:
-                    request.session.set_expiry(60 * 60 * 24 * 30) # 30 يوماً
-                else:
-                    request.session.set_expiry(0) # حتى إغلاق المتصفح
-                    
+                
+                # تمديد الجلسة والكوكيز: سنة كاملة افتراضياً و 90 يوماً كحد أدنى (منع انتهاء الجلسة عند إغلاق المتصفح)
+                expiry_seconds = 60 * 60 * 24 * 365 if remember_me else 60 * 60 * 24 * 90
+                request.session.set_expiry(expiry_seconds)
+                
+                # دمج واستعادة سلة المشتريات المحفوظة بحساب العميل
+                merge_and_restore_user_cart(request, user)
+                
                 display_name = user.first_name or user.username
                 messages.success(request, f'تم تسجيل الدخول بنجاح. مرحباً {display_name}.')
                 return redirect(_get_safe_redirect(request, default='store:home'))
@@ -2150,7 +2204,7 @@ def login_view(request):
                 messages.error(request, 'هذا الحساب معطل حالياً. يرجى التواصل مع إدارة المتجر.')
         else:
             cache.set(throttle_key, failed_attempts + 1, timeout=600)
-            messages.error(request, 'بيانات الدخول غير صحيحة. يرجى التحقق من رقم الهاتف والرمز السري.')
+            messages.error(request, 'بيانات الدخول غير صحيحة. يرجى التحقق من رقم الهاتف أو البريد الإلكتروني والرمز السري.')
             
     return render(request, 'store/auth/login.html', {'next_url': next_url})
 
@@ -2235,9 +2289,11 @@ def register_view(request):
             phone=phone
         )
         
-        # تسجيل الدخول
+        # تسجيل الدخول وتمديد الجلسة لسنة ومزامنة السلة
         cache.set(reg_throttle_key, reg_count + 1, timeout=900)
         auth_login(request, new_user)
+        request.session.set_expiry(60 * 60 * 24 * 365)
+        sync_cart_to_profile(request)
         
         messages.success(request, f'تم إنشاء الحساب بنجاح. مرحباً {name}.')
         return redirect(_get_safe_redirect(request, default='store:home'))
@@ -2406,8 +2462,10 @@ def google_auth_callback(request):
         profile.avatar_url = avatar_url
         profile.save(update_fields=['avatar_url'])
         
-    # تسجيل الدخول
+    # تسجيل الدخول وتمديد الجلسة لسنة كاملة واستعادة السلة المدمجة
     auth_login(request, user)
+    request.session.set_expiry(60 * 60 * 24 * 365)
+    merge_and_restore_user_cart(request, user)
     
     display_name = user.first_name or user.username
     messages.success(request, f'تم تسجيل الدخول عبر Google بنجاح. مرحباً {display_name}.')
@@ -2550,6 +2608,7 @@ def reorder_view(request, order_number):
             
     request.session['cart'] = cart
     request.session.modified = True
+    sync_cart_to_profile(request)
     
     if added_count > 0:
         messages.success(request, f'تمت إضافة {added_count} قطعة من طلبكم السابق #{order.order_number} إلى سلة المشتريات بنجاح.')
