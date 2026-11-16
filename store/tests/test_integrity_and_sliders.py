@@ -109,7 +109,15 @@ class ControlPanelIntegrityAndSliderTests(TestCase):
             is_featured=True,
             is_active=True
         )
-        res = self.client.get(reverse('store:home'))
+        # 1. فحص الهيكل الفوري للصفحة الرئيسية واحتوائه على حاوية التحميل المتدرج HTMX
+        home_res = self.client.get(reverse('store:home'))
+        self.assertEqual(home_res.status_code, 200)
+        home_content = home_res.content.decode('utf-8')
+        self.assertIn('home-deferred-container', home_content)
+        self.assertIn('hx-get="/partials/home-deferred/"', home_content)
+
+        # 2. فحص محتوى شريط المنتجات المميزة في مسار التحميل المتدرج الذكي
+        res = self.client.get(reverse('store:home_deferred_content'))
         self.assertEqual(res.status_code, 200)
         content = res.content.decode('utf-8')
         self.assertIn('id="featured-scroll"', content)
@@ -128,19 +136,21 @@ class ControlPanelIntegrityAndSliderTests(TestCase):
         Product.objects.create(name_ar="ساعة رولكس كلاسيك", category=watch_cat, price_yer=Decimal('350000'), is_active=True)
         Product.objects.create(name_ar="سيروم فيتامين سي", category=cosmetic_cat, price_yer=Decimal('15000'), is_active=True)
 
-        res = self.client.get(reverse('store:home'))
-        self.assertEqual(res.status_code, 200)
-        content = res.content.decode('utf-8')
+        # 1. فحص الصفحة الرئيسية: شريط الأقسام العلوي وشريط الثقة
+        home_res = self.client.get(reverse('store:home'))
+        self.assertEqual(home_res.status_code, 200)
+        home_content = home_res.content.decode('utf-8')
+        self.assertIn('id="categories-scroll"', home_content)
+        self.assertIn('أصالة وجودة مضمونة', home_content)
+        self.assertIn('توصيل سريع معتمد', home_content)
+        self.assertIn('تغليف ملكي فاخر', home_content)
+        self.assertIn('خدمة عملاء واستشارات', home_content)
 
-        # فحص شرائط الأقسام
-        self.assertIn('id="categories-scroll"', content)
+        # 2. فحص مسار المحتوى المتدرج: شرائط الأقسام التفاعلية
+        def_res = self.client.get(reverse('store:home_deferred_content'))
+        self.assertEqual(def_res.status_code, 200)
+        content = def_res.content.decode('utf-8')
         self.assertIn('id="perfumes-scroll"', content)
         self.assertIn('id="watches-scroll"', content)
         self.assertIn('id="cosmetics-scroll"', content)
-
-        # فحص شريط الثقة والضمانات المعتمد
-        self.assertIn('أصالة وجودة مضمونة', content)
-        self.assertIn('توصيل سريع معتمد', content)
-        self.assertIn('تغليف ملكي فاخر', content)
-        self.assertIn('خدمة عملاء واستشارات', content)
 

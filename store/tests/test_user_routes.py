@@ -97,8 +97,12 @@ class UserRoutesAndOperationsTests(TestCase):
         res = self.client.get(reverse('store:home'))
         self.assertEqual(res.status_code, 200)
         self.assertTemplateUsed(res, 'store/home.html')
-        self.assertIn('featured_products', res.context)
         self.assertIn('categories', res.context)
+
+        # فحص جلب المنتجات المميزة في مسار المحتوى المتدرج
+        def_res = self.client.get(reverse('store:home_deferred_content'))
+        self.assertEqual(def_res.status_code, 200)
+        self.assertIn('featured_products', def_res.context)
 
     def test_product_list_and_search(self):
         """فحص صفحة كافة المنتجات والبحث النصي"""
@@ -779,7 +783,7 @@ class UserRoutesAndOperationsTests(TestCase):
             is_active=True
         )
 
-        res = self.client.get(reverse('store:home'))
+        res = self.client.get(reverse('store:home_deferred_content'))
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, 'أفخم الإكسسوارات والهدايا')
         self.assertContains(res, 'سوار فاخر مطلي بالذهب')
@@ -788,7 +792,7 @@ class UserRoutesAndOperationsTests(TestCase):
         new_cat.show_in_home_slider = False
         new_cat.save()
 
-        res_after = self.client.get(reverse('store:home'))
+        res_after = self.client.get(reverse('store:home_deferred_content'))
         self.assertEqual(res_after.status_code, 200)
         self.assertNotContains(res_after, 'أفخم الإكسسوارات والهدايا')
 

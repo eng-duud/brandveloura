@@ -1,0 +1,310 @@
+{% load image_optimization %}
+
+<div id="home-deferred-container" class="transition-opacity duration-300">
+    <!-- 3. Featured Products Horizontal Scroll Strip -->
+    {% if featured_products %}
+    <section class="py-10 bg-white/40 border-b border-pink-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <!-- Header of Featured Strip -->
+            <div class="flex items-center justify-between mb-5">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-white text-brand-600 flex items-center justify-center border border-pink-200 shrink-0 shadow-2xs">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-brand-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base sm:text-xl font-bold text-slate-900">المنتجات المميزة</h2>
+                        <span class="text-[11px] text-slate-500 block">مختارات حصرية من أبرز المنتجات وأكثرها طلباً</span>
+                    </div>
+                </div>
+                
+                <!-- Actions & Scroll Buttons -->
+                <div class="flex items-center gap-2">
+                    <a href="{% url 'store:product_list' %}" class="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-800 text-xs font-semibold transition border border-pink-200 shadow-2xs">
+                        <span>مشاهدة الكل</span>
+                        <i data-lucide="arrow-left" class="w-3 h-3"></i>
+                    </a>
+                    <div class="flex items-center gap-1">
+                        <button 
+                            type="button"
+                            onclick="sliderStep('featured-scroll', 'prev')" 
+                            class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
+                            title="تمرير لليمين (السابق)"
+                        >
+                            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button 
+                            type="button"
+                            onclick="sliderStep('featured-scroll', 'next')" 
+                            class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
+                            title="تمرير لليسار (التالي)"
+                        >
+                            <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Horizontal Scroll Container -->
+            <div 
+                id="featured-scroll" 
+                class="bv-slider-strip flex flex-nowrap items-stretch gap-3 sm:gap-4 overflow-x-auto pb-4 pt-1 select-none"
+                style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; cursor: grab;"
+            >
+                {% for product in featured_products|slice:":8" %}
+                <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 190px !important; width: 190px !important; max-width: 220px !important; min-width: 175px !important;">
+                    {% include 'store/components/product_card.html' with product=product %}
+                </div>
+                {% endfor %}
+
+                <!-- Final Card in the Horizontal Strip: View All Featured -->
+                <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 170px !important; width: 170px !important; max-width: 200px !important; min-width: 160px !important;">
+                    <a 
+                        href="{% url 'store:product_list' %}" 
+                        class="h-full rounded-2xl bg-white border-2 border-dashed border-pink-200 hover:border-brand-400 p-4 flex flex-col items-center justify-center text-center group transition duration-200 cursor-pointer shadow-2xs"
+                    >
+                        <div class="w-10 h-10 rounded-xl bg-brand-500 text-white flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-900 text-xs mb-0.5">مشاهدة الكل</h3>
+                        <p class="text-[10px] text-slate-400 font-light mb-3">استعراض كامل القائمة</p>
+                        <span class="px-3 py-1.5 rounded-xl bg-white text-slate-800 text-xs font-semibold border border-pink-200 shadow-2xs group-hover:bg-brand-500 group-hover:text-white group-hover:border-brand-500 transition">
+                            تصفح المنتجات
+                        </span>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- 4. Dynamic Category Horizontal Scroll Strips (Managed Seamlessly from Admin) -->
+    {% for slider in category_sliders %}
+    <section class="py-10 {% cycle 'bg-transparent' 'bg-white/40' %} border-b border-pink-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <!-- Header of Category Strip -->
+            <div class="flex items-center justify-between mb-5">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-white text-brand-600 flex items-center justify-center border border-pink-200 shrink-0 shadow-2xs">
+                        <i data-lucide="{{ slider.icon|default:'sparkles' }}" class="w-4 h-4 text-brand-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base sm:text-xl font-bold text-slate-900">{{ slider.title }}</h2>
+                        <span class="text-[11px] text-slate-500 block">{{ slider.subtitle }}</span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <a href="{{ slider.catalog_url }}" class="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-800 text-xs font-semibold transition border border-pink-200 shadow-2xs">
+                        <span>استعراض الكل</span>
+                        <i data-lucide="arrow-left" class="w-3 h-3"></i>
+                    </a>
+                    <div class="flex items-center gap-1">
+                        <button 
+                            type="button"
+                            onclick="sliderStep('{{ slider.slider_id }}', 'prev')" 
+                            class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
+                            title="تمرير لليمين (السابق)"
+                        >
+                            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button 
+                            type="button"
+                            onclick="sliderStep('{{ slider.slider_id }}', 'next')" 
+                            class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
+                            title="تمرير لليسار (التالي)"
+                        >
+                            <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Horizontal Products Scroll Container -->
+            <div 
+                id="{{ slider.slider_id }}" 
+                class="bv-slider-strip flex flex-nowrap items-stretch gap-3 sm:gap-4 overflow-x-auto pb-4 pt-1 select-none"
+                style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; cursor: grab;"
+            >
+                {% for product in slider.products|slice:":8" %}
+                <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 190px !important; width: 190px !important; max-width: 220px !important; min-width: 175px !important;">
+                    {% include 'store/components/product_card.html' with product=product %}
+                </div>
+                {% endfor %}
+
+                <!-- Final Card in Strip: View All Products in Category -->
+                <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 170px !important; width: 170px !important; max-width: 200px !important; min-width: 160px !important;">
+                    <a 
+                        href="{{ slider.catalog_url }}" 
+                        class="h-full rounded-2xl bg-white border-2 border-dashed border-pink-200 hover:border-brand-400 p-4 flex flex-col items-center justify-center text-center group transition duration-200 cursor-pointer shadow-2xs"
+                    >
+                        <div class="w-10 h-10 rounded-xl bg-brand-500 text-white flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
+                            <i data-lucide="{{ slider.icon|default:'sparkles' }}" class="w-4 h-4"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-900 text-xs mb-0.5">كافة المنتجات</h3>
+                        <p class="text-[10px] text-slate-400 font-light mb-3">تصفح تشكيلة {{ slider.title }}</p>
+                        <span class="px-3 py-1.5 rounded-xl bg-white text-slate-800 text-xs font-semibold border border-pink-200 shadow-2xs group-hover:bg-brand-500 group-hover:text-white group-hover:border-brand-500 transition">
+                            استعراض القسم
+                        </span>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </section>
+    {% endfor %}
+
+    <!-- 5. Gifting & Occasions Bundles Strip -->
+    {% include 'store/components/gift_bundles_strip.html' %}
+
+    <!-- 6. Luxury Brands Horizontal Scroll Strip -->
+    {% if featured_brands or perfume_brands %}
+    <section class="py-10 bg-transparent border-b border-pink-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <!-- Header of Perfume Brands Strip -->
+            <div class="flex items-center justify-between mb-5">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-white text-brand-600 flex items-center justify-center border border-pink-200 shrink-0 shadow-2xs">
+                        <i data-lucide="crown" class="w-4 h-4 text-brand-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base sm:text-xl font-bold text-slate-900">الماركات والبراندات العالمية</h2>
+                        <span class="text-[11px] text-slate-400 block">أرقى دور العطور والساعات والمستحضرات العالمية</span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <a href="{% url 'store:brands_list' %}" class="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-800 text-xs font-semibold transition border border-pink-200 shadow-2xs">
+                        <span>كافة الماركات</span>
+                        <i data-lucide="arrow-left" class="w-3 h-3"></i>
+                    </a>
+                    <div class="flex items-center gap-1">
+                        <button 
+                            type="button"
+                            onclick="sliderStep('brands-scroll', 'prev')" 
+                            class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
+                            title="تمرير لليمين (السابق)"
+                        >
+                            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button 
+                            type="button"
+                            onclick="sliderStep('brands-scroll', 'next')" 
+                            class="w-8 h-8 rounded-xl bg-white hover:bg-brand-500 hover:text-white text-slate-700 border border-pink-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
+                            title="تمرير لليسار (التالي)"
+                        >
+                            <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Horizontal Brands Strip -->
+            <div 
+                id="brands-scroll" 
+                class="bv-slider-strip flex flex-nowrap items-stretch gap-3 sm:gap-4 overflow-x-auto pb-4 pt-1 select-none"
+                style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; cursor: grab;"
+            >
+                {% if featured_brands %}
+                    {% for b in featured_brands|slice:":8" %}
+                    <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 190px !important; width: 190px !important; max-width: 220px !important; min-width: 175px !important;">
+                        <a 
+                            href="{% url 'store:brand_detail' b.slug %}" 
+                            class="h-full rounded-2xl bg-white border border-pink-200 hover:border-brand-400 p-4 flex flex-col justify-between transition-all duration-200 hover:shadow-md group cursor-pointer text-center"
+                        >
+                            <div>
+                                <!-- Brand Logo Container -->
+                                <div class="w-14 h-14 rounded-2xl bg-pink-50/50 border border-pink-100 flex items-center justify-center mx-auto mb-3 p-1.5 shadow-2xs group-hover:scale-105 group-hover:bg-pink-100/60 transition-all overflow-hidden">
+                                    {% if b.logo or b.logo_url_fallback %}
+                                    <img src="{{ b.get_logo_url|cloudinary_webp:160 }}" srcset="{{ b.get_logo_url|cloudinary_webp_srcset:'96,160,240' }}" sizes="64px" alt="{{ b.name_ar }}" loading="lazy" decoding="async" class="w-full h-full object-contain">
+                                    {% else %}
+                                    <span class="text-base font-bold text-brand-600 font-serif">
+                                        {{ b.name_en|default:b.name_ar|slice:":2"|upper }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if b.name_en %}
+                                <span class="text-[9px] text-slate-400 font-semibold uppercase tracking-wider block truncate">{{ b.name_en }}</span>
+                                {% endif %}
+                                <h3 class="font-bold text-slate-900 text-xs sm:text-sm leading-tight mt-0.5 group-hover:text-brand-600 transition-colors truncate">
+                                    {{ b.name_ar }}
+                                </h3>
+                                <p class="text-[10px] text-slate-400 mt-1 font-light">
+                                    <span class="font-bold text-slate-700 font-num">{{ b.products_count }}</span> منتجات متوفرة
+                                </p>
+                            </div>
+
+                            <div class="pt-2.5 mt-2.5 border-t border-pink-100 flex items-center justify-center gap-1 text-[11px] font-medium text-slate-600 group-hover:text-brand-600 transition">
+                                <span>تصفح التشكيلة</span>
+                                <i data-lucide="arrow-left" class="w-3 h-3 group-hover:-translate-x-0.5 transition-transform"></i>
+                            </div>
+                        </a>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    {% for b in perfume_brands|slice:":8" %}
+                    <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 190px !important; width: 190px !important; max-width: 220px !important; min-width: 175px !important;">
+                        <a 
+                            href="{% url 'store:perfumes_catalog' %}?brand={{ b.brand_name }}" 
+                            class="h-full rounded-2xl bg-white border border-pink-200 hover:border-brand-400 p-3.5 flex flex-col justify-between transition-all duration-200 hover:shadow-md group cursor-pointer text-center"
+                        >
+                            <div>
+                                <!-- Monogram -->
+                                <div class="w-11 h-11 rounded-xl bg-brand-500 text-white flex items-center justify-center mx-auto mb-2.5 shadow-2xs group-hover:scale-105 transition-all">
+                                    <i data-lucide="{{ b.icon }}" class="w-5 h-5"></i>
+                                </div>
+                                
+                                <span class="text-[9px] text-slate-400 font-medium uppercase tracking-wider block">{{ b.country }}</span>
+                                <h3 class="font-bold text-slate-900 text-xs sm:text-sm leading-tight mt-0.5 group-hover:text-brand-600 transition-colors">
+                                    {{ b.brand_name }}
+                                </h3>
+                                <p class="text-[10px] text-slate-400 mt-0.5 font-light">
+                                    {{ b.count }} عطور متوفرة
+                                </p>
+                            </div>
+
+                            <div class="pt-2.5 mt-2 border-t border-pink-100 flex items-center justify-center gap-1 text-[11px] font-medium text-slate-600 group-hover:text-brand-600 transition">
+                                <span>تصفح الماركة</span>
+                                <i data-lucide="arrow-left" class="w-3 h-3 group-hover:-translate-x-0.5 transition-transform"></i>
+                            </div>
+                        </a>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Final Card in Brands Strip: View All Brands Directory -->
+                <div class="bv-slider-item shrink-0 flex flex-col" style="flex: 0 0 170px !important; width: 170px !important; max-width: 200px !important; min-width: 160px !important;">
+                    <a 
+                        href="{% url 'store:brands_list' %}" 
+                        class="h-full rounded-2xl bg-white border-2 border-dashed border-pink-200 hover:border-brand-400 p-4 flex flex-col items-center justify-center text-center group transition duration-200 cursor-pointer shadow-2xs"
+                    >
+                        <div class="w-11 h-11 rounded-xl bg-brand-500 text-white flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform shadow-2xs">
+                            <i data-lucide="crown" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-900 text-xs mb-0.5">كافة الماركات</h3>
+                        <p class="text-[10px] text-slate-400 font-light mb-3">دليل البراندات العالمية</p>
+                        <span class="px-3 py-1.5 rounded-xl bg-white text-slate-800 text-xs font-semibold border border-pink-200 shadow-2xs group-hover:bg-brand-500 group-hover:text-white group-hover:border-brand-500 transition">
+                            عرض الكل
+                        </span>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Reinitialize slider interactions & Lucide icons for swapped content -->
+    <script>
+        if (typeof window.initLuxurySliders === 'function') {
+            window.initLuxurySliders();
+        }
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+            window.lucide.createIcons(document.getElementById('home-deferred-container'));
+        }
+    </script>
+</div>

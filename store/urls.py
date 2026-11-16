@@ -16,6 +16,7 @@ app_name = 'store'
 urlpatterns = [
     # صفحات المتجر الرئيسية
     path('', views.home_view, name='home'),
+    path('partials/home-deferred/', views.home_deferred_content_view, name='home_deferred_content'),
     path('products/', views.product_list_view, name='product_list'),
     path('perfumes/', views.perfumes_catalog_view, name='perfumes_catalog'),
     path('watches/', views.watches_catalog_view, name='watches_catalog'),

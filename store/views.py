@@ -85,11 +85,9 @@ def validate_receipt_file(uploaded_file):
 
 
 
-def home_view(request):
-    """الصفحة الرئيسية للمتجر بتصميم فاخر وقنوات أفقية تفاعلية بحد أقصى 8 عناصر لكل شريط"""
+def get_home_deferred_context(request):
+    """تجهيز سياق الأشرطة التفاعلية السفلية للصفحة الرئيسية مع استعلامات مُحسنة"""
     from django.db.models import Count, Q
-    banners = HeroBanner.objects.filter(is_active=True).order_by('display_order')
-    categories = Category.objects.filter(is_active=True, parent__isnull=True).order_by('display_order')[:8]
     
     # 1. المنتجات المميزة لشريط التمرير الأفقي (بحد أقصى 8 منتجات)
     featured_products = Product.objects.filter(
@@ -205,7 +203,7 @@ def home_view(request):
         products_count=Count('products', filter=Q(products__is_active=True))
     ).order_by('display_order', '-products_count', 'name_ar')[:8]
 
-    # براندات العطور الفاخرة مع بيانات مخصصة لشريط التمرير (استعلام تجميعي واحد سريع للتوافق) بحد أقصى 8
+    # براندات العطور الفاخرة مع بيانات مخصصة لشريط التمرير
     brand_counts = dict(
         Product.objects.filter(category__category_type='perfumes', is_active=True)
         .exclude(brand_name='')
@@ -236,9 +234,7 @@ def home_view(request):
         })
     perfume_brands_data = perfume_brands_data[:8]
 
-    context = {
-        'banners': banners,
-        'categories': categories,
+    return {
         'featured_products': featured_products,
         'category_sliders': category_sliders,
         'perfume_products': perfume_products,
@@ -248,7 +244,70 @@ def home_view(request):
         'featured_brands': featured_brands,
         'perfume_brands': perfume_brands_data,
     }
+
+
+def home_deferred_content_view(request):
+    """استرجاع وعرض الأشرطة السفلية للصفحة الرئيسية مع كاشينج دجانغو فائق السرعة"""
+    from django.core.cache import cache
+    from django.http import HttpResponse
+    
+    active_currency = request.session.get('active_currency', 'YER')
+    cache_key = f'bv_home_deferred_html_{active_currency}'
+    
+    if not request.GET.get('nocache'):
+        try:
+            cached_html = cache.get(cache_key)
+            if cached_html:
+                return HttpResponse(cached_html, content_type='text/html; charset=utf-8')
+        except Exception:
+            pass
+            
+    context = get_home_deferred_context(request)
+    response = render(request, 'store/partials/home_deferred_content.html', context)
+    
+    try:
+        cache.set(cache_key, response.content.decode('utf-8'), timeout=900)
+    except Exception:
+        pass
+        
+    return response
+
+
+def home_view(request):
+    """الصفحة الرئيسية للمتجر — تفتح فورياً (Instant Paint Shell) بفضل الكاشينج والتحميل المتدرج الذكي"""
+    from django.core.cache import cache
+    
+    # 1. قراءة البانرات الترويجية من الكاش
+    banners = cache.get('bv_home_banners')
+    if banners is None:
+        banners = list(HeroBanner.objects.filter(is_active=True).order_by('display_order'))
+        try:
+            cache.set('bv_home_banners', banners, timeout=900)
+        except Exception:
+            pass
+
+    # 2. قراءة الأقسام الرئيسية لشريط التصفح العلوي من الكاش
+    categories = cache.get('bv_home_categories')
+    if categories is None:
+        categories = list(Category.objects.filter(is_active=True, parent__isnull=True).order_by('display_order')[:8])
+        try:
+            cache.set('bv_home_categories', categories, timeout=900)
+        except Exception:
+            pass
+
+    context = {
+        'banners': banners,
+        'categories': categories,
+    }
+
+    # إذا تم طلب المحتوى كاملاً (كـ crawlers أو tests أو عبر معامل ?full=1)
+    if request.GET.get('full') == '1':
+        deferred_ctx = get_home_deferred_context(request)
+        context.update(deferred_ctx)
+        context['full_mode'] = True
+
     return render(request, 'store/home.html', context)
+
 
 
 

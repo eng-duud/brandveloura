@@ -174,7 +174,7 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="text-slate-800 antialiased flex flex-col min-h-screen selection:bg-brand-500 selection:text-white" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<body class="text-slate-800 antialiased flex flex-col min-h-screen selection:bg-brand-500 selection:text-white" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-boost="true">
 
     <!-- Global HTMX Loading Indicator Bar (Top Shimmer) -->
     <div id="global-htmx-indicator" class="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-600 via-rose-400 to-brand-600 z-50 pointer-events-none animate-pulse"></div>
@@ -402,13 +402,13 @@
                                 {% endif %}
                             </a>
                             {% if user.is_staff %}
-                            <a href="{% url 'admin:index' %}" class="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-900 hover:text-white text-slate-700 transition">
+                            <a href="{% url 'admin:index' %}" hx-boost="false" class="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-900 hover:text-white text-slate-700 transition">
                                 <i data-lucide="sliders" class="w-3.5 h-3.5 text-slate-400"></i>
                                 <span>لوحة الإدارة</span>
                             </a>
                             {% endif %}
                             <div class="border-t border-slate-100 my-1"></div>
-                            <a href="{% url 'store:logout' %}" class="flex items-center gap-2 px-3.5 py-2 hover:bg-rose-50 text-rose-700 font-bold transition">
+                            <a href="{% url 'store:logout' %}" hx-boost="false" class="flex items-center gap-2 px-3.5 py-2 hover:bg-rose-50 text-rose-700 font-bold transition">
                                 <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
                                 <span>تسجيل الخروج</span>
                             </a>
@@ -863,12 +863,12 @@
                             {% endif %}
                         </a>
                         {% if user.is_staff %}
-                        <a href="{% url 'admin:index' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition">
+                        <a href="{% url 'admin:index' %}" hx-boost="false" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition">
                             <i data-lucide="sliders" class="w-4 h-4 text-slate-400"></i>
                             <span>لوحة تحكم الإدارة</span>
                         </a>
                         {% endif %}
-                        <a href="{% url 'store:logout' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 transition">
+                        <a href="{% url 'store:logout' %}" hx-boost="false" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 transition">
                             <i data-lucide="log-out" class="w-4 h-4"></i>
                             <span>تسجيل الخروج</span>
                         </a>
@@ -1573,6 +1573,16 @@
                 if (notifContainer && !notifContainer.contains(e.target)) {
                     notifMenu.classList.add('hidden');
                 }
+            }
+        });
+
+        // Global HTMX Event Listeners for smooth transitions and icon updates
+        document.addEventListener('htmx:afterSettle', function(evt) {
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons(evt.detail.elt || document);
+            }
+            if (typeof window.initLuxurySliders === 'function') {
+                window.initLuxurySliders();
             }
         });
     </script>

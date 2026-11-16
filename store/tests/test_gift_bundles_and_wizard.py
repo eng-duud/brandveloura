@@ -152,14 +152,15 @@ class GiftBundlesAndWizardTests(TestCase):
                 is_featured=True
             )
 
-        response = self.client.get(reverse('store:home'))
+        # فحص سقف العناصر في مسار أشرطة المنتجات المتدرجة (بحد أقصى 8 عناصر لكل شريط)
+        response = self.client.get(reverse('store:home_deferred_content'))
         self.assertEqual(response.status_code, 200)
         self.assertLessEqual(len(response.context['featured_products']), 8)
         self.assertLessEqual(len(response.context['perfume_products']), 8)
 
     def test_home_view_includes_ready_gift_bundles(self):
-        """التحقق من أن الصفحة الرئيسية تعرض الباقات الجاهزة المنسقة"""
-        response = self.client.get(reverse('store:home'))
+        """التحقق من أن باقات الهدايا الجاهزة المنسقة تُعرض بنجاح في أشرطة الصفحة الرئيسية"""
+        response = self.client.get(reverse('store:home_deferred_content'))
         self.assertEqual(response.status_code, 200)
         self.assertIn('gift_bundles', response.context)
         self.assertContains(response, 'باقة الفخامة الملكية')
