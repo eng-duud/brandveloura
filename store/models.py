@@ -136,6 +136,20 @@ class StoreSettings(models.Model):
         if env_insta and (created or settings_obj.contact_instagram != env_insta):
             settings_obj.contact_instagram = env_insta
             updated = True
+
+        # تطهير وضمان استبعاد كلمة "بوتيك / Boutique" من اسم المتجر ووصفه تلقائياً
+        if settings_obj.store_name and 'Boutique' in settings_obj.store_name:
+            settings_obj.store_name = settings_obj.store_name.replace('Boutique', '').strip()
+            updated = True
+        if settings_obj.store_name and 'بوتيك' in settings_obj.store_name:
+            settings_obj.store_name = settings_obj.store_name.replace('بوتيك', '').strip()
+            updated = True
+        if settings_obj.store_tagline and 'بوتيك' in settings_obj.store_tagline:
+            settings_obj.store_tagline = settings_obj.store_tagline.replace('بوتيك', 'متجر').strip()
+            updated = True
+        if settings_obj.store_tagline and 'Boutique' in settings_obj.store_tagline:
+            settings_obj.store_tagline = settings_obj.store_tagline.replace('Boutique', 'Store').strip()
+            updated = True
             
         if updated:
             try:
@@ -292,13 +306,53 @@ class ShippingZone(models.Model):
 
 class HeroBanner(models.Model):
     """البانرات الترويجية المتحركة في الصفحة الرئيسية"""
+    DESTINATION_CHOICES = [
+        ('all_products', 'جميع المنتجات (/products/)'),
+        ('category', 'قسم محدد (Category)'),
+        ('product', 'منتج محدد (Product)'),
+        ('gifting', 'صانع وتنسيق الهدايا (/gifting/)'),
+        ('brands', 'الماركات العالمية (/brands/)'),
+        ('custom', 'رابط مخصص يدوي (Custom URL)'),
+    ]
+
     title = models.CharField(max_length=200, verbose_name='العنوان الرئيسي')
     subtitle = models.CharField(max_length=300, blank=True, verbose_name='العنوان الفرعي / الوصف')
     tag_badge = models.CharField(max_length=100, blank=True, default='تشكيلة حصرية 2026', verbose_name='شارة ترويجية')
     image = models.ImageField(upload_to='banners/', null=True, blank=True, verbose_name='صورة البانر')
     image_url_fallback = models.URLField(blank=True, verbose_name='رابط صورة خارجي (في حال عدم رفع ملف)')
+    
+    link_type = models.CharField(
+        max_length=20, 
+        choices=DESTINATION_CHOICES, 
+        default='all_products', 
+        blank=True,
+        verbose_name='نوع الوجهة عند النقر'
+    )
+    target_category = models.ForeignKey(
+        'Category',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='hero_banners',
+        verbose_name='القسم المستهدف'
+    )
+    target_product = models.ForeignKey(
+        'Product',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='hero_banners',
+        verbose_name='المنتج المستهدف'
+    )
+    custom_url = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name='رابط مخصص يدوي',
+        help_text='يُستخدم فقط إذا كان نوع الوجهة "رابط مخصص يدوي"'
+    )
+
     button_text = models.CharField(max_length=100, default='تسوق التشكيلة الآن', verbose_name='نص الزر')
-    button_link = models.CharField(max_length=250, default='/products/', verbose_name='رابط الزر')
+    button_link = models.CharField(max_length=250, default='/products/', blank=True, verbose_name='رابط الزر (يتم توليده تلقائياً)')
     display_order = models.PositiveIntegerField(default=0, verbose_name='ترتيب العرض')
     is_active = models.BooleanField(default=True, verbose_name='مفعل')
 
@@ -309,6 +363,28 @@ class HeroBanner(models.Model):
 
     def __str__(self):
         return self.title
+
+    def save(self, *args, **kwargs):
+        # توليد رابط الزر تلقائياً وبدقة لمنع كتابة المسارات يدوياً
+        if not self.link_type:
+            self.link_type = 'all_products'
+
+        if self.link_type == 'all_products':
+            if not self.button_link:
+                self.button_link = '/products/'
+        elif self.link_type == 'gifting':
+            self.button_link = '/gifting/'
+        elif self.link_type == 'brands':
+            self.button_link = '/brands/'
+        elif self.link_type == 'category' and self.target_category:
+            self.button_link = f"/products/?category={self.target_category.slug}"
+        elif self.link_type == 'product' and self.target_product:
+            self.button_link = f"/products/{self.target_product.slug}/"
+        elif self.link_type == 'custom' and self.custom_url:
+            self.button_link = self.custom_url.strip()
+        elif not self.button_link:
+            self.button_link = '/products/'
+        super().save(*args, **kwargs)
 
     @property
     def get_image_url(self):
@@ -353,6 +429,23 @@ class Category(models.Model):
     display_order = models.PositiveIntegerField(default=0, verbose_name='ترتيب العرض')
     is_default = models.BooleanField(default=False, verbose_name='القسم الافتراضي لصفحة الأقسام', help_text='تحديد هذا القسم كقسم رئيسي افتراضي يفتح تلقائياً للعميل عند دخول صفحة الأقسام')
     is_featured = models.BooleanField(default=True, verbose_name='عرض في الرئيسية')
+    show_in_home_slider = models.BooleanField(
+        default=False, 
+        verbose_name='عرض كشريط منتجات في الرئيسية',
+        help_text='تفعيل ظهور هذا القسم كشريط أفقي تفاعلي للمنتجات في الصفحة الرئيسية'
+    )
+    home_slider_order = models.PositiveIntegerField(
+        default=0, 
+        blank=True,
+        verbose_name='ترتيب شريط القسم في الرئيسية',
+        help_text='يحدد أولوية وترتيب ظهور الشريط في الصفحة الرئيسية (الأصغر يظهر أولاً)'
+    )
+    home_slider_title = models.CharField(
+        max_length=150, 
+        blank=True, 
+        verbose_name='عنوان مخصص للشريط في الرئيسية (اختياري)',
+        help_text='إذا تركته فارغاً سيتم استخدام اسم القسم تلقائياً'
+    )
     is_active = models.BooleanField(default=True, verbose_name='مفعل')
 
     class Meta:

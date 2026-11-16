@@ -128,10 +128,13 @@ class SubCategoryInline(admin.TabularInline):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['image_preview', 'name_ar', 'hierarchy_badge', 'products_count', 'is_featured', 'is_active', 'display_order']
-    list_editable = ['is_featured', 'is_active', 'display_order']
+    list_display = [
+        'image_preview', 'name_ar', 'hierarchy_badge', 'products_count', 
+        'show_in_home_slider', 'home_slider_order', 'is_featured', 'is_active', 'display_order'
+    ]
+    list_editable = ['show_in_home_slider', 'home_slider_order', 'is_featured', 'is_active', 'display_order']
     search_fields = ['name_ar', 'name_en']
-    list_filter = ['parent', 'is_featured', 'is_active']
+    list_filter = ['show_in_home_slider', 'parent', 'is_featured', 'is_active']
     autocomplete_fields = ['parent']
     prepopulated_fields = {'slug': ('name_ar',)}
     list_per_page = 25
@@ -150,6 +153,10 @@ class CategoryAdmin(admin.ModelAdmin):
         ('معلومات القسم وتصنيفه الهرمي', {
             'description': 'حدد اسم القسم. إن كان قسماً رئيسياً كـ (العطور أو الساعات) اترك حقل القسم الرئيسي فارغاً. وإن كان صنفاً فرعياً اختر القسم الرئيسي التابع له. (ملاحظة: يتم تحديد القسم الافتراضي الذي يفتح تلقائياً في المتجر من إعدادات المتجر فقط لمنع التضارب).',
             'fields': (('name_ar', 'parent'), 'image', ('is_featured', 'is_active', 'display_order'))
+        }),
+        ('إعدادات شريط القسم في الصفحة الرئيسية', {
+            'description': 'تحكم في ظهور هذا القسم كشريط أفقي مستقل للمنتجات في الصفحة الرئيسية وترتيبه بكل سلاسة وبدون تعديل كود',
+            'fields': (('show_in_home_slider', 'home_slider_order'), 'home_slider_title')
         }),
         ('بيانات إضافية ورابط SEO (اختياري)', {
             'classes': ('collapse',),
@@ -1152,14 +1159,25 @@ class ShippingZoneAdmin(admin.ModelAdmin):
 
 @admin.register(HeroBanner)
 class HeroBannerAdmin(admin.ModelAdmin):
-    list_display = ['banner_preview', 'title', 'tag_badge', 'button_text', 'display_order', 'is_active']
+    list_display = ['banner_preview', 'title', 'destination_badge', 'button_text', 'display_order', 'is_active']
     list_editable = ['display_order', 'is_active']
+    list_filter = ['link_type', 'is_active']
+    autocomplete_fields = ['target_category', 'target_product']
     list_per_page = 25
 
     fieldsets = (
         ('محتوى البانر الإعلاني', {
             'description': 'يظهر هذا البانر في شريط العرض المتحرك في أعلى الصفحة الرئيسية',
-            'fields': (('title', 'tag_badge'), 'subtitle', 'image', ('button_text', 'button_link'), ('display_order', 'is_active'))
+            'fields': (('title', 'tag_badge'), 'subtitle', 'image', ('button_text', 'display_order', 'is_active'))
+        }),
+        ('تحديد وجهة الرابط عند النقر (بدون كتابة مسار يدوي)', {
+            'description': 'اختر نوع الوجهة وسيقوم النظام بتوليد رابط التوجيه بدقة وأمان تلقائياً عند الحفظ',
+            'fields': (
+                'link_type',
+                ('target_category', 'target_product'),
+                'custom_url',
+                'button_link',
+            )
         }),
         ('خيارات متقدمة', {
             'classes': ('collapse',),
@@ -1172,6 +1190,20 @@ class HeroBannerAdmin(admin.ModelAdmin):
         return format_html(
             '<img src="{}" style="width: 70px; height: 35px; object-fit: cover; border-radius: 4px;" />',
             obj.get_image_url
+        )
+
+    @admin.display(description='الوجهة عند النقر')
+    def destination_badge(self, obj):
+        text = obj.get_link_type_display()
+        if obj.link_type == 'category' and obj.target_category:
+            text = f"قسم: {obj.target_category.name_ar}"
+        elif obj.link_type == 'product' and obj.target_product:
+            text = f"منتج: {obj.target_product.name_ar[:25]}"
+        elif obj.link_type == 'custom' and obj.custom_url:
+            text = f"مخصص: {obj.custom_url[:25]}"
+        return format_html(
+            '<span style="background-color: #fdf2f8; color: #be123f; border: 1px solid #fecdd3; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;">{}</span>',
+            text
         )
 
 

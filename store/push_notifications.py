@@ -104,34 +104,47 @@ def send_web_push(subscription, title, body, url="/", icon=None, badge=None):
         return False
 
 
-def broadcast_web_push(title, body, url="/", icon=None, user_filter=None):
+def broadcast_web_push(title, body, url="/", icon=None, user_filter=None, async_dispatch=None):
     """
     بث إشعار ويب فوري لجميع الأجهزة المشتركة (أو لمستخدم معين)
-    وحفظ الإشعار في مركز الإشعارات بالمتجر
+    وحفظ الإشعار في مركز الإشعارات بالمتجر بشكل غير متزامن لتفادي حظر خادم الويب
     """
-    subscriptions_qs = WebPushSubscription.objects.all()
-    if user_filter:
-        subscriptions_qs = subscriptions_qs.filter(user=user_filter)
+    import sys
+    import threading
 
-    successful_sends = 0
-    for sub in subscriptions_qs:
-        if send_web_push(sub, title=title, body=body, url=url, icon=icon):
-            successful_sends += 1
+    if async_dispatch is None:
+        async_dispatch = ('test' not in sys.argv)
 
-    # Save to notification center in database
-    try:
-        Notification.objects.create(
-            recipient=user_filter,
-            for_admin=False,
-            title=title,
-            message=body,
-            notification_type='promotion' if not user_filter else 'system',
-            link=url or "/"
-        )
-    except Exception as ex:
-        logger.warning(f"Failed to record notification log: {ex}")
+    def _do_push():
+        subscriptions_qs = WebPushSubscription.objects.all()
+        if user_filter:
+            subscriptions_qs = subscriptions_qs.filter(user=user_filter)
 
-    return successful_sends
+        successful_sends = 0
+        for sub in subscriptions_qs:
+            if send_web_push(sub, title=title, body=body, url=url, icon=icon):
+                successful_sends += 1
+
+        # Save to notification center in database
+        try:
+            Notification.objects.create(
+                recipient=user_filter,
+                for_admin=False,
+                title=title,
+                message=body,
+                notification_type='promotion' if not user_filter else 'system',
+                link=url or "/"
+            )
+        except Exception as ex:
+            logger.warning(f"Failed to record notification log: {ex}")
+
+        return successful_sends
+
+    if async_dispatch:
+        thread = threading.Thread(target=_do_push, daemon=True)
+        thread.start()
+        return 1
+    return _do_push()
 
 
 def send_product_promotion_push(product, custom_title=None, custom_body=None):

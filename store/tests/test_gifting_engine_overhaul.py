@@ -329,6 +329,19 @@ class GiftingEngineOverhaulTests(TestCase):
 
         sample_b64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
 
+        # فحص رفض رفع الفاتورة من مستخدم مجهول غير مصرح
+        unauth_res = self.client.post(
+            reverse('store:save_order_invoice_image', kwargs={'order_number': order.order_number}),
+            data=json.dumps({'image_data': sample_b64}),
+            content_type='application/json'
+        )
+        self.assertEqual(unauth_res.status_code, 403)
+
+        # فحص السماح لصاحب الجلسة (العميل الذي أنشأ الطلب)
+        session = self.client.session
+        session['last_order_number'] = order.order_number
+        session.save()
+
         res = self.client.post(
             reverse('store:save_order_invoice_image', kwargs={'order_number': order.order_number}),
             data=json.dumps({'image_data': sample_b64}),

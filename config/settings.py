@@ -301,7 +301,7 @@ from django.urls import reverse_lazy
 
 UNFOLD = {
     "SITE_TITLE": "Brand Veloura | لوحة الإدارة",
-    "SITE_HEADER": "Brand Veloura Boutique",
+    "SITE_HEADER": "Brand Veloura",
     "SITE_SUBHEADER": "المتجر الفاخر للعطور والساعات ومستحضرات التجميل",
     "COLORS": {
         "primary": {

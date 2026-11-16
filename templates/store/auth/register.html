@@ -104,12 +104,11 @@
                 <!-- Email & Phone Grid -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">البريد الإلكتروني *</label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">البريد الإلكتروني <span class="text-[10px] font-normal text-slate-400">(اختياري)</span></label>
                         <div class="relative">
                             <input 
                                 type="email" 
                                 name="email" 
-                                required 
                                 value="{{ email|default:'' }}"
                                 placeholder="name@domain.com" 
                                 class="w-full h-10 bg-white border border-slate-200 focus:border-brand-500 focus:outline-none rounded-xl px-3.5 pr-9 text-xs font-medium text-slate-900 transition"
@@ -119,7 +118,7 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف للتوصيل *</label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف (يُستخدم لتسجيل الدخول) *</label>
                         <div class="relative">
                             <input 
                                 type="tel" 
@@ -132,13 +131,14 @@
                             >
                             <i data-lucide="phone" class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2"></i>
                         </div>
+                        <span class="text-[10px] text-amber-700 font-medium block mt-1">⚠️ رقم الهاتف ثابت ومرتبط بحسابك بشكل دائم لأسباب أمنية.</span>
                     </div>
                 </div>
 
                 <!-- Passwords Grid -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور (6 خانات فأكثر) *</label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">الرمز السري / كلمة المرور (6 خانات فأكثر) *</label>
                         <div class="relative">
                             <input 
                                 type="password" 
@@ -160,7 +160,7 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">تأكيد كلمة المرور *</label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">تأكيد الرمز السري *</label>
                         <div class="relative">
                             <input 
                                 type="password" 
@@ -244,7 +244,7 @@
     }
 
     function triggerGoogleAuth() {
-        window.location.href = "{% url 'store:google_login' %}{% if next_url %}?next={{ next_url }}{% endif %}";
+        window.location.href = "{% url 'store:google_login' %}{% if next_url %}?next={{ next_url|escapejs }}{% endif %}";
     }
 </script>
 {% endblock %}

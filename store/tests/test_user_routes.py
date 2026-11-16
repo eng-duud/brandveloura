@@ -267,18 +267,6 @@ class UserRoutesAndOperationsTests(TestCase):
         self.assertTrue(order.is_luxury_gift_wrapping)
         self.assertEqual(order.recipient_name, 'عمر سعيد')
 
-    def test_track_order(self):
-        """فحص مسار تتبع الطلب وإعادة توجيهه للملف الشخصي أو الرئيسية"""
-        res = self.client.get(reverse('store:track_order'))
-        self.assertEqual(res.status_code, 302)
-        self.assertRedirects(res, reverse('store:home'))
-        
-        # عند تسجيل الدخول يعيد التوجيه للملف الشخصي
-        self.client.force_login(self.user)
-        res_auth = self.client.get(reverse('store:track_order'))
-        self.assertEqual(res_auth.status_code, 302)
-        self.assertRedirects(res_auth, reverse('store:account_profile'))
-
     # 5. اختبارات مصادقة المستخدم والملف الشخصي
     def test_user_register_and_login_flow(self):
         """فحص إنشاء حساب جديد، تسجيل الخروج، ثم الدخول مجدداً"""
@@ -305,11 +293,35 @@ class UserRoutesAndOperationsTests(TestCase):
         })
         self.assertEqual(login_res.status_code, 302)
 
+    def test_user_register_with_phone_only_and_login_with_phone(self):
+        """فحص إنشاء حساب برقم الهاتف فقط بدون بريد إلكتروني، ثم تسجيل الدخول برقم الهاتف والرمز السري"""
+        reg_res = self.client.post(reverse('store:register'), {
+            'name': 'حمزة اليماني',
+            'phone': '779988776',
+            'password': 'SecureCode2026!',
+            'password_confirm': 'SecureCode2026!'
+        })
+        self.assertEqual(reg_res.status_code, 302)
+        profile = UserProfile.objects.filter(phone='779988776').first()
+        self.assertIsNotNone(profile)
+        self.assertEqual(profile.user.first_name, 'حمزة اليماني')
+
+        # تسجيل الخروج
+        self.client.get(reverse('store:logout'))
+
+        # تسجيل الدخول برقم الهاتف والرمز السري
+        login_res = self.client.post(reverse('store:login'), {
+            'identifier': '779988776',
+            'password': 'SecureCode2026!'
+        })
+        self.assertEqual(login_res.status_code, 302)
+        self.assertEqual(int(self.client.session['_auth_user_id']), profile.user.id)
+
     def test_google_auth_demo_callback(self):
-        """فحص مسار الدخول بحساب Google التجريبي"""
+        """فحص منع وإلغاء مسار الدخول بحساب Google التجريبي"""
         res = self.client.get(reverse('store:google_callback') + '?demo=1')
         self.assertEqual(res.status_code, 302)
-        self.assertIn('_auth_user_id', self.client.session)
+        self.assertNotIn('_auth_user_id', self.client.session)
 
     def test_account_profile_view_and_update(self):
         """فحص استعراض وتحديث بيانات الملف الشخصي للمستخدم المسجل"""
@@ -704,6 +716,81 @@ class UserRoutesAndOperationsTests(TestCase):
         self.assertNotContains(res_brand, 'الأسعار بالريال السعودي والمعادل بالريال اليمني')
         self.assertContains(res_brand, 'search-toggle-btn')
         self.assertContains(res_brand, 'catalog-search-row')
+
+    def test_hero_banner_destination_links_auto_generation(self):
+        """فحص توليد روابط أزرار البانرات تلقائياً بناءً على اختيار نوع الوجهة بدون كتابة مسار يدوي"""
+        from store.models import HeroBanner
+
+        # 1. وجهة قسم
+        banner_cat = HeroBanner.objects.create(
+            title='بانر قسم العطور',
+            link_type='category',
+            target_category=self.cat_perfumes,
+        )
+        self.assertEqual(banner_cat.button_link, f"/products/?category={self.cat_perfumes.slug}")
+
+        # 2. وجهة منتج محدد
+        banner_prod = HeroBanner.objects.create(
+            title='بانر منتج خاص',
+            link_type='product',
+            target_product=self.perfume,
+        )
+        self.assertEqual(banner_prod.button_link, f"/products/{self.perfume.slug}/")
+
+        # 3. وجهة صانع الهدايا
+        banner_gift = HeroBanner.objects.create(
+            title='بانر تنسيق الهدايا',
+            link_type='gifting',
+        )
+        self.assertEqual(banner_gift.button_link, '/gifting/')
+
+        # 4. وجهة الماركات
+        banner_brands = HeroBanner.objects.create(
+            title='بانر الماركات العالمية',
+            link_type='brands',
+        )
+        self.assertEqual(banner_brands.button_link, '/brands/')
+
+        # 5. رابط خارجي مخصص
+        banner_custom = HeroBanner.objects.create(
+            title='بانر انستغرام',
+            link_type='custom',
+            custom_url='https://instagram.com/brandveloura',
+        )
+        self.assertEqual(banner_custom.button_link, 'https://instagram.com/brandveloura')
+
+    def test_dynamic_category_sliders_on_homepage(self):
+        """فحص ظهور وتحديث أشرطة الأقسام في الصفحة الرئيسية بسلاسة بناءً على إعدادات القسم"""
+        # إنشاء قسم جديد مفعل كشريط في الرئيسية
+        new_cat = Category.objects.create(
+            name_ar="إكسسوارات فاخرة",
+            slug="luxury-accessories",
+            category_type="general",
+            show_in_home_slider=True,
+            home_slider_order=10,
+            home_slider_title="أفخم الإكسسوارات والهدايا",
+            is_active=True,
+        )
+        Product.objects.create(
+            category=new_cat,
+            name_ar="سوار فاخر مطلي بالذهب",
+            slug="gold-bracelet-test",
+            price_yer=15000,
+            is_active=True
+        )
+
+        res = self.client.get(reverse('store:home'))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'أفخم الإكسسوارات والهدايا')
+        self.assertContains(res, 'سوار فاخر مطلي بالذهب')
+
+        # تعطيل شريط القسم والتحقق من اختفائه
+        new_cat.show_in_home_slider = False
+        new_cat.save()
+
+        res_after = self.client.get(reverse('store:home'))
+        self.assertEqual(res_after.status_code, 200)
+        self.assertNotContains(res_after, 'أفخم الإكسسوارات والهدايا')
 
 
 

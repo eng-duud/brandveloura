@@ -48,7 +48,6 @@ urlpatterns = [
     path('order/success/<str:order_number>/', views.order_success_view, name='order_success_alias'),
     path('gift-slip/<str:order_number>/', views.gift_slip_view, name='gift_slip'),
     path('api/order/<str:order_number>/save-invoice-image/', views.save_order_invoice_image, name='save_order_invoice_image'),
-    path('track-order/', views.track_order_view, name='track_order'),
     
     # بوالص وطباعة كروت الإهداء والفواتير للإدارة
     path('admin/order/<int:order_id>/print-gift-card/', views.admin_print_gift_card, name='admin_print_gift_card'),

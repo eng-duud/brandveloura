@@ -232,7 +232,7 @@ class AdminRoutesAndOperationsTests(TestCase):
         self.assertEqual(res.status_code, 200)
         settings_obj.refresh_from_db()
         self.assertEqual(settings_obj.yer_per_sar, Decimal('410.00'))
-        self.assertEqual(settings_obj.store_name, 'Brand Veloura Boutique')
+        self.assertEqual(settings_obj.store_name, 'Brand Veloura')
 
     def test_admin_hero_banner_add(self):
         """فحص إضافة بانر ترويجي للرئيسية من لوحة الإدارة"""
