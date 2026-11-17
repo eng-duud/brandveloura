@@ -1,4 +1,5 @@
 from decimal import Decimal
+import logging
 import urllib.parse
 import uuid
 from django import forms
@@ -9,6 +10,27 @@ from django.db.models import Count, Q, Sum
 from django.urls import reverse
 from django.contrib.auth.models import Group, User
 from django.contrib.auth.admin import UserAdmin as DefaultUserAdmin
+
+from .cache_service import (
+    cache_get_or_set_safe,
+    invalidate_admin_metrics_cache,
+    invalidate_home_and_catalog_cache,
+)
+
+audit_logger = logging.getLogger('store.admin_audit')
+CONFIRMED_ORDER_STATUSES = ('payment_verified', 'processing', 'out_for_delivery', 'delivered')
+
+
+def _log_admin_audit(request, action, target_desc):
+    actor = getattr(getattr(request, 'user', None), 'username', 'system')
+    actor_id = getattr(getattr(request, 'user', None), 'pk', None)
+    audit_logger.info(
+        "[ADMIN_AUDIT] actor=%s (id=%s) action=%s target=%s",
+        actor,
+        actor_id,
+        action,
+        target_desc,
+    )
 
 # إلغاء تسجيل نموذج المجموعات البرمجية لتخفيف التعقيد عن المستخدم العادي
 try:
@@ -40,27 +62,39 @@ def custom_admin_each_context(request):
         ctx['store_settings'] = settings_obj
         ctx['yer_per_sar'] = settings_obj.yer_per_sar
 
-        from django.core.cache import cache
-        pending_count = cache.get('bv_admin_pending_orders')
-        if pending_count is None:
-            pending_count = Order.objects.filter(status='pending_verification').count()
-            cache.set('bv_admin_pending_orders', pending_count, timeout=10)
+        pending_count = cache_get_or_set_safe(
+            'bv_admin_pending_orders',
+            lambda: Order.objects.filter(status='pending_verification').count(),
+            timeout=15,
+            jitter_ratio=0.0,
+        ) or 0
         ctx['admin_pending_orders'] = pending_count
 
         resolver_match = getattr(request, 'resolver_match', None)
         if getattr(resolver_match, 'namespace', '') == 'admin' and getattr(resolver_match, 'url_name', '') == 'index':
-            order_stats = Order.objects.aggregate(
-                total_orders=Count('id'),
-                pending_orders=Count('id', filter=Q(status='pending_verification')),
-                total_sales_yer=Sum('total_yer', filter=~Q(status='cancelled')),
-                total_sales_sar=Sum('total_sar', filter=~Q(status='cancelled')),
-            )
-            ctx['admin_total_orders'] = order_stats['total_orders'] or 0
-            ctx['admin_pending_orders'] = order_stats['pending_orders'] or 0
-            ctx['admin_total_sales_yer'] = order_stats['total_sales_yer'] or 0
-            ctx['admin_total_sales_sar'] = order_stats['total_sales_sar'] or 0
-            ctx['admin_low_stock_count'] = Product.objects.filter(stock_quantity__lte=3, is_active=True).count()
-            ctx['admin_recent_orders'] = Order.objects.order_by('-created_at')[:6]
+            def _build_dashboard_metrics():
+                order_stats = Order.objects.aggregate(
+                    total_orders=Count('id'),
+                    pending_orders=Count('id', filter=Q(status='pending_verification')),
+                    confirmed_sales_yer=Sum('total_yer', filter=Q(status__in=CONFIRMED_ORDER_STATUSES)),
+                    confirmed_sales_sar=Sum('total_sar', filter=Q(status__in=CONFIRMED_ORDER_STATUSES)),
+                )
+                return {
+                    'admin_total_orders': order_stats['total_orders'] or 0,
+                    'admin_pending_orders': order_stats['pending_orders'] or 0,
+                    'admin_total_sales_yer': order_stats['confirmed_sales_yer'] or 0,
+                    'admin_total_sales_sar': order_stats['confirmed_sales_sar'] or 0,
+                    'admin_low_stock_count': Product.objects.filter(stock_quantity__lte=3, is_active=True).count(),
+                    'admin_recent_orders': list(Order.objects.order_by('-created_at')[:6]),
+                }
+
+            dash_metrics = cache_get_or_set_safe(
+                'bv_admin_dashboard_metrics',
+                _build_dashboard_metrics,
+                timeout=30,
+                jitter_ratio=0.0,
+            ) or {}
+            ctx.update(dash_metrics)
     except Exception:
         pass
     return ctx
@@ -104,6 +138,15 @@ class SimplifiedUserAdmin(DefaultUserAdmin):
         elif obj.is_staff:
             return mark_safe('<span style="background: #0284c7; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">مشرف متجر</span>')
         return mark_safe('<span style="color: #64748b; font-size: 11px;">عميل مسجل</span>')
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if not change or any(f in form.changed_data for f in ('is_staff', 'is_superuser', 'is_active')):
+            _log_admin_audit(
+                request,
+                'user_privilege_update' if change else 'user_created',
+                f"target_user_id={obj.pk} is_staff={obj.is_staff} is_superuser={obj.is_superuser} is_active={obj.is_active}",
+            )
 
 try:
     admin.site.unregister(User)
@@ -339,6 +382,29 @@ class ProductAdminForm(forms.ModelForm):
         return cleaned_data
 
 
+class LowStockListFilter(admin.SimpleListFilter):
+    """فلتر سريع لحالة المخزون يطابق تنبيه لوحة التحكم"""
+    title = 'حالة المخزون'
+    parameter_name = 'low_stock'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('low', 'منخفض أو نافد (≤ 3)'),
+            ('out', 'نفد من المخزون (0)'),
+            ('healthy', 'متوفر (> 3)'),
+        ]
+
+    def queryset(self, request, queryset):
+        val = self.value()
+        if val == 'low':
+            return queryset.filter(stock_quantity__lte=3, is_active=True)
+        if val == 'out':
+            return queryset.filter(stock_quantity__lte=0)
+        if val == 'healthy':
+            return queryset.filter(stock_quantity__gt=3)
+        return queryset
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     form = ProductAdminForm
@@ -348,13 +414,17 @@ class ProductAdmin(admin.ModelAdmin):
         'stock_badge', 'is_featured', 'is_new', 'is_active'
     ]
     list_filter = [
-        'is_active', 'is_featured', 'is_new', 'is_best_seller', 
+        LowStockListFilter, 'is_active', 'is_featured', 'is_new', 'is_best_seller', 
         'has_grades', 'category', 'brand'
     ]
     search_fields = ['name_ar', 'name_en', 'brand__name_ar', 'brand__name_en', 'brand_name', 'sku']
     search_help_text = 'البحث باسم المنتج بالعربي أو الإنجليزي، الماركة (Brand)، أو رمز SKU'
-    date_hierarchy = 'created_at'
     list_per_page = 25
+
+    def lookup_allowed(self, lookup, value):
+        if lookup == 'stock_quantity__lte':
+            return True
+        return super().lookup_allowed(lookup, value)
     list_editable = ['is_featured', 'is_new', 'is_active']
     list_select_related = ['category', 'brand']
     autocomplete_fields = ['category', 'brand']
@@ -583,18 +653,21 @@ class ProductAdmin(admin.ModelAdmin):
                     display_order=img.display_order
                 )
             count += 1
+        _log_admin_audit(request, 'duplicate_products', f"count={count}")
         self.message_user(request, f"تم بنجاح تكرار {count} منتج مع كامل صورهم وتفاصيلهم.")
 
     @admin.action(description='✅ تفعيل وعرض المنتجات المحددة في المتجر')
     def make_active(self, request, queryset):
         updated = queryset.update(is_active=True)
         invalidate_home_and_catalog_cache()
+        _log_admin_audit(request, 'products_make_active', f"count={updated}")
         self.message_user(request, f"تم تفعيل {updated} منتج بنجاح.")
 
     @admin.action(description='🚫 إلغاء تفعيل وإخفاء المنتجات المحددة')
     def make_inactive(self, request, queryset):
         updated = queryset.update(is_active=False)
         invalidate_home_and_catalog_cache()
+        _log_admin_audit(request, 'products_make_inactive', f"count={updated}")
         self.message_user(request, f"تم إخفاء {updated} منتج من واجهة المتجر.")
 
     @admin.action(description='⭐ تمييز في الصفحة الرئيسية (Featured)')
@@ -627,12 +700,14 @@ class ProductAdmin(admin.ModelAdmin):
         total_sent = 0
         for prod in queryset:
             total_sent += send_product_promotion_push(prod)
+        _log_admin_audit(request, 'product_push_campaign', f"products={queryset.count()} sent={total_sent}")
         self.message_user(request, f"تم بنجاح إرسال إشعار ترويجي لـ {queryset.count()} منتج إلى {total_sent} جهاز مشترك!")
 
     @admin.action(description='⚠️ تحديد كـ نفد من المخزون (المخزون = 0)')
     def mark_out_of_stock(self, request, queryset):
         updated = queryset.update(stock_quantity=0)
         invalidate_home_and_catalog_cache()
+        _log_admin_audit(request, 'products_mark_out_of_stock', f"count={updated}")
         self.message_user(request, f"تم تحديد المخزون إلى 0 لـ {updated} منتج.")
 
 
@@ -1073,6 +1148,7 @@ class OrderAdmin(admin.ModelAdmin):
             order.status = 'delivered'
             order.save()
             count += 1
+        _log_admin_audit(request, 'orders_bulk_delivered', f"count={count}")
         self.message_user(request, f'تم تحديث {count} طلب إلى مكتمل ومسلم.')
 
     @admin.action(description='إلغاء الطلبات واسترجاع كمياتها للمخزون آلياً ♻️')
@@ -1082,6 +1158,7 @@ class OrderAdmin(admin.ModelAdmin):
             order.status = 'cancelled'
             order.save()
             restored_count += 1
+        _log_admin_audit(request, 'orders_bulk_cancelled', f"count={restored_count}")
         self.message_user(request, f'تم إلغاء {restored_count} طلب واسترجاع كميات منتجاتها إلى المخزون فوراً.')
 
     def save_model(self, request, obj, form, change):
@@ -1092,6 +1169,12 @@ class OrderAdmin(admin.ModelAdmin):
             except Exception:
                 pass
         super().save_model(request, obj, form, change)
+        if old_status != obj.status:
+            _log_admin_audit(
+                request,
+                'order_status_change',
+                f"order={obj.order_number} from={old_status} to={obj.status}",
+            )
         if old_status and old_status != obj.status:
             from .push_notifications import send_order_status_push
             sent = send_order_status_push(obj, obj.status)
@@ -1154,6 +1237,18 @@ class StoreSettingsAdmin(admin.ModelAdmin):
         if self.model.objects.exists():
             return False
         return True
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        safe_changed = [
+            f for f in getattr(form, 'changed_data', [])
+            if 'secret' not in f and 'private' not in f and 'key' not in f
+        ]
+        _log_admin_audit(
+            request,
+            'store_settings_updated',
+            f"yer_per_sar={obj.yer_per_sar} cart_reservation_minutes={obj.cart_reservation_minutes} fields={safe_changed}",
+        )
 
 
 # ==============================================================================

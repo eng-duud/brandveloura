@@ -125,15 +125,12 @@ class StoreSettings(models.Model):
 
     @classmethod
     def get_settings(cls):
-        from django.core.cache import cache
         from django.db import connection
+        from .cache_service import cache_get, cache_set
 
         cache_key = 'bv_store_settings'
         use_cache = not connection.in_atomic_block
-        try:
-            settings_obj = cache.get(cache_key) if use_cache else None
-        except Exception:
-            settings_obj = None
+        settings_obj = cache_get(cache_key) if use_cache else None
 
         if settings_obj is None:
             settings_obj = cls.objects.first()
@@ -177,34 +174,25 @@ class StoreSettings(models.Model):
                     pass
 
             if use_cache:
-                try:
-                    cache.set(cache_key, settings_obj, timeout=60)
-                except Exception:
-                    pass
+                cache_set(cache_key, settings_obj, timeout=120)
 
         return settings_obj
 
     @classmethod
     def get_exchange_rate(cls):
         """الحصول على سعر الصرف المعتمد من الكاش السريع لتفادي N+1 استعلامات في القوائم والمنتجات"""
-        try:
-            from django.core.cache import cache
-            cached_rate = cache.get('bv_yer_per_sar')
-            if cached_rate is not None:
-                return cached_rate
-        except Exception:
-            pass
+        from .cache_service import cache_get, cache_set
+
+        cached_rate = cache_get('bv_yer_per_sar')
+        if cached_rate is not None:
+            return cached_rate
 
         rate = cls.objects.values_list('yer_per_sar', flat=True).first()
         if not rate:
             settings_obj = cls.get_settings()
             rate = settings_obj.yer_per_sar or Decimal('530.00')
 
-        try:
-            from django.core.cache import cache
-            cache.set('bv_yer_per_sar', rate, timeout=300)
-        except Exception:
-            pass
+        cache_set('bv_yer_per_sar', rate, timeout=300)
         return rate
 
     def clean(self):

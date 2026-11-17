@@ -50,6 +50,7 @@
                 id="brands-search-form"
                 hx-get="{% url 'store:brands_list' %}"
                 hx-target="#brands-grid"
+                hx-swap="outerHTML"
                 hx-indicator="#brands-loading-spinner"
                 hx-push-url="true"
                 class="relative"

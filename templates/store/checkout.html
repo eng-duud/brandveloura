@@ -186,6 +186,7 @@
                                 hx-get="{% url 'store:get_shipping_fee' %}" 
                                 hx-include="#checkout-form"
                                 hx-target="#checkout-totals" 
+                                hx-swap="outerHTML"
                                 hx-trigger="change"
                                 class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 cursor-pointer"
                                 {% if is_gift_active %}disabled{% else %}required{% endif %}
@@ -337,6 +338,7 @@
                                 hx-get="{% url 'store:get_shipping_fee' %}" 
                                 hx-include="#checkout-form"
                                 hx-target="#checkout-totals" 
+                                hx-swap="outerHTML"
                                 hx-trigger="change"
                                 class="w-full h-10 bg-white border border-pink-200 rounded-xl px-3 text-xs font-medium text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 cursor-pointer"
                                 {% if is_gift_active %}required{% else %}disabled{% endif %}
@@ -451,6 +453,7 @@
                                 hx-get="{% url 'store:get_shipping_fee' %}" 
                                 hx-include="#checkout-form"
                                 hx-target="#checkout-totals" 
+                                hx-swap="outerHTML"
                                 class="w-4 h-4 text-brand-500 rounded focus:ring-brand-500 cursor-pointer"
                                 {% if not is_gift_active %}disabled{% endif %}
                             >

@@ -85,6 +85,8 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 # Global Session & Long-Lived Cookie Configuration (365-Day Rolling Session)
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+SESSION_CACHE_ALIAS = 'sessions'
 SESSION_COOKIE_AGE = 86400 * 365  # 1 full year persistent shopping & auth session
 SESSION_SAVE_EVERY_REQUEST = True  # Automatically renews/slides cookie expiration on every visit
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
@@ -112,24 +114,57 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
 # Caching Configuration (LocMemCache default, Redis if REDIS_URL provided)
 REDIS_URL = os.getenv('REDIS_URL') or os.getenv('REDIS_TLS_URL')
+_REDIS_SOCKET_TIMEOUT = float(os.getenv('REDIS_SOCKET_TIMEOUT', '2.0'))
+_REDIS_CONNECT_TIMEOUT = float(os.getenv('REDIS_CONNECT_TIMEOUT', '2.0'))
 if REDIS_URL and 'test' not in sys.argv:
+    _redis_options = {
+        'socket_connect_timeout': _REDIS_CONNECT_TIMEOUT,
+        'socket_timeout': _REDIS_SOCKET_TIMEOUT,
+        'retry_on_timeout': True,
+        'health_check_interval': 30,
+    }
+    if REDIS_URL.startswith('rediss://') and os.getenv('REDIS_SSL_CERT_REQS', '').lower() == 'none':
+        _redis_options['ssl_cert_reqs'] = None
     CACHES = {
         'default': {
-            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'BACKEND': 'store.cache_backend.ResilientRedisCache',
             'LOCATION': REDIS_URL,
+            'KEY_PREFIX': 'veloura_cat',
+            'VERSION': 1,
             'TIMEOUT': 300,
-        }
+            'OPTIONS': dict(_redis_options),
+        },
+        'sessions': {
+            'BACKEND': 'store.cache_backend.ResilientRedisCache',
+            'LOCATION': REDIS_URL,
+            'KEY_PREFIX': 'veloura_sess',
+            'VERSION': 1,
+            'TIMEOUT': 86400 * 7,
+            'OPTIONS': dict(_redis_options),
+        },
     }
 else:
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-            'LOCATION': 'brandveloura-cache',
+            'LOCATION': 'veloura-default-cache',
+            'KEY_PREFIX': 'veloura_cat',
+            'VERSION': 1,
             'TIMEOUT': 300,
             'OPTIONS': {
+                'MAX_ENTRIES': 3000,
+            },
+        },
+        'sessions': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'veloura-sessions-cache',
+            'KEY_PREFIX': 'veloura_sess',
+            'VERSION': 1,
+            'TIMEOUT': 86400 * 7,
+            'OPTIONS': {
                 'MAX_ENTRIES': 2000,
-            }
-        }
+            },
+        },
     }
 
 
@@ -154,6 +189,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'store.middleware.PerformanceAndObservabilityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -198,7 +234,7 @@ elif DATABASE_URL and 'username:password' not in DATABASE_URL:
         DATABASES = {
             'default': dj_database_url.config(
                 default=DATABASE_URL,
-                conn_max_age=600,
+                conn_max_age=int(os.getenv('DB_CONN_MAX_AGE', '600')),
                 conn_health_checks=True,
             )
         }
@@ -213,6 +249,8 @@ elif DATABASE_URL and 'username:password' not in DATABASE_URL:
                 'PASSWORD': unquote(url.password or ''),
                 'HOST': url.hostname,
                 'PORT': url.port or 5432,
+                'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '600')),
+                'CONN_HEALTH_CHECKS': True,
             }
         }
 else:
@@ -306,6 +344,11 @@ LOGGING = {
         'django.request': {
             'handlers': ['console'],
             'level': 'ERROR',
+            'propagate': False,
+        },
+        'store': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
             'propagate': False,
         },
     },

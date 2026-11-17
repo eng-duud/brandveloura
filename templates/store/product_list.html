@@ -105,6 +105,7 @@
                             href="{% url 'store:product_list' %}?category={{ main_category.slug }}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
                             hx-get="{% url 'store:product_list' %}?category={{ main_category.slug }}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
                             hx-target="#product-grid"
+                            hx-swap="outerHTML"
                             hx-push-url="true"
                             class="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 {% if not active_subcategory %}bg-slate-900 text-white shadow-xs{% else %}bg-pink-50/70 hover:bg-pink-100 text-slate-700 border border-pink-200/60{% endif %}"
                         >
@@ -117,6 +118,7 @@
                             href="{% url 'store:product_list' %}?category={{ main_category.slug }}&subcategory={{ sub.slug }}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
                             hx-get="{% url 'store:product_list' %}?category={{ main_category.slug }}&subcategory={{ sub.slug }}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
                             hx-target="#product-grid"
+                            hx-swap="outerHTML"
                             hx-push-url="true"
                             class="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 {% if active_subcategory and active_subcategory.slug == sub.slug %}bg-slate-900 text-white shadow-xs{% else %}bg-pink-50/70 hover:bg-pink-100 text-slate-700 border border-pink-200/60{% endif %}"
                         >
@@ -129,6 +131,7 @@
                             href="{% url 'store:product_list' %}"
                             hx-get="{% url 'store:product_list' %}"
                             hx-target="#product-grid"
+                            hx-swap="outerHTML"
                             hx-push-url="true"
                             class="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 bg-slate-900 text-white shadow-xs"
                         >
@@ -194,6 +197,7 @@
                     href="{{ catalog_reset_url }}" 
                     hx-get="{{ catalog_reset_url }}" 
                     hx-target="#product-grid" 
+                    hx-swap="outerHTML"
                     hx-push-url="true"
                     class="inline-flex items-center gap-1 text-rose-600 hover:text-rose-700 font-bold transition text-[11px] py-1 px-2 rounded-lg hover:bg-rose-50 cursor-pointer"
                 >
@@ -366,6 +370,7 @@
                             href="{{ catalog_reset_url }}" 
                             hx-get="{{ catalog_reset_url }}" 
                             hx-target="#product-grid" 
+                            hx-swap="outerHTML"
                             hx-push-url="true"
                             onclick="closeFilterDrawer()"
                             class="py-3 px-4 rounded-xl border border-pink-200 text-slate-700 hover:bg-pink-50 font-bold text-xs transition cursor-pointer text-center"

@@ -2,38 +2,35 @@ import copy
 import os
 import time
 from decimal import Decimal
+from django.db.models import Prefetch
+from .cache_service import cache_get_or_set_safe
 from .models import StoreSettings, Category
 
 
 def store_context(request):
     """سياق عام يتم تمريره تلقائياً لكافة صفحات وقوالب المتجر"""
-    from django.core.cache import cache
     settings = copy.copy(StoreSettings.get_settings())
-    
-    categories = cache.get('bv_active_categories')
-    if categories is None:
-        categories = list(Category.objects.filter(is_active=True).order_by('display_order'))
-        try:
-            cache.set('bv_active_categories', categories, timeout=300)
-        except Exception:
-            pass
 
-    main_categories = cache.get('bv_main_categories')
-    if main_categories is None:
-        from django.db.models import Prefetch
-        sub_prefetch = Prefetch(
-            'subcategories',
-            queryset=Category.objects.filter(is_active=True).order_by('display_order', 'name_ar')
-        )
-        main_categories = list(
+    categories = cache_get_or_set_safe(
+        'bv_active_categories',
+        lambda: list(Category.objects.filter(is_active=True).order_by('display_order')),
+        timeout=300,
+    )
+
+    main_categories = cache_get_or_set_safe(
+        'bv_main_categories',
+        lambda: list(
             Category.objects.filter(is_active=True, parent__isnull=True)
-            .prefetch_related(sub_prefetch)
+            .prefetch_related(
+                Prefetch(
+                    'subcategories',
+                    queryset=Category.objects.filter(is_active=True).order_by('display_order', 'name_ar'),
+                )
+            )
             .order_by('display_order', 'name_ar')
-        )
-        try:
-            cache.set('bv_main_categories', main_categories, timeout=300)
-        except Exception:
-            pass
+        ),
+        timeout=300,
+    )
     
     # حساب عدد عناصر السلة واستعادتها تلقائياً للمستخدم المسجل إن كانت الجلسة فارغة
     cart = request.session.get('cart')
@@ -81,26 +78,20 @@ def store_context(request):
     if request.user.is_authenticated:
         from .models import Notification
         user_cache_key = f'bv_unread_notifications_user_{request.user.pk}'
-        unread_notifications_count = cache.get(user_cache_key)
-        if unread_notifications_count is None:
-            unread_notifications_count = Notification.objects.filter(
-                recipient=request.user, is_read=False
-            ).count()
-            try:
-                cache.set(user_cache_key, unread_notifications_count, timeout=10)
-            except Exception:
-                pass
+        unread_notifications_count = cache_get_or_set_safe(
+            user_cache_key,
+            lambda: Notification.objects.filter(recipient=request.user, is_read=False).count(),
+            timeout=15,
+            jitter_ratio=0.0,
+        ) or 0
         if request.user.is_staff:
             admin_cache_key = 'bv_admin_unread_notifications'
-            admin_unread_notifications_count = cache.get(admin_cache_key)
-            if admin_unread_notifications_count is None:
-                admin_unread_notifications_count = Notification.objects.filter(
-                    for_admin=True, is_read=False
-                ).count()
-                try:
-                    cache.set(admin_cache_key, admin_unread_notifications_count, timeout=10)
-                except Exception:
-                    pass
+            admin_unread_notifications_count = cache_get_or_set_safe(
+                admin_cache_key,
+                lambda: Notification.objects.filter(for_admin=True, is_read=False).count(),
+                timeout=15,
+                jitter_ratio=0.0,
+            ) or 0
 
     # ضمان انعكاس متغيرات البيئة فورياً في المتجر (WhatsApp, Phone, Instagram)
     env_phone = os.getenv('STORE_PHONE', '').strip()

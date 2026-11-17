@@ -51,7 +51,7 @@
         </div>
 
         <!-- Low Stock Alerts Card -->
-        <a href="{% url 'admin:store_product_changelist' %}?stock_quantity__lte=3" style="text-decoration: none;" class="bv-kpi-card">
+        <a href="{% url 'admin:store_product_changelist' %}?low_stock=low" style="text-decoration: none;" class="bv-kpi-card">
             <div class="bv-kpi-info">
                 <h4 style="color: #dc2626;">تنبيهات انخفاض المخزون</h4>
                 <div class="bv-kpi-val" style="color: #dc2626;">{{ admin_low_stock_count|default:"0" }}</div>

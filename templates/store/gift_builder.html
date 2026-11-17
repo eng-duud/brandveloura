@@ -192,6 +192,7 @@
         hx-post="{% url 'store:gift_calculate' %}"
         hx-trigger="change"
         hx-target="#gift-summary-card"
+        hx-swap="outerHTML"
         onsubmit="return validateGiftBuilderForm()"
     >
         {% csrf_token %}

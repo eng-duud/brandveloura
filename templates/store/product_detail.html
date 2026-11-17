@@ -311,7 +311,7 @@
             {% endif %}
 
             <!-- Immediate Add to Cart & Buy Actions Form -->
-            <form hx-post="{% url 'store:cart_add' %}" hx-target="#cart-badge-container" class="space-y-3 pt-1">
+            <form hx-post="{% url 'store:cart_add' %}" hx-target="#cart-badge-container" hx-disabled-elt="find button[type='submit']" class="space-y-3 pt-1">
                 <input type="hidden" name="product_id" value="{{ product.id }}">
                 <input type="hidden" id="selected-grade-input" name="grade" value="{% if product.has_grades %}{% if product.price_original_yer %}original{% else %}master{% endif %}{% endif %}">
                 

@@ -85,16 +85,20 @@
                         <button 
                             hx-post="{% url 'store:cart_update' %}" 
                             hx-target="#cart-container"
+                            hx-swap="outerHTML"
+                            hx-disabled-elt="this"
                             hx-vals='{"item_key": "{{ item.key }}", "action": "decrease"}'
-                            class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-pink-50 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer transition"
+                            class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-pink-50 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer transition disabled:opacity-50"
                             aria-label="تقليل الكمية"
                         >-</button>
                         <span class="w-7 sm:w-8 text-center text-xs font-bold font-num text-slate-900">{{ item.quantity }}</span>
                         <button 
                             hx-post="{% url 'store:cart_update' %}" 
                             hx-target="#cart-container"
+                            hx-swap="outerHTML"
+                            hx-disabled-elt="this"
                             hx-vals='{"item_key": "{{ item.key }}", "action": "increase"}'
-                            class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-pink-50 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer transition"
+                            class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-pink-50 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer transition disabled:opacity-50"
                             aria-label="زيادة الكمية"
                         >+</button>
                     </div>
@@ -109,8 +113,10 @@
                     <button 
                         hx-post="{% url 'store:cart_remove' %}" 
                         hx-target="#cart-container"
+                        hx-swap="outerHTML"
+                        hx-disabled-elt="this"
                         hx-vals='{"item_key": "{{ item.key }}"}'
-                        class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                        class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer disabled:opacity-50"
                         title="حذف من السلة"
                         aria-label="حذف العنصر"
                     >
@@ -227,7 +233,7 @@
                 clearInterval(window._cartTimerInterval);
                 timerEl.textContent = '00:00';
                 if (typeof htmx !== 'undefined') {
-                    htmx.ajax('GET', '{% url "store:cart_view" %}', {target: '#cart-container'});
+                    htmx.ajax('GET', '{% url "store:cart_view" %}', {target: '#cart-container', swap: 'outerHTML'});
                 } else {
                     window.location.reload();
                 }

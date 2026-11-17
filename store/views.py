@@ -42,6 +42,32 @@ from .models import (
     Order, OrderItem, HeroBanner, UserProfile, Notification,
     WebPushSubscription, GiftBundle, GiftBundleItem
 )
+from .cache_service import (
+    cache_delete,
+    cache_get,
+    cache_get_or_set_safe,
+    cache_set,
+    invalidate_admin_metrics_cache,
+    invalidate_notification_cache,
+    invalidate_product_cache,
+    make_brands_list_key,
+    make_catalog_brands_key,
+    make_gift_builder_catalog_key,
+    make_product_gallery_key,
+    make_product_related_key,
+    schedule_invalidation,
+)
+
+audit_logger = logging.getLogger('store.admin_audit')
+
+
+def _parse_int_id(raw_val):
+    """Parse positive integer ID safely from user/query input without raising ValueError."""
+    try:
+        val = int(str(raw_val).strip())
+        return val if val > 0 else None
+    except (TypeError, ValueError):
+        return None
 
 logger = logging.getLogger(__name__)
 
@@ -262,7 +288,7 @@ def get_home_deferred_context(request):
                     'products': prods,
                 })
 
-    ready_gift_bundles = list(GiftBundle.objects.filter(is_active=True).prefetch_related('items__product').order_by('display_order', '-created_at')[:8])
+    ready_gift_bundles = list(GiftBundle.objects.filter(is_active=True).prefetch_related('items__product__images').order_by('display_order', '-created_at')[:8])
     if ready_gift_bundles:
         gift_bundles = ready_gift_bundles
     else:
@@ -318,28 +344,18 @@ def get_home_deferred_context(request):
 
 def home_deferred_content_view(request):
     """استرجاع وعرض الأشرطة السفلية للصفحة الرئيسية مع كاشينج دجانغو فائق السرعة"""
-    from django.core.cache import cache
-    from django.http import HttpResponse
-    
     active_currency = request.session.get('active_currency', 'YER')
     cache_key = f'bv_home_deferred_html_{active_currency}'
-    
+
     if not request.GET.get('nocache'):
-        try:
-            cached_html = cache.get(cache_key)
-            if cached_html:
-                return HttpResponse(cached_html, content_type='text/html; charset=utf-8')
-        except Exception:
-            pass
-            
+        cached_html = cache_get(cache_key)
+        if cached_html:
+            return HttpResponse(cached_html, content_type='text/html; charset=utf-8')
+
     context = get_home_deferred_context(request)
     response = render(request, 'store/partials/home_deferred_content.html', context)
-    
-    try:
-        cache.set(cache_key, response.content.decode('utf-8'), timeout=900)
-    except Exception:
-        pass
-        
+
+    cache_set(cache_key, response.content.decode('utf-8'), timeout=900)
     return response
 
 
@@ -406,24 +422,35 @@ def brands_list_view(request):
     """دليل وتصنيف كافة الماركات والبراندات العالمية الفاخرة بالمتجر"""
     from django.db.models import Count
     search_query = request.GET.get('q', '').strip()
-    
-    brands = Brand.objects.filter(is_active=True).annotate(
-        products_count=Count('products', filter=Q(products__is_active=True))
-    ).prefetch_related('categories')
-    
-    if search_query:
-        brands = brands.filter(
-            Q(name_ar__icontains=search_query) |
-            Q(name_en__icontains=search_query) |
-            Q(description__icontains=search_query)
+
+    if not search_query:
+        brands = cache_get_or_set_safe(
+            make_brands_list_key(),
+            lambda: list(
+                Brand.objects.filter(is_active=True)
+                .annotate(products_count=Count('products', filter=Q(products__is_active=True)))
+                .prefetch_related('categories')
+                .order_by('display_order', '-products_count', 'name_ar')
+            ),
+            timeout=300,
+        ) or []
+    else:
+        brands = list(
+            Brand.objects.filter(is_active=True)
+            .filter(
+                Q(name_ar__icontains=search_query) |
+                Q(name_en__icontains=search_query) |
+                Q(description__icontains=search_query)
+            )
+            .annotate(products_count=Count('products', filter=Q(products__is_active=True)))
+            .prefetch_related('categories')
+            .order_by('display_order', '-products_count', 'name_ar')
         )
-        
-    brands = brands.order_by('display_order', '-products_count', 'name_ar')
     
     context = {
         'brands': brands,
         'search_query': search_query,
-        'total_count': brands.count(),
+        'total_count': len(brands),
     }
     
     if _is_htmx_partial(request):
@@ -531,35 +558,51 @@ def product_list_view(request):
     min_price = request.GET.get('min_price', '').strip()
     max_price = request.GET.get('max_price', '').strip()
     
-    # جلب كافة الأقسام الرئيسية الفعالة للشريط العلوي
-    all_main_categories = list(Category.objects.filter(is_active=True, parent__isnull=True).order_by('display_order', 'id'))
-    
+    # استرجاع كافة الأقسام النشطة من الكاش (تجنب 4 استعلامات متكررة للأقسام في كل طلب)
+    active_cats = cache_get_or_set_safe(
+        'bv_active_categories',
+        lambda: list(Category.objects.filter(is_active=True).order_by('display_order', 'id')),
+        timeout=300,
+    ) or []
+    cats_by_id = {c.id: c for c in active_cats}
+    cats_by_slug = {c.slug: c for c in active_cats}
+    children_map = {}
+    for c in active_cats:
+        children_map.setdefault(c.parent_id, []).append(c)
+
+    def _descendants_ids(root_id):
+        res, queue = [], [root_id]
+        while queue:
+            cid = queue.pop(0)
+            if cid not in res:
+                res.append(cid)
+                queue.extend(ch.id for ch in children_map.get(cid, []))
+        return res
+
+    all_main_categories = sorted(children_map.get(None, []), key=lambda c: (c.display_order, c.id))
+
     current_category = None
     main_category = None
     active_subcategory = None
     category_subcategories = []
 
     if category_slug:
-        current_category = Category.objects.filter(slug=category_slug, is_active=True).first()
+        current_category = cats_by_slug.get(category_slug)
         if current_category:
-            if current_category.parent is None:
-                # هذا قسم رئيسي
+            if current_category.parent_id is None:
                 main_category = current_category
-                category_subcategories = list(main_category.subcategories.filter(is_active=True).order_by('display_order', 'name_ar'))
+                category_subcategories = sorted(children_map.get(main_category.id, []), key=lambda c: (c.display_order, c.name_ar))
                 if subcategory_slug:
-                    active_subcategory = main_category.subcategories.filter(slug=subcategory_slug, is_active=True).first()
-                    if active_subcategory:
-                        products = products.filter(category=active_subcategory)
-                    else:
-                        products = products.filter(category_id__in=main_category.get_descendants_and_self_ids())
-                else:
-                    products = products.filter(category_id__in=main_category.get_descendants_and_self_ids())
+                    sub_cand = cats_by_slug.get(subcategory_slug)
+                    if sub_cand and sub_cand.parent_id == main_category.id:
+                        active_subcategory = sub_cand
+                target_cat_ids = _descendants_ids(active_subcategory.id if active_subcategory else main_category.id)
+                products = products.filter(category_id__in=target_cat_ids)
             else:
-                # الرابط يشير مباشرة إلى تصنيف فرعي
                 active_subcategory = current_category
-                main_category = current_category.parent
-                category_subcategories = list(main_category.subcategories.filter(is_active=True).order_by('display_order', 'name_ar'))
-                products = products.filter(category=active_subcategory)
+                main_category = cats_by_id.get(current_category.parent_id) or current_category.parent
+                category_subcategories = sorted(children_map.get(main_category.id, []), key=lambda c: (c.display_order, c.name_ar))
+                products = products.filter(category_id__in=_descendants_ids(active_subcategory.id))
 
     # إذا لم يتم تحديد قسم، نعتمد القسم الافتراضي المحدد من قبل الإدارة من مكان واحد (إعدادات المتجر)
     if not main_category and all_main_categories:
@@ -571,15 +614,14 @@ def product_list_view(request):
         except Exception:
             pass
 
-        # في حال لم يتم تحديد قسم في إعدادات المتجر، نتحقق من وجود قسم افتراضي مسبق أو قسم العطور أو أول قسم
         if not default_cat:
             default_cat = next((c for c in all_main_categories if getattr(c, 'is_default', False)), None)
         if not default_cat:
             default_cat = next((c for c in all_main_categories if c.slug == 'perfumes' or 'عطور' in c.name_ar), None)
         main_category = default_cat or all_main_categories[0]
         current_category = main_category
-        category_subcategories = list(main_category.subcategories.filter(is_active=True).order_by('display_order', 'name_ar'))
-        products = products.filter(category_id__in=main_category.get_descendants_and_self_ids())
+        category_subcategories = sorted(children_map.get(main_category.id, []), key=lambda c: (c.display_order, c.name_ar))
+        products = products.filter(category_id__in=_descendants_ids(main_category.id))
     elif not main_category and not all_main_categories:
         category_subcategories = []
 
@@ -636,22 +678,34 @@ def product_list_view(request):
     else: # newest
         products = products.order_by('-created_at')
         
-    # الماركات المتوفرة للفلترة في سياق هذا القسم
+    # الماركات المتوفرة للفلترة في سياق هذا القسم (كاش مع إزالة ترتيب النموذج الافتراضي لمنع DISTINCT المكرر)
     if main_category:
-        cat_ids = main_category.get_descendants_and_self_ids()
-        available_brands = list(
-            Product.objects.filter(category_id__in=cat_ids, is_active=True)
-            .exclude(brand_name='')
-            .values_list('brand_name', flat=True)
-            .distinct()
-        )
+        available_brands = cache_get_or_set_safe(
+            make_catalog_brands_key(main_category.id),
+            lambda: list(
+                Product.objects.filter(
+                    category_id__in=main_category.get_descendants_and_self_ids(),
+                    is_active=True,
+                )
+                .exclude(brand_name='')
+                .order_by('brand_name')
+                .values_list('brand_name', flat=True)
+                .distinct()
+            ),
+            timeout=300,
+        ) or []
     else:
-        available_brands = list(
-            Product.objects.filter(is_active=True)
-            .exclude(brand_name='')
-            .values_list('brand_name', flat=True)
-            .distinct()
-        )
+        available_brands = cache_get_or_set_safe(
+            make_catalog_brands_key(None),
+            lambda: list(
+                Product.objects.filter(is_active=True)
+                .exclude(brand_name='')
+                .order_by('brand_name')
+                .values_list('brand_name', flat=True)
+                .distinct()
+            ),
+            timeout=300,
+        ) or []
 
     # احتساب الفلاتر النشطة لعداد الأيقونة
     active_filters_count = 0
@@ -732,16 +786,26 @@ def product_detail_view(request, slug):
         return product_quick_view(request, slug)
 
     product = get_object_or_404(
-        Product.objects.select_related('category').prefetch_related('images'), 
-        slug=slug, 
+        Product.objects.select_related('category', 'brand').prefetch_related('images'),
+        slug=slug,
         is_active=True
     )
-    images = product.images.all()
-    
-    # منتجات ذات صلة من نفس القسم مع تفادي N+1
-    related_products = Product.objects.filter(
-        category=product.category, is_active=True
-    ).exclude(id=product.id).select_related('category').prefetch_related('images')[:4]
+    images = cache_get_or_set_safe(
+        make_product_gallery_key(product.id),
+        lambda: list(product.images.all()),
+        timeout=180,
+    ) or []
+
+    related_products = cache_get_or_set_safe(
+        make_product_related_key(product.id),
+        lambda: list(
+            Product.objects.filter(category=product.category, is_active=True)
+            .exclude(id=product.id)
+            .select_related('category', 'brand')
+            .prefetch_related('images')[:4]
+        ),
+        timeout=180,
+    ) or []
     
     context = {
         'product': product,
@@ -1165,21 +1229,24 @@ def toggle_currency(request):
 
 def get_shipping_fee(request):
     """حساب رسوم الشحن والتغليف عند اختيار المدينة أو خيار الهدية لحظياً عبر HTMX"""
-    city_id = request.GET.get('shipping_city') or request.GET.get('city_id')
+    city_id = _parse_int_id(request.GET.get('shipping_city') or request.GET.get('city_id'))
     order_type = request.GET.get('order_type', 'personal')
     is_gift = (order_type == 'gift') or (request.GET.get('is_gift') in ['true', '1', 'on'])
     is_gift_wrapping = (request.GET.get('is_luxury_gift_wrapping') in ['true', '1', 'on']) if is_gift else False
-    
+
     shipping_fee = Decimal('0.00')
     delivery_time = 'خلال 24-48 ساعة'
-    
+
     if city_id:
-        try:
-            zone = ShippingZone.objects.get(id=city_id, is_active=True)
+        zones_map = cache_get_or_set_safe(
+            'bv_shipping_zones_active',
+            lambda: {z.id: z for z in ShippingZone.objects.filter(is_active=True)},
+            timeout=300,
+        ) or {}
+        zone = zones_map.get(city_id)
+        if zone:
             shipping_fee = zone.delivery_fee_yer
             delivery_time = zone.estimated_delivery_time
-        except (ShippingZone.DoesNotExist, ValueError):
-            pass
             
     settings = StoreSettings.get_settings()
     gift_wrapping_fee = settings.gift_wrapping_fee_yer if is_gift_wrapping else Decimal('0.00')
@@ -1285,94 +1352,8 @@ def gift_builder_view(request):
     yer_per_sar = settings.yer_per_sar or Decimal('530.00')
     wrapping_fee = settings.gift_wrapping_fee_yer or Decimal('2500.00')
 
-    bundle_slug = request.GET.get('bundle_slug') or request.GET.get('bundle')
-    bundle_id = request.GET.get('bundle_id')
-    selected_gift_bundle = None
-    selected_bundle = None
-
-    if bundle_slug:
-        selected_gift_bundle = GiftBundle.objects.filter(slug=bundle_slug, is_active=True).prefetch_related('items__product').first()
-    elif bundle_id:
-        selected_gift_bundle = GiftBundle.objects.filter(id=bundle_id, is_active=True).prefetch_related('items__product').first()
-        if not selected_gift_bundle:
-            selected_bundle = Product.objects.filter(id=bundle_id, is_active=True).first()
-
-    perfume_id = request.GET.get('perfume_id')
-    selected_perfume = None
-    if perfume_id:
-        selected_perfume = Product.objects.filter(id=perfume_id, is_active=True).first()
-
-    initial_grade = request.GET.get('grade', 'all').strip().lower()
-    if initial_grade not in ['all', 'original', 'master']:
-        initial_grade = 'all'
-
-    # 1. جلب العطور الفاخرة بشكل مرن وقوي يشمل الأقسام والـ slug والاسم مع ضمان عدم ظهور القائمة فارغة
-    from django.db.models import Q
-    perfume_q = (
-        Q(category__category_type='perfumes') |
-        Q(category__parent__category_type='perfumes') |
-        Q(category__slug__icontains='perfume') |
-        Q(category__name_ar__icontains='عطر') |
-        Q(category__name_ar__icontains='عطور') |
-        Q(name_ar__icontains='عطر')
-    )
-
-    perfumes_base = Product.objects.filter(
-        perfume_q, is_active=True
-    ).exclude(category__category_type='bundles').select_related('category', 'brand').prefetch_related('images')
-    
-    # محاولة جلب العطور التي لديها مخزون موجب أولاً، ثم جميع العطور النشطة كضمان
-    perfumes = list(perfumes_base.filter(stock_quantity__gt=0).order_by('-is_featured', '-is_best_seller', '-created_at')[:48])
-    if not perfumes:
-        perfumes = list(perfumes_base.order_by('-is_featured', '-is_best_seller', '-created_at')[:48])
-    
-    # في حال لم تتطابق أي فلاتر تصنيف (مثلاً في بيئة جديدة أو أسماء أقسام مختلفة)، نعرض كافة المنتجات النشطة بالمتجر كـ Fallback فوري
-    if not perfumes:
-        perfumes = list(Product.objects.filter(is_active=True).exclude(category__category_type='bundles').select_related('category', 'brand').prefetch_related('images').order_by('-is_featured', '-created_at')[:36])
-
-    # 2. جلب الملحقات (ساعات، مستحضرات تجميل، عناية) بشكل مرن وشامل
-    acc_q = (
-        Q(category__category_type__in=['watches', 'cosmetics', 'care']) |
-        Q(category__parent__category_type__in=['watches', 'cosmetics', 'care']) |
-        Q(category__slug__in=['watches', 'cosmetics', 'care']) |
-        Q(category__name_ar__icontains='ساع') |
-        Q(category__name_ar__icontains='مكياج') |
-        Q(category__name_ar__icontains='تجميل') |
-        Q(category__name_ar__icontains='عناية')
-    )
-    selected_perfume_pids = set(p.id for p in perfumes)
-    accessories_base = Product.objects.filter(
-        acc_q, is_active=True
-    ).exclude(category__category_type='bundles').exclude(id__in=selected_perfume_pids).select_related('category', 'brand').prefetch_related('images')
-    
-    accessories = list(accessories_base.filter(stock_quantity__gt=0).order_by('-is_featured', '-created_at')[:36])
-    if not accessories:
-        accessories = list(accessories_base.order_by('-is_featured', '-created_at')[:36])
-    
-    # Fallback للملحقات: أي منتجات إضافية نشطة لم تكن ضمن العطور
-    if not accessories:
-        accessories = list(Product.objects.filter(is_active=True).exclude(category__category_type='bundles').exclude(id__in=selected_perfume_pids).select_related('category', 'brand').prefetch_related('images')[:24])
-
-    ready_gift_bundles = list(GiftBundle.objects.filter(is_active=True).prefetch_related('items__product').order_by('display_order', '-created_at')[:12])
-    if not ready_gift_bundles:
-        ready_gift_bundles = list(Product.objects.filter(category__category_type='bundles', is_active=True).order_by('-created_at')[:10])
-
-    # استخراج الأصناف المحددة مسبقاً إذا تم اختيار باقة جاهزة لتخصيصها
-    preselected_perfume_ids = []
-    preselected_accessory_ids = []
-    preselected_grades = {}
-    if selected_gift_bundle:
-        for b_item in selected_gift_bundle.items.all():
-            p_obj = b_item.product
-            c_type = getattr(p_obj.category, 'category_type', '')
-            if c_type == 'perfumes':
-                preselected_perfume_ids.append(p_obj.id)
-                preselected_grades[str(p_obj.id)] = b_item.grade
-            else:
-                preselected_accessory_ids.append(p_obj.id)
-
     if request.method == 'POST':
-        post_bundle_id = request.POST.get('bundle_id')
+        post_bundle_id = _parse_int_id(request.POST.get('bundle_id'))
         perfume_ids = request.POST.getlist('perfume_id')
         if not perfume_ids and request.POST.get('perfume_id'):
             perfume_ids = [request.POST.get('perfume_id')]
@@ -1393,12 +1374,23 @@ def gift_builder_view(request):
         preferred_delivery_date = request.POST.get('preferred_delivery_date', '').strip() or None
         is_luxury_gift_wrapping = request.POST.get('is_luxury_gift_wrapping') in ['true', '1', 'on']
 
+        if preferred_delivery_date:
+            try:
+                parsed_d = datetime.strptime(preferred_delivery_date, '%Y-%m-%d').date()
+                if parsed_d < date.today():
+                    preferred_delivery_date = (date.today() + timedelta(days=1)).isoformat()
+            except (ValueError, TypeError):
+                preferred_delivery_date = None
+
         cart = request.session.get('cart', {})
 
         if post_bundle_id:
-            # التحقق أولاً من نموذج GiftBundle الجديد
-            bundle_obj = GiftBundle.objects.filter(id=post_bundle_id, is_active=True).first()
+            bundle_obj = GiftBundle.objects.prefetch_related('items__product').filter(id=post_bundle_id, is_active=True).first()
             if bundle_obj:
+                b_items = list(bundle_obj.items.all())
+                if any((not bi.product or not bi.product.is_active or bi.product.stock_quantity < bi.quantity) for bi in b_items):
+                    messages.error(request, f'عذراً، أحد منتجات الباقة ({bundle_obj.title_ar}) غير متوفر بالكمية المطلوبة.')
+                    return redirect('store:gift_builder')
                 b_key = f"bundle_{bundle_obj.id}"
                 cart[b_key] = {
                     'product_id': bundle_obj.id,
@@ -1409,28 +1401,35 @@ def gift_builder_view(request):
                     'price_yer': float(bundle_obj.price_yer),
                     'image_url': bundle_obj.primary_image_url,
                     'quantity': 1,
-                    'variant_info': f"باقة جاهزة ({bundle_obj.items.count()} عناصر)",
+                    'variant_info': f"باقة جاهزة ({len(b_items)} عناصر)",
                     'grade': '',
                 }
-                # دعم إضافة ملحقات إضافية مخصصة للباقة الجاهزة
-                bundle_pids = set(bundle_obj.items.values_list('product_id', flat=True))
-                for aid in accessory_ids:
-                    if int(aid) not in bundle_pids:
-                        acc_obj = Product.objects.filter(id=aid, is_active=True).first()
-                        if acc_obj:
-                            a_key = f"{acc_obj.id}_acc_gift"
-                            cart[a_key] = {
-                                'product_id': acc_obj.id,
-                                'name': acc_obj.name_ar,
-                                'brand': acc_obj.brand_name,
-                                'price_yer': float(acc_obj.price_yer),
-                                'image_url': acc_obj.primary_image_url,
-                                'quantity': 1,
-                                'variant_info': f"إضافة للباقة ({acc_obj.category.name_ar if acc_obj.category else 'ملحق'})",
-                                'grade': '',
-                            }
+                bundle_pids = {bi.product_id for bi in b_items}
+                parsed_extra_acc = [
+                    aid_int for aid in accessory_ids
+                    for aid_int in [_parse_int_id(aid)]
+                    if aid_int and aid_int not in bundle_pids
+                ]
+                extra_acc_map = Product.objects.filter(id__in=parsed_extra_acc, is_active=True).select_related('category').in_bulk() if parsed_extra_acc else {}
+                for aid_int in parsed_extra_acc:
+                    acc_obj = extra_acc_map.get(aid_int)
+                    if acc_obj and acc_obj.stock_quantity > 0:
+                        a_key = f"{acc_obj.id}_acc_gift"
+                        cart[a_key] = {
+                            'product_id': acc_obj.id,
+                            'name': acc_obj.name_ar,
+                            'brand': acc_obj.brand_name,
+                            'price_yer': float(acc_obj.price_yer),
+                            'image_url': acc_obj.primary_image_url,
+                            'quantity': 1,
+                            'variant_info': f"إضافة للباقة ({acc_obj.category.name_ar if acc_obj.category else 'ملحق'})",
+                            'grade': '',
+                        }
             else:
                 bundle_prod = get_object_or_404(Product, id=post_bundle_id, is_active=True)
+                if bundle_prod.stock_quantity <= 0:
+                    messages.error(request, f'عذراً، ({bundle_prod.name_ar}) نفد من المخزون حالياً.')
+                    return redirect('store:gift_builder')
                 b_key = f"bundle_{bundle_prod.id}"
                 cart[b_key] = {
                     'product_id': bundle_prod.id,
@@ -1443,13 +1442,17 @@ def gift_builder_view(request):
                     'grade': '',
                 }
         else:
-            if not perfume_ids:
+            parsed_perfume_ids = [pid_int for pid in perfume_ids for pid_int in [_parse_int_id(pid)] if pid_int]
+            if not parsed_perfume_ids:
                 messages.warning(request, 'يرجى اختيار عطر واحد على الأقل لتجهيز باقة الإهداء.')
                 return redirect('store:gift_builder')
 
-            for pid in perfume_ids:
-                perfume_obj = get_object_or_404(Product, id=pid, is_active=True)
-                p_grade = request.POST.get(f'grade_{pid}') or perfume_grade_default
+            for pid_int in parsed_perfume_ids:
+                perfume_obj = get_object_or_404(Product, id=pid_int, is_active=True)
+                if perfume_obj.stock_quantity <= 0:
+                    messages.error(request, f'عذراً، العطر ({perfume_obj.name_ar}) نفد من المخزون حالياً.')
+                    return redirect('store:gift_builder')
+                p_grade = request.POST.get(f'grade_{pid_int}') or perfume_grade_default
                 p_price = float(perfume_obj.price_master_yer if p_grade == 'master' and perfume_obj.price_master_yer else (perfume_obj.price_original_yer or perfume_obj.price_yer))
                 grade_name = 'ماستر' if p_grade == 'master' else 'أصلي'
                 p_key = f"{perfume_obj.id}_{p_grade}_gift"
@@ -1464,23 +1467,27 @@ def gift_builder_view(request):
                     'grade': p_grade,
                 }
 
-            for aid in accessory_ids:
-                acc_obj = get_object_or_404(Product, id=aid, is_active=True)
-                a_key = f"{acc_obj.id}_acc_gift"
-                cart[a_key] = {
-                    'product_id': acc_obj.id,
-                    'name': acc_obj.name_ar,
-                    'brand': acc_obj.brand_name,
-                    'price_yer': float(acc_obj.price_yer),
-                    'image_url': acc_obj.primary_image_url,
-                    'quantity': 1,
-                    'variant_info': acc_obj.category.name_ar if acc_obj.category else 'ملحق إضافي',
-                    'grade': '',
-                }
+            parsed_acc_ids = [aid_int for aid in accessory_ids for aid_int in [_parse_int_id(aid)] if aid_int]
+            acc_map = Product.objects.filter(id__in=parsed_acc_ids, is_active=True).select_related('category').in_bulk() if parsed_acc_ids else {}
+            for aid_int in parsed_acc_ids:
+                acc_obj = acc_map.get(aid_int)
+                if acc_obj and acc_obj.stock_quantity > 0:
+                    a_key = f"{acc_obj.id}_acc_gift"
+                    cart[a_key] = {
+                        'product_id': acc_obj.id,
+                        'name': acc_obj.name_ar,
+                        'brand': acc_obj.brand_name,
+                        'price_yer': float(acc_obj.price_yer),
+                        'image_url': acc_obj.primary_image_url,
+                        'quantity': 1,
+                        'variant_info': f"ملحق إهداء ({acc_obj.category.name_ar if acc_obj.category else 'إكسسوار'})",
+                        'grade': '',
+                    }
 
         request.session['cart'] = cart
         request.session.modified = True
         sync_cart_to_profile(request)
+        refresh_cart_reservation(request)
         request.session['gift_data'] = {
             'is_gift': True,
             'recipient_name': recipient_name,
@@ -1495,13 +1502,104 @@ def gift_builder_view(request):
         request.session.modified = True
         return redirect('store:checkout')
 
-    seen_brands = set()
-    perfume_brands = []
-    for p in perfumes:
-        b_name = p.effective_brand_name
-        if b_name and b_name not in seen_brands:
-            seen_brands.add(b_name)
-            perfume_brands.append(b_name)
+    bundle_slug = request.GET.get('bundle_slug') or request.GET.get('bundle')
+    bundle_id = _parse_int_id(request.GET.get('bundle_id'))
+    selected_gift_bundle = None
+    selected_bundle = None
+
+    if bundle_slug:
+        selected_gift_bundle = GiftBundle.objects.filter(slug=bundle_slug, is_active=True).prefetch_related('items__product__images').first()
+    elif bundle_id:
+        selected_gift_bundle = GiftBundle.objects.filter(id=bundle_id, is_active=True).prefetch_related('items__product__images').first()
+        if not selected_gift_bundle:
+            selected_bundle = Product.objects.filter(id=bundle_id, is_active=True).first()
+
+    perfume_id = _parse_int_id(request.GET.get('perfume_id'))
+    selected_perfume = Product.objects.filter(id=perfume_id, is_active=True).first() if perfume_id else None
+
+    initial_grade = request.GET.get('grade', 'all').strip().lower()
+    if initial_grade not in ['all', 'original', 'master']:
+        initial_grade = 'all'
+
+    def _build_gift_catalog():
+        perfume_q = (
+            Q(category__category_type='perfumes') |
+            Q(category__parent__category_type='perfumes') |
+            Q(category__slug__icontains='perfume') |
+            Q(category__name_ar__icontains='عطر') |
+            Q(category__name_ar__icontains='عطور') |
+            Q(name_ar__icontains='عطر')
+        )
+        perfumes_base = Product.objects.filter(
+            perfume_q, is_active=True
+        ).exclude(category__category_type='bundles').select_related('category', 'brand').prefetch_related('images')
+
+        perfumes_list = list(perfumes_base.filter(stock_quantity__gt=0).order_by('-is_featured', '-is_best_seller', '-created_at')[:48])
+        if not perfumes_list:
+            perfumes_list = list(perfumes_base.order_by('-is_featured', '-is_best_seller', '-created_at')[:48])
+        if not perfumes_list:
+            perfumes_list = list(Product.objects.filter(is_active=True).exclude(category__category_type='bundles').select_related('category', 'brand').prefetch_related('images').order_by('-is_featured', '-created_at')[:36])
+
+        acc_q = (
+            Q(category__category_type__in=['watches', 'cosmetics', 'care']) |
+            Q(category__parent__category_type__in=['watches', 'cosmetics', 'care']) |
+            Q(category__slug__in=['watches', 'cosmetics', 'care']) |
+            Q(category__name_ar__icontains='ساع') |
+            Q(category__name_ar__icontains='مكياج') |
+            Q(category__name_ar__icontains='تجميل') |
+            Q(category__name_ar__icontains='عناية')
+        )
+        selected_perfume_pids = {p.id for p in perfumes_list}
+        accessories_base = Product.objects.filter(
+            acc_q, is_active=True
+        ).exclude(category__category_type='bundles').exclude(id__in=selected_perfume_pids).select_related('category', 'brand').prefetch_related('images')
+
+        accessories_list = list(accessories_base.filter(stock_quantity__gt=0).order_by('-is_featured', '-created_at')[:36])
+        if not accessories_list:
+            accessories_list = list(accessories_base.order_by('-is_featured', '-created_at')[:36])
+        if not accessories_list:
+            accessories_list = list(Product.objects.filter(is_active=True).exclude(category__category_type='bundles').exclude(id__in=selected_perfume_pids).select_related('category', 'brand').prefetch_related('images')[:24])
+
+        bundles_list = list(
+            GiftBundle.objects.filter(is_active=True)
+            .prefetch_related('items__product__images')
+            .order_by('display_order', '-created_at')[:12]
+        )
+        if not bundles_list:
+            bundles_list = list(Product.objects.filter(category__category_type='bundles', is_active=True).prefetch_related('images').order_by('-created_at')[:10])
+
+        seen_b, brands_list = set(), []
+        for p in perfumes_list:
+            b_name = p.effective_brand_name
+            if b_name and b_name not in seen_b:
+                seen_b.add(b_name)
+                brands_list.append(b_name)
+
+        return {
+            'perfumes': perfumes_list,
+            'accessories': accessories_list,
+            'ready_gift_bundles': bundles_list,
+            'perfume_brands': brands_list,
+        }
+
+    gift_catalog = cache_get_or_set_safe(make_gift_builder_catalog_key(), _build_gift_catalog, timeout=300) or {}
+    perfumes = gift_catalog.get('perfumes', [])
+    accessories = gift_catalog.get('accessories', [])
+    ready_gift_bundles = gift_catalog.get('ready_gift_bundles', [])
+    perfume_brands = gift_catalog.get('perfume_brands', [])
+
+    preselected_perfume_ids = []
+    preselected_accessory_ids = []
+    preselected_grades = {}
+    if selected_gift_bundle:
+        for b_item in selected_gift_bundle.items.all():
+            p_obj = b_item.product
+            c_type = getattr(p_obj.category, 'category_type', '')
+            if c_type == 'perfumes':
+                preselected_perfume_ids.append(p_obj.id)
+                preselected_grades[str(p_obj.id)] = b_item.grade
+            else:
+                preselected_accessory_ids.append(p_obj.id)
 
     context = {
         'perfumes': perfumes,
@@ -1546,9 +1644,10 @@ def gift_calculate_live(request):
     items_breakdown = []
 
     if bundle_id:
-        bundle_obj = GiftBundle.objects.filter(id=bundle_id, is_active=True).first()
-        if not bundle_obj:
-            bundle_obj = Product.objects.filter(id=bundle_id, is_active=True).first()
+        parsed_bundle_id = _parse_int_id(bundle_id)
+        bundle_obj = GiftBundle.objects.prefetch_related('items').filter(id=parsed_bundle_id, is_active=True).first() if parsed_bundle_id else None
+        if not bundle_obj and parsed_bundle_id:
+            bundle_obj = Product.objects.filter(id=parsed_bundle_id, is_active=True).first()
         if bundle_obj:
             b_title = getattr(bundle_obj, 'title_ar', getattr(bundle_obj, 'name_ar', 'باقة جاهزة'))
             total_yer += bundle_obj.price_yer
@@ -1557,23 +1656,33 @@ def gift_calculate_live(request):
                 'type': 'باقة جاهزة',
                 'price_yer': bundle_obj.price_yer
             })
-            # حساب أي ملحقات إضافية مختارة مع الباقة
+            # حساب أي ملحقات إضافية مختارة مع الباقة بأمان وباستعلام واحد
             bundle_pids = set(bundle_obj.items.values_list('product_id', flat=True)) if hasattr(bundle_obj, 'items') else set()
-            for aid in accessory_ids:
-                if int(aid) not in bundle_pids:
-                    a_obj = Product.objects.filter(id=aid, is_active=True).first()
-                    if a_obj:
-                        total_yer += a_obj.price_yer
-                        items_breakdown.append({
-                            'title': a_obj.name_ar,
-                            'type': 'ملحق مضاف للباقة',
-                            'price_yer': a_obj.price_yer
-                        })
+            extra_acc_ids = [
+                aid_int for aid in accessory_ids
+                for aid_int in [_parse_int_id(aid)]
+                if aid_int and aid_int not in bundle_pids
+            ]
+            acc_map = Product.objects.filter(id__in=extra_acc_ids, is_active=True).in_bulk() if extra_acc_ids else {}
+            for aid_int in extra_acc_ids:
+                a_obj = acc_map.get(aid_int)
+                if a_obj:
+                    total_yer += a_obj.price_yer
+                    items_breakdown.append({
+                        'title': a_obj.name_ar,
+                        'type': 'ملحق مضاف للباقة',
+                        'price_yer': a_obj.price_yer
+                    })
     else:
-        for pid in perfume_ids:
-            p_obj = Product.objects.filter(id=pid, is_active=True).first()
+        parsed_perfume_ids = [pid_int for pid in perfume_ids for pid_int in [_parse_int_id(pid)] if pid_int]
+        parsed_acc_ids = [aid_int for aid in accessory_ids for aid_int in [_parse_int_id(aid)] if aid_int]
+        all_ids = set(parsed_perfume_ids) | set(parsed_acc_ids)
+        prod_map = Product.objects.filter(id__in=all_ids, is_active=True).select_related('category').in_bulk() if all_ids else {}
+
+        for pid_int in parsed_perfume_ids:
+            p_obj = prod_map.get(pid_int)
             if p_obj:
-                p_grade = request.POST.get(f'grade_{pid}') or perfume_grade_default
+                p_grade = request.POST.get(f'grade_{pid_int}') or perfume_grade_default
                 p_price = p_obj.price_master_yer if p_grade == 'master' and p_obj.price_master_yer else (p_obj.price_original_yer or p_obj.price_yer)
                 total_yer += p_price
                 grade_name = 'ماستر' if p_grade == 'master' else 'أصلي'
@@ -1583,8 +1692,8 @@ def gift_calculate_live(request):
                     'price_yer': p_price
                 })
 
-        for aid in accessory_ids:
-            a_obj = Product.objects.filter(id=aid, is_active=True).first()
+        for aid_int in parsed_acc_ids:
+            a_obj = prod_map.get(aid_int)
             if a_obj:
                 total_yer += a_obj.price_yer
                 items_breakdown.append({
@@ -1963,7 +2072,12 @@ def checkout_view(request):
         request.session.modified = True
         if request.user.is_authenticated:
             UserProfile.objects.filter(user=request.user).update(cart_data={})
-        
+
+        schedule_invalidation(lambda: (
+            invalidate_admin_metrics_cache(),
+            invalidate_notification_cache(for_admin=True),
+        ))
+
         return redirect('store:order_success', order_number=order.order_number)
 
     user_profile = getattr(request.user, 'store_profile', None) if request.user.is_authenticated else None
@@ -2070,6 +2184,7 @@ def gift_slip_view(request, order_number):
 def admin_print_gift_card(request, order_id):
     """صفحة طباعة كرت الإهداء الملكي الفاخر بقياس بطاقة الإهداء (10x15 سم) جاهزة للطباعة على ورق مقوى"""
     order = get_object_or_404(Order, id=order_id)
+    audit_logger.info("[ADMIN_AUDIT] actor=%s action=print_gift_card order=%s", request.user.username, order.order_number)
     settings = StoreSettings.get_settings()
     return render(request, 'admin/print_gift_card.html', {
         'order': order,
@@ -2081,6 +2196,7 @@ def admin_print_gift_card(request, order_id):
 def admin_print_recipient_slip(request, order_id):
     """صفحة طباعة بوليصة التوصيل للمستلم خالية 100% من الأسعار لمندوب الشحن والتسليم"""
     order = get_object_or_404(Order.objects.prefetch_related('items__product'), id=order_id)
+    audit_logger.info("[ADMIN_AUDIT] actor=%s action=print_recipient_slip order=%s", request.user.username, order.order_number)
     settings = StoreSettings.get_settings()
     return render(request, 'admin/print_recipient_slip.html', {
         'order': order,
@@ -2092,6 +2208,7 @@ def admin_print_recipient_slip(request, order_id):
 def admin_print_invoice(request, order_id):
     """صفحة طباعة الفاتورة الرسمية A4 الخاصة بلوحة الإدارة"""
     order = get_object_or_404(Order.objects.prefetch_related('items__product'), id=order_id)
+    audit_logger.info("[ADMIN_AUDIT] actor=%s action=print_invoice order=%s", request.user.username, order.order_number)
     settings = StoreSettings.get_settings()
     return render(request, 'store/print_invoice.html', {
         'order': order,
@@ -2481,7 +2598,7 @@ def login_view(request):
     if request.method == 'POST':
         client_ip = _get_client_ip(request)
         throttle_key = f"bv_login_fails_{client_ip}"
-        failed_attempts = cache.get(throttle_key, 0)
+        failed_attempts = cache_get(throttle_key, 0)
         if failed_attempts >= 10:
             messages.error(request, 'تم تجاوز الحد الأقصى لمحاولات تسجيل الدخول. يرجى الانتظار 10 دقائق والمحاولة مجدداً.')
             return render(request, 'store/auth/login.html', {'identifier': request.POST.get('identifier', ''), 'next_url': request.POST.get('next', '')})
@@ -2513,7 +2630,7 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             if user.is_active:
-                cache.delete(throttle_key)
+                cache_delete(throttle_key)
                 auth_login(request, user)
                 
                 # تمديد الجلسة والكوكيز: سنة كاملة افتراضياً و 90 يوماً كحد أدنى (منع انتهاء الجلسة عند إغلاق المتصفح)
@@ -2529,7 +2646,7 @@ def login_view(request):
             else:
                 messages.error(request, 'هذا الحساب معطل حالياً. يرجى التواصل مع إدارة المتجر.')
         else:
-            cache.set(throttle_key, failed_attempts + 1, timeout=600)
+            cache_set(throttle_key, failed_attempts + 1, timeout=600)
             messages.error(request, 'بيانات الدخول غير صحيحة. يرجى التحقق من رقم الهاتف أو البريد الإلكتروني والرمز السري.')
             
     return render(request, 'store/auth/login.html', {'next_url': next_url})
@@ -2561,7 +2678,7 @@ def register_view(request):
 
         client_ip = _get_client_ip(request)
         reg_throttle_key = f"bv_register_rate_{client_ip}"
-        reg_count = cache.get(reg_throttle_key, 0)
+        reg_count = cache_get(reg_throttle_key, 0)
         if reg_count >= 10:
             return _render_register_error('تم تجاوز الحد المسموح لمحاولات إنشاء الحسابات من هذا الجهاز مؤقتاً. يرجى الانتظار 15 دقيقة.')
 
@@ -2619,7 +2736,7 @@ def register_view(request):
         )
         
         # تسجيل الدخول وتمديد الجلسة لسنة ومزامنة السلة
-        cache.set(reg_throttle_key, reg_count + 1, timeout=900)
+        cache_set(reg_throttle_key, reg_count + 1, timeout=900)
         auth_login(request, new_user)
         request.session.set_expiry(60 * 60 * 24 * 365)
         sync_cart_to_profile(request)
@@ -2899,25 +3016,34 @@ def account_profile_view(request):
         
     orders = Order.objects.filter(order_query).distinct().select_related('payment_method').prefetch_related('items__product').order_by('-created_at')
     
-    total_orders_count = orders.count()
-    active_statuses = ['pending_verification', 'payment_verified', 'processing', 'out_for_delivery']
-    active_orders_count = orders.filter(status__in=active_statuses).count()
-    delivered_orders_count = orders.filter(status='delivered').count()
-    
-    total_spent_yer = sum(o.total_yer for o in orders.exclude(status='cancelled'))
+    orders_list = list(orders)
+    total_orders_count = len(orders_list)
+    active_statuses = {'pending_verification', 'payment_verified', 'processing', 'out_for_delivery'}
+    active_orders_count = sum(1 for o in orders_list if o.status in active_statuses)
+    delivered_orders_count = sum(1 for o in orders_list if o.status == 'delivered')
+
+    total_spent_yer = sum((o.total_yer for o in orders_list if o.status != 'cancelled'), Decimal('0.00'))
     settings = StoreSettings.get_settings()
     yer_per_sar = settings.yer_per_sar or Decimal('530.00')
     total_spent_sar = _yer_to_sar(total_spent_yer, yer_per_sar)
-    
-    shipping_zones = ShippingZone.objects.filter(is_active=True).order_by('city_name')
-    
-    # إشعارات وتنبيهات العميل
-    notifications = Notification.objects.filter(recipient=request.user).order_by('-created_at')
-    notifications_unread_count = notifications.filter(is_read=False).count()
+
+    shipping_zones = list(
+        (
+            cache_get_or_set_safe(
+                'bv_shipping_zones_active',
+                lambda: {z.id: z for z in ShippingZone.objects.filter(is_active=True).order_by('city_name')},
+                timeout=300,
+            ) or {}
+        ).values()
+    )
+
+    # إشعارات وتنبيهات العميل في استعلام واحد
+    notifications = list(Notification.objects.filter(recipient=request.user).order_by('-created_at'))
+    notifications_unread_count = sum(1 for n in notifications if not n.is_read)
 
     context = {
         'profile': profile,
-        'orders': orders,
+        'orders': orders_list,
         'shipping_zones': shipping_zones,
         'total_orders_count': total_orders_count,
         'active_orders_count': active_orders_count,
@@ -2989,7 +3115,13 @@ def notification_badge_view(request):
     """مكون HTMX لشارة عدد الإشعارات غير المقروءة في الهيدر"""
     unread_count = 0
     if request.user.is_authenticated:
-        unread_count = Notification.objects.filter(recipient=request.user, is_read=False).count()
+        user_cache_key = f'bv_unread_notifications_user_{request.user.pk}'
+        unread_count = cache_get_or_set_safe(
+            user_cache_key,
+            lambda: Notification.objects.filter(recipient=request.user, is_read=False).count(),
+            timeout=15,
+            jitter_ratio=0.0,
+        ) or 0
     return render(request, 'store/partials/notification_badge.html', {
         'unread_count': unread_count
     })
@@ -3036,8 +3168,10 @@ def mark_notification_read_view(request, notification_id):
             'unread_count': unread_count
         })
         
-    target_link = notification.link or reverse('store:account_profile')
-    return redirect(target_link)
+    target_link = notification.link
+    if target_link and url_has_allowed_host_and_scheme(url=target_link, allowed_hosts={request.get_host()}):
+        return redirect(target_link)
+    return redirect('store:account_profile')
 
 
 @require_POST
@@ -3045,14 +3179,13 @@ def mark_all_notifications_read_view(request):
     """تحديد كافة إشعارات العميل كمقروءة دفعة واحدة"""
     if not request.user.is_authenticated:
         return JsonResponse({'status': 'unauthorized'}, status=401)
-        
+
     Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
-    from django.core.cache import cache
-    cache.delete(f'bv_unread_notifications_user_{request.user.pk}')
-    
+    invalidate_notification_cache(user_id=request.user.pk)
+
     if request.user.is_staff and request.POST.get('admin_scope') == '1':
         Notification.objects.filter(for_admin=True, is_read=False).update(is_read=True)
-        cache.delete('bv_admin_unread_notifications')
+        invalidate_notification_cache(for_admin=True)
         
     if request.headers.get('HX-Request'):
         notifications = Notification.objects.filter(recipient=request.user).order_by('-created_at')[:8]
