@@ -78,7 +78,7 @@
         </div>
         {% if user.is_staff %}
         <div class="pt-1">
-            <a href="{% url 'admin:store_category_add' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition shadow-xs">
+            <a href="{% url 'admin:store_category_add' %}" hx-boost="false" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition shadow-xs">
                 <i data-lucide="plus" class="w-4 h-4"></i>
                 <span>إضافة قسم جديد</span>
             </a>

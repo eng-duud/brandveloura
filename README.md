@@ -6,14 +6,14 @@
 
 **منصة تجارة إلكترونية فاخرة وتطبيق ويب تقدمي (PWA) فائق السرعة، مبني خصيصاً لقطاع المنتجات الفاخرة ومخصص للسوق اليمني والخليجي.**
 
-[![Django](https://img.shields.io/badge/Django-6.0+-092e20?style=for-the-badge&logo=django&logoColor=white)](https://www.djangoproject.com/)
+[![Django](https://img.shields.io/badge/Django-5.1+-092e20?style=for-the-badge&logo=django&logoColor=white)](https://www.djangoproject.com/)
 [![Python](https://img.shields.io/badge/Python-3.12+-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4+-38bdf8?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![HTMX](https://img.shields.io/badge/HTMX-1.9+-336699?style=for-the-badge&logo=htmx&logoColor=white)](https://htmx.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Railway](https://img.shields.io/badge/Deployed_on-Railway-0B0D0E?style=for-the-badge&logo=railway&logoColor=white)](https://railway.com/)
 [![Cloudflare](https://img.shields.io/badge/Protected_by-Cloudflare-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://www.cloudflare.com/)
-[![Tests](https://img.shields.io/badge/Tests-83%20Passed-success?style=for-the-badge&logo=checkmarx&logoColor=white)](#-حزمة-الاختبارات-وضمان-الجودة)
+[![Tests](https://img.shields.io/badge/Tests-141%20Passed-success?style=for-the-badge&logo=checkmarx&logoColor=white)](#-حزمة-الاختبارات-وضمان-الجودة)
 
 🌐 **المتجر الحي:** [brandveloura.com](https://brandveloura.com) | 🚀 **سيرفر الاستضافة:** [web-production-f1ff6.up.railway.app](https://web-production-f1ff6.up.railway.app)
 
@@ -76,7 +76,7 @@
 
 | المجال | التقنية | الاستخدام |
 | :--- | :--- | :--- |
-| **Backend** | Python 3.12+ / Django 6.x | المنطق البرمجي، الأمان، وإدارة البيانات |
+| **Backend** | Python 3.12+ / Django 5.1+ | المنطق البرمجي، الأمان، وإدارة البيانات |
 | **Admin UI** | Django Unfold | واجهة إدارة حديثة وفاخرة متوافقة مع الهواتف |
 | **Frontend** | Tailwind CSS & HTMX | واجهات تفاعلية وسريعة بدون ثقل أطر عمل SPA |
 | **Database** | PostgreSQL | قاعدة البيانات السحابية للإنتاج |
@@ -170,7 +170,7 @@
 python manage.py test
 ```
 
-> **آخر تحقق:** اجتازت جميع الـ **90 اختباراً** بنجاح، بما فيها اختبارات صيغ WebP و`srcset`.
+> **آخر تحقق:** اجتازت جميع الـ **141 اختباراً** بنجاح، بما فيها اختبارات التحصين الأمني، `hx-boost`، وتوافق WebP/PWA.
 
 ---
 
@@ -199,6 +199,7 @@ python manage.py test
 | `CSRF_TRUSTED_ORIGINS` | ✅ | النطاقات الموثوقة لمنع هجمات CSRF | `https://brandveloura.com,https://*.up.railway.app` |
 | `DJANGO_ADMIN_URL` | ⚙️ | المسار السري للوحة الإدارة (يحمي من الاختراق) | `cpanel-0x110` |
 | `DATABASE_URL` | ✅ | رابط الاتصال بقاعدة بيانات PostgreSQL | `postgresql://user:pass@host:5432/db` |
+| `REDIS_URL` | ⚙️ | رابط Redis لمزامنة الكاش بين Gunicorn Workers | `redis://default:pass@redis.railway.internal:6379/0` |
 | `DJANGO_SUPERUSER_USERNAME`| ⚙️ | اسم مستخدم المدير للإنشاء التلقائي عند الإقلاع | `admin` |
 | `DJANGO_SUPERUSER_PASSWORD`| ⚙️ | كلمة مرور المدير للإنشاء التلقائي عند الإقلاع | `SecretAdminPass2026!` |
 | `CLOUDINARY_CLOUD_NAME` | ⚙️ | اسم سحابة Cloudinary لحفظ الصور | `brandveloura-cloud` |
@@ -222,7 +223,7 @@ brandveloura/
 │   ├── admin.py                 # تخصيص لوحة إدارة Unfold الفاخرة وتكبير السندات
 │   ├── views.py                 # منطق العرض وتدفق الطلب ومعالجات HTMX
 │   ├── urls.py                  # مسارات صفحات المتجر والسلة وإتمام الشراء
-│   ├── tests/                   # حزمة الاختبارات الشاملة (90 اختباراً)
+│   ├── tests/                   # حزمة الاختبارات الشاملة (141 اختباراً)
 │   └── management/commands/     # أوامر مخصصة (seed_data, setup_admin)
 ├── templates/                   # قوالب HTML المبنية بـ Tailwind CSS و HTMX
 │   ├── base.html                # القالب الأساسي وشريط التنقل السفلي والـ PWA

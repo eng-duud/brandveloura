@@ -635,13 +635,19 @@
         if (window.lucide) lucide.createIcons();
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
+    function initAccountTabs() {
         const urlParams = new URLSearchParams(window.location.search);
         const tab = urlParams.get('tab');
         if (tab && ['orders', 'profile', 'security', 'notifications'].includes(tab)) {
             switchTab(tab);
         }
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAccountTabs, { once: true });
+    } else {
+        initAccountTabs();
+    }
 
     function copyToClipboard(text, successMsg) {
         if (navigator.clipboard) {

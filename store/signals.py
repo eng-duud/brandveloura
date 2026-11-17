@@ -27,6 +27,7 @@ def invalidate_home_and_catalog_cache():
         'bv_home_deferred_html_SAR',
         'bv_home_deferred_html_USD',
         'bv_store_settings',
+        'bv_yer_per_sar',
     ]
     try:
         cache.delete_many(keys_to_delete)
@@ -37,7 +38,14 @@ def invalidate_home_and_catalog_cache():
 
 @receiver([post_save, post_delete], sender=Product)
 def product_cache_invalidation(sender, instance, **kwargs):
-    """إبطال كاش الصفحة الرئيسية والكتالوج عند تعديل أو حذف أي منتج"""
+    """إبطال كاش الصفحة الرئيسية والكتالوج عند تعديل أو حذف المنتج (مع تجنب المسح عند مجرد خصم مخزون لم ينفد)"""
+    update_fields = kwargs.get('update_fields')
+    if (
+        update_fields is not None
+        and set(update_fields) == {'stock_quantity'}
+        and (instance.stock_quantity or 0) > 0
+    ):
+        return
     invalidate_home_and_catalog_cache()
 
 
@@ -79,7 +87,7 @@ def gift_bundle_item_cache_invalidation(sender, instance, **kwargs):
 def store_settings_cache_invalidation(sender, instance, **kwargs):
     """إبطال كاش إعدادات المتجر وأسعار الصرف فور الحفظ"""
     try:
-        cache.delete('bv_store_settings')
+        cache.delete_many(['bv_store_settings', 'bv_yer_per_sar'])
     except Exception:
         pass
     invalidate_home_and_catalog_cache()

@@ -247,12 +247,18 @@
 
 <!-- Slider & Strip Scrolling Scripts -->
 <script>
+(function() {
+    if (typeof window.__bvHomeCleanup === 'function') {
+        try { window.__bvHomeCleanup(); } catch (e) {}
+    }
+
     // 1. Auto Slider Running Every 2 Seconds (2000ms)
     let currentSlide = 0;
     const slides = document.querySelectorAll('.hero-slide');
     const dots = document.querySelectorAll('.slide-dot');
     const totalSlides = slides.length;
     let slideInterval = null;
+    const activeRafs = new Set();
 
     function showSlide(index) {
         if (totalSlides === 0) return;
@@ -293,13 +299,16 @@
     }
 
     function startTimer() {
+        if (slideInterval) {
+            clearInterval(slideInterval);
+            slideInterval = null;
+        }
         if (totalSlides > 1) {
             slideInterval = setInterval(nextSlide, 2000);
         }
     }
 
     function restartTimer() {
-        if (slideInterval) clearInterval(slideInterval);
         startTimer();
     }
 
@@ -308,7 +317,10 @@
     const container = document.getElementById('hero-slider-container');
     if (container) {
         container.addEventListener('mouseenter', () => {
-            if (slideInterval) clearInterval(slideInterval);
+            if (slideInterval) {
+                clearInterval(slideInterval);
+                slideInterval = null;
+            }
         });
         container.addEventListener('mouseleave', () => {
             startTimer();
@@ -346,9 +358,9 @@
 
     function initLuxurySlider(stripId, options = {}) {
         const el = document.getElementById(stripId);
-        if (!el) return;
+        if (!el || bvSliders[stripId]) return;
 
-        const speed = options.speed || 0.65; // pixels per animation frame (smooth 60fps)
+        const speed = options.speed || 0.65;
         let isPaused = false;
         let pauseTimer = null;
         let isMouseDown = false;
@@ -365,7 +377,6 @@
             }, ms);
         }
 
-        // Pause on mouse hover & mobile touch
         el.addEventListener('mouseenter', () => { isPaused = true; });
         el.addEventListener('mouseleave', () => {
             if (!isMouseDown) isPaused = false;
@@ -373,9 +384,8 @@
         el.addEventListener('touchstart', () => { isPaused = true; }, { passive: true });
         el.addEventListener('touchend', () => { pauseTemporarily(2500); }, { passive: true });
 
-        // Mouse Drag-to-Scroll (Desktop grab & glide)
         el.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return; // Only primary mouse button
+            if (e.button !== 0) return;
             isMouseDown = true;
             hasDragged = false;
             startX = e.pageX - el.offsetLeft;
@@ -383,14 +393,15 @@
             isPaused = true;
         });
 
-        window.addEventListener('mouseup', () => {
+        function onWindowMouseUp() {
             if (isMouseDown) {
                 isMouseDown = false;
                 el.classList.remove('is-dragging');
                 pauseTemporarily(2500);
                 setTimeout(() => { hasDragged = false; }, 80);
             }
-        });
+        }
+        window.addEventListener('mouseup', onWindowMouseUp);
 
         el.addEventListener('mousemove', (e) => {
             if (!isMouseDown) return;
@@ -404,7 +415,6 @@
             }
         });
 
-        // Prevent accidental card click/modal open if user was dragging
         el.addEventListener('click', (e) => {
             if (hasDragged) {
                 e.preventDefault();
@@ -412,8 +422,11 @@
             }
         }, true);
 
-        // Smooth Auto-Glide Loop via requestAnimationFrame
         function glide() {
+            if (!document.body.contains(el)) {
+                if (rafId) activeRafs.delete(rafId);
+                return;
+            }
             if (!isPaused && !isMouseDown && el.scrollWidth > el.clientWidth) {
                 const mode = detectRTLType();
                 const maxScroll = el.scrollWidth - el.clientWidth;
@@ -421,21 +434,23 @@
                 if (mode === 'negative') {
                     el.scrollLeft -= speed;
                     if (Math.abs(el.scrollLeft) >= maxScroll - 2) {
-                        el.scrollLeft = 0; // seamless loop
+                        el.scrollLeft = 0;
                     }
                 } else {
                     el.scrollLeft += speed;
                     if (el.scrollLeft >= maxScroll - 2) {
-                        el.scrollLeft = 0; // seamless loop
+                        el.scrollLeft = 0;
                     }
                 }
             }
+            if (rafId) activeRafs.delete(rafId);
             rafId = requestAnimationFrame(glide);
+            activeRafs.add(rafId);
         }
 
         rafId = requestAnimationFrame(glide);
+        activeRafs.add(rafId);
 
-        // Step navigation for next/prev arrows
         function step(dir) {
             pauseTemporarily(3500);
             const mode = detectRTLType();
@@ -449,7 +464,16 @@
             el.scrollBy({ left: delta, behavior: 'smooth' });
         }
 
-        bvSliders[stripId] = { step, pauseTemporarily };
+        function destroy() {
+            if (pauseTimer) clearTimeout(pauseTimer);
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+                activeRafs.delete(rafId);
+            }
+            window.removeEventListener('mouseup', onWindowMouseUp);
+        }
+
+        bvSliders[stripId] = { step, pauseTemporarily, destroy };
     }
 
     function sliderStep(stripId, dir) {
@@ -472,13 +496,17 @@
         }
     }
 
-    // Initialize all sliders globally
+    window.nextSlide = nextSlide;
+    window.prevSlide = prevSlide;
+    window.goToSlide = goToSlide;
+    window.sliderStep = sliderStep;
+    window.scrollContainer = scrollContainer;
+
     window.initLuxurySliders = function() {
         initLuxurySlider('categories-scroll', { speed: 0.55 });
         initLuxurySlider('featured-scroll', { speed: 0.65 });
         initLuxurySlider('bundles-scroll', { speed: 0.60 });
         initLuxurySlider('brands-scroll', { speed: 0.55 });
-        // Automatically initialize all category sliders dynamically
         document.querySelectorAll('.bv-slider-strip').forEach(el => {
             if (el.id && !bvSliders[el.id]) {
                 initLuxurySlider(el.id, { speed: 0.60 });
@@ -486,13 +514,34 @@
         });
     };
 
-    // Initialize on DOMContentLoaded and when HTMX settles
-    document.addEventListener('DOMContentLoaded', () => {
+    window.__bvHomeCleanup = function() {
+        if (slideInterval) {
+            clearInterval(slideInterval);
+            slideInterval = null;
+        }
+        activeRafs.forEach(id => cancelAnimationFrame(id));
+        activeRafs.clear();
+        Object.keys(bvSliders).forEach(k => {
+            if (bvSliders[k] && typeof bvSliders[k].destroy === 'function') {
+                bvSliders[k].destroy();
+            }
+            delete bvSliders[k];
+        });
+    };
+
+    function bootHome() {
         window.initLuxurySliders();
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootHome, { once: true });
+    } else {
+        bootHome();
+    }
+})();
 </script>
 
 <style>

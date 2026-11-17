@@ -36,8 +36,14 @@ COPY --from=css-builder /app/static/css/tailwind.css /app/static/css/tailwind.cs
 # Ensure the start script has executable permissions.
 RUN chmod +x /app/start.sh
 
-# Collect static files into staticfiles directory.
-RUN python manage.py collectstatic --noinput
+# Collect static files into staticfiles directory and drop root privileges.
+RUN mkdir -p /app/staticfiles /app/media && \
+    python manage.py collectstatic --noinput && \
+    addgroup --system appuser && \
+    adduser --system --ingroup appuser appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 8000
 

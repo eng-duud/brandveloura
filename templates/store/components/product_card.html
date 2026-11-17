@@ -112,14 +112,14 @@
             <input type="hidden" name="product_id" value="{{ product.id }}">
             <input type="hidden" name="quantity" value="1">
             {% if product.has_grades %}
-            <input type="hidden" name="grade" value="master">
+            <input type="hidden" name="grade" value="{% if product.price_master_yer %}master{% else %}original{% endif %}">
             {% endif %}
             <button 
                 type="submit" 
                 hx-disabled-elt="this"
                 aria-label="إضافة {{ product.name_ar }} إلى السلة"
                 class="w-full h-10 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-98 disabled:opacity-50"
-                onclick="showToast('تمت إضافة {{ product.name_ar }} للسلة');"
+                hx-on::after-request="if(event.detail.successful && event.detail.xhr.getResponseHeader('HX-Trigger') === 'cartUpdated') showToast('تمت إضافة {{ product.name_ar|escapejs }} للسلة');"
             >
                 <i data-lucide="shopping-bag" class="w-3.5 h-3.5"></i>
                 <span>أضف للسلة</span>

@@ -29,7 +29,7 @@
         </div>
     </div>
 
-    <form id="checkout-form" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+    <form id="checkout-form" method="POST" enctype="multipart/form-data" hx-boost="false" class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         {% csrf_token %}
 
         <!-- Left Column: Order Type, Details, Gifting & Payment (7 Cols) -->
@@ -884,19 +884,20 @@
         });
     };
 
-    document.addEventListener('DOMContentLoaded', () => {
+    function initCheckoutPage() {
         const select = document.getElementById('payment-method-select');
         if (select && select.value) {
             onPaymentMethodSelect(select.value);
         }
 
         // Initialize active order type
-        const initialType = document.getElementById('order_type_input').value || 'personal';
+        const initialTypeEl = document.getElementById('order_type_input');
+        const initialType = (initialTypeEl && initialTypeEl.value) || 'personal';
         setOrderType(initialType);
 
         const checkoutForm = document.getElementById('checkout-form');
         if (checkoutForm) {
-            checkoutForm.addEventListener('submit', function(e) {
+            checkoutForm.addEventListener('submit', function() {
                 const btn = document.getElementById('submit-order-btn');
                 if (btn && !btn.disabled) {
                     btn.disabled = true;
@@ -912,10 +913,13 @@
             if (!timerEl) return;
             var totalSec = parseInt(timerEl.getAttribute('data-seconds'), 10);
             if (isNaN(totalSec) || totalSec <= 0) return;
-            
-            var interval = setInterval(function() {
+
+            if (window.__bvCheckoutTimerInterval) {
+                clearInterval(window.__bvCheckoutTimerInterval);
+            }
+            window.__bvCheckoutTimerInterval = setInterval(function() {
                 if (totalSec <= 0) {
-                    clearInterval(interval);
+                    clearInterval(window.__bvCheckoutTimerInterval);
                     timerEl.textContent = '00:00';
                     window.location.href = "{% url 'store:cart_view' %}";
                     return;
@@ -926,6 +930,12 @@
                 totalSec--;
             }, 1000);
         })();
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCheckoutPage, { once: true });
+    } else {
+        initCheckoutPage();
+    }
 </script>
 {% endblock %}

@@ -1,7 +1,9 @@
 import os
 import sys
+import hashlib
 from pathlib import Path
 from urllib.parse import urlparse
+from django.core.management.utils import get_random_secret_key
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -12,13 +14,29 @@ try:
 except ImportError:
     pass
 
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'brand-veloura-luxury-secret-key-2026-prod-grade')
+SECRET_KEY_ENV = os.getenv('DJANGO_SECRET_KEY', '').strip()
+DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() in ('true', '1')
 
-DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
+RUNNING_TESTS = len(sys.argv) > 1 and sys.argv[1] == 'test'
+RUNNING_COLLECTSTATIC = len(sys.argv) > 1 and sys.argv[1] == 'collectstatic'
+
+if SECRET_KEY_ENV:
+    SECRET_KEY = SECRET_KEY_ENV
+elif RUNNING_COLLECTSTATIC or RUNNING_TESTS:
+    SECRET_KEY = get_random_secret_key()
+elif DEBUG:
+    SECRET_KEY = hashlib.sha256(f"bv-local-dev-{BASE_DIR}".encode()).hexdigest()
+else:
+    runtime_seed = os.getenv('RAILWAY_SERVICE_ID') or os.getenv('DATABASE_URL') or str(BASE_DIR)
+    if runtime_seed == str(BASE_DIR):
+        SECRET_KEY = get_random_secret_key()
+    else:
+        SECRET_KEY = hashlib.sha256(f"bv-runtime-{runtime_seed}".encode()).hexdigest()
 
 # Clean ALLOWED_HOSTS (strip schemes like https:// if mistakenly passed)
 ALLOWED_HOSTS = []
-raw_hosts = os.getenv('DJANGO_ALLOWED_HOSTS', '*').split(',')
+DEFAULT_ALLOWED_HOSTS = '.railway.app,.up.railway.app,brandveloura.com,www.brandveloura.com,.brandveloura.com,localhost,127.0.0.1'
+raw_hosts = os.getenv('DJANGO_ALLOWED_HOSTS', DEFAULT_ALLOWED_HOSTS).split(',')
 for host in raw_hosts:
     cleaned = host.strip()
     if cleaned:
@@ -29,6 +47,10 @@ for host in raw_hosts:
 railway_domain = os.getenv('RAILWAY_PUBLIC_DOMAIN', '').strip()
 if railway_domain and railway_domain not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(railway_domain)
+if not ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'brandveloura.com', 'www.brandveloura.com', '.brandveloura.com', '.railway.app', '.up.railway.app']
+if RUNNING_TESTS and 'testserver' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('testserver')
 if '*' not in ALLOWED_HOSTS:
     for domain_pattern in ['.railway.app', '.up.railway.app', 'brandveloura.com', 'www.brandveloura.com', '.brandveloura.com', 'localhost', '127.0.0.1']:
         if domain_pattern not in ALLOWED_HOSTS:
@@ -70,9 +92,9 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 
 # Production Security Enhancements (Enabled when DEBUG=False and not running tests)
-if not DEBUG and 'test' not in sys.argv:
+if not DEBUG and not RUNNING_TESTS:
     SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True') == 'True'
-    SECURE_REDIRECT_EXEMPT = [r'^health/?$']
+    SECURE_REDIRECT_EXEMPT = [r'^health/?$', r'^healthz/?$']
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     CSRF_COOKIE_HTTPONLY = True

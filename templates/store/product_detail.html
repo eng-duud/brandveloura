@@ -284,11 +284,11 @@
                     <div 
                         id="grade-card-master" 
                         onclick="setProductGrade('master', {{ product.price_master_yer|default:0 }}, '{{ product.price_master_sar|default:0 }}', {{ product.compare_at_price_master_yer|default:0 }}, {{ product.discount_percentage_master|default:0 }})"
-                        class="grade-card p-2.5 rounded-xl border-2 border-pink-200 bg-white/70 cursor-pointer transition hover:border-pink-300 relative"
+                        class="grade-card p-2.5 rounded-xl border-2 {% if not product.price_original_yer %}border-brand-500 bg-white shadow-2xs{% else %}border-pink-200 bg-white/70 hover:border-pink-300{% endif %} cursor-pointer transition relative"
                     >
                         <div class="flex items-center justify-between">
                             <span class="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                                <span id="radio-dot-master" class="w-2 h-2 rounded-full bg-pink-200"></span>
+                                <span id="radio-dot-master" class="w-2 h-2 rounded-full {% if not product.price_original_yer %}bg-brand-500{% else %}bg-pink-200{% endif %}"></span>
                                 <span>ماستر كواليتي</span>
                             </span>
                             {% if product.discount_percentage_master > 0 %}
@@ -313,14 +313,14 @@
             <!-- Immediate Add to Cart & Buy Actions Form -->
             <form hx-post="{% url 'store:cart_add' %}" hx-target="#cart-badge-container" class="space-y-3 pt-1">
                 <input type="hidden" name="product_id" value="{{ product.id }}">
-                <input type="hidden" id="selected-grade-input" name="grade" value="{% if product.has_grades %}original{% endif %}">
+                <input type="hidden" id="selected-grade-input" name="grade" value="{% if product.has_grades %}{% if product.price_original_yer %}original{% else %}master{% endif %}{% endif %}">
                 
                 <div class="flex items-center gap-2.5 sm:gap-3">
                     <!-- Quantity Stepper -->
                     <div class="flex items-center border border-pink-200 rounded-xl bg-white p-1">
-                        <button type="button" onclick="const q = document.getElementById('qty-input'); if(q.value > 1) q.value--;" class="w-9 h-9 rounded-lg hover:bg-pink-50 flex items-center justify-center font-bold text-slate-700 text-sm cursor-pointer" aria-label="تقليل الكمية">-</button>
+                        <button type="button" onclick="const q = document.getElementById('qty-input'); if(parseInt(q.value || '1', 10) > 1) q.value = parseInt(q.value, 10) - 1;" class="w-9 h-9 rounded-lg hover:bg-pink-50 flex items-center justify-center font-bold text-slate-700 text-sm cursor-pointer" aria-label="تقليل الكمية">-</button>
                         <input type="number" id="qty-input" name="quantity" value="1" min="1" max="{{ product.stock_quantity|default:99 }}" class="w-10 text-center text-xs font-black font-num bg-transparent focus:outline-none">
-                        <button type="button" onclick="const q = document.getElementById('qty-input'); q.value++;" class="w-9 h-9 rounded-lg hover:bg-pink-50 flex items-center justify-center font-bold text-slate-700 text-sm cursor-pointer" aria-label="زيادة الكمية">+</button>
+                        <button type="button" onclick="const q = document.getElementById('qty-input'); const max = parseInt(q.max || '99', 10); if(parseInt(q.value || '1', 10) < max) q.value = parseInt(q.value || '1', 10) + 1;" class="w-9 h-9 rounded-lg hover:bg-pink-50 flex items-center justify-center font-bold text-slate-700 text-sm cursor-pointer" aria-label="زيادة الكمية">+</button>
                     </div>
 
                     <!-- Add to Cart CTA -->
@@ -336,7 +336,7 @@
                     <button 
                         type="submit" 
                         class="flex-1 py-3 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs sm:text-sm shadow-xs transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer min-h-[46px] active:scale-98"
-                        onclick="if(typeof showToast === 'function') showToast('تمت إضافة {{ product.name_ar }} إلى سلة المشتريات بنجاح');"
+                        hx-on::after-request="if(event.detail.successful && event.detail.xhr.getResponseHeader('HX-Trigger') === 'cartUpdated' && typeof showToast === 'function') showToast('تمت إضافة {{ product.name_ar|escapejs }} إلى سلة المشتريات بنجاح');"
                     >
                         <i data-lucide="shopping-bag" class="w-4 h-4"></i>
                         <span>إضافة للسلة</span>
@@ -348,7 +348,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <a 
                         id="whatsapp-inquiry-btn"
-                        href="https://wa.me/{{ store_settings.contact_whatsapp }}?text=مرحباً، أود الطلب: {{ product.name_ar }}" 
+                        href="https://wa.me/{{ store_settings.contact_whatsapp|urlencode }}?text={{ 'مرحباً، أود الطلب: '|urlencode }}{{ product.name_ar|urlencode }}" 
                         target="_blank"
                         class="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-pink-50 text-slate-800 border border-pink-200 font-medium text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
                     >

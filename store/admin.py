@@ -4,7 +4,7 @@ import uuid
 from django import forms
 from django.core.exceptions import ValidationError
 from django.contrib import admin
-from django.utils.html import format_html
+from django.utils.html import format_html, mark_safe
 from django.db.models import Count, Q, Sum
 from django.urls import reverse
 from django.contrib.auth.models import Group, User
@@ -28,6 +28,7 @@ from .models import (
     Order, OrderItem, HeroBanner, UserProfile, Notification,
     WebPushSubscription
 )
+from .signals import invalidate_home_and_catalog_cache
 
 # تزويد قوالب لوحة الإدارة بإحصائيات لوحة التحكم وسعر الصرف المباشر
 original_admin_each_context = admin.site.each_context
@@ -99,10 +100,10 @@ class SimplifiedUserAdmin(DefaultUserAdmin):
     @admin.display(description='نوع الحساب')
     def is_staff_badge(self, obj):
         if obj.is_superuser:
-            return format_html('<span style="background: #be123f; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">مدير رئيسي</span>')
+            return mark_safe('<span style="background: #be123f; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">مدير رئيسي</span>')
         elif obj.is_staff:
-            return format_html('<span style="background: #0284c7; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">مشرف متجر</span>')
-        return format_html('<span style="color: #64748b; font-size: 11px;">عميل مسجل</span>')
+            return mark_safe('<span style="background: #0284c7; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">مشرف متجر</span>')
+        return mark_safe('<span style="color: #64748b; font-size: 11px;">عميل مسجل</span>')
 
 try:
     admin.site.unregister(User)
@@ -177,7 +178,7 @@ class CategoryAdmin(admin.ModelAdmin):
                 '<span style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 6px; font-size: 11px;">فرعي من: <strong style="color: #0f172a;">{}</strong></span>',
                 obj.parent.name_ar
             )
-        return format_html(
+        return mark_safe(
             '<span style="background-color: #fdf2f8; color: #be123f; border: 1px solid #fecdd3; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">⭐ قسم رئيسي</span>'
         )
 
@@ -213,6 +214,11 @@ class BrandAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name_en',)}
     list_editable = ['is_featured', 'is_active', 'display_order']
     filter_horizontal = ['categories']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(
+            _products_count=Count('products', distinct=True)
+        )
     fieldsets = (
         ('1. بيانات الماركة والبراند الفاخر', {
             'description': 'أدخل اسم الماركة بالعربي والإنجليزي، وارفع الشعار الرسمي بدقة عالية.',
@@ -242,18 +248,20 @@ class BrandAdmin(admin.ModelAdmin):
                 '<img src="{}" style="width: 36px; height: 36px; object-fit: contain; border-radius: 8px; border: 1px solid #fecdd3; background: #ffffff; padding: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);" />',
                 url
             )
-        return format_html('<span style="color: #94a3b8; font-size: 11px;">—</span>')
+        return mark_safe('<span style="color: #94a3b8; font-size: 11px;">—</span>')
 
-    @admin.display(description='المنتجات')
+    @admin.display(description='المنتجات', ordering='_products_count')
     def products_count(self, obj):
-        count = obj.products.count()
+        count = getattr(obj, '_products_count', None)
+        if count is None:
+            count = obj.products.count()
         if count > 0:
             url = reverse('admin:store_product_changelist') + f"?brand__id__exact={obj.id}"
             return format_html(
                 '<a href="{}" style="font-weight: 700; color: #be123f; font-family: var(--bv-font-num); text-decoration: underline;" title="عرض منتجات هذا البراند">{} منتج ↗</a>',
                 url, count
             )
-        return format_html('<span style="color: #94a3b8; font-size: 11px;">لا يوجد</span>')
+        return mark_safe('<span style="color: #94a3b8; font-size: 11px;">لا يوجد</span>')
 
 
 # ==============================================================================
@@ -270,11 +278,11 @@ class ProductImageInline(admin.TabularInline):
     @admin.display(description='معاينة')
     def preview(self, instance):
         if instance and instance.pk and instance.get_image_url:
-            badge = '<span style="display:block; font-size:10px; color:#be123f; font-weight:700; margin-top:2px;">⭐ رئيسية</span>' if instance.is_primary else ''
+            badge = mark_safe('<span style="display:block; font-size:10px; color:#be123f; font-weight:700; margin-top:2px;">⭐ رئيسية</span>') if instance.is_primary else ''
             return format_html(
                 '<div style="text-align: center;"><img src="{}" style="width: 52px; height: 52px; object-fit: cover; border-radius: 8px; border: 1.5px solid #fecdd3; box-shadow: 0 2px 6px rgba(0,0,0,0.06);" />{}</div>',
                 instance.get_image_url,
-                format_html(badge)
+                badge
             )
         return '—'
 
@@ -439,12 +447,12 @@ class ProductAdmin(admin.ModelAdmin):
                 '<span style="background: #fdf2f8; color: #be123f; border: 1px solid #fecdd3; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">{}</span>',
                 name
             )
-        return format_html('<span style="color: #94a3b8; font-size: 11px;">—</span>')
+        return mark_safe('<span style="color: #94a3b8; font-size: 11px;">—</span>')
 
     @admin.display(description='المخزون', ordering='stock_quantity')
     def stock_badge(self, obj):
         if obj.stock_quantity <= 0:
-            return format_html('<span style="background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">نفد من المخزون ⚠️</span>')
+            return mark_safe('<span style="background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">نفد من المخزون ⚠️</span>')
         elif obj.stock_quantity <= 3:
             return format_html('<span style="background-color: #fef3c7; color: #d97706; border: 1px solid #fcd34d; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">متبقي {} فقط!</span>', obj.stock_quantity)
         return format_html('<span style="color: #059669; font-weight: bold; font-size: 11px;">{} قطعة</span>', obj.stock_quantity)
@@ -460,7 +468,7 @@ class ProductAdmin(admin.ModelAdmin):
                 '<span style="background-color: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: bold;">أصلي: {}{} | ماستر: {}{}</span>',
                 orig, orig_disc, mast, mast_disc
             )
-        return format_html('<span style="color: #94a3b8; font-size: 11px;">—</span>')
+        return mark_safe('<span style="color: #94a3b8; font-size: 11px;">—</span>')
 
     @admin.display(description='الصورة')
     def image_preview(self, obj):
@@ -485,56 +493,72 @@ class ProductAdmin(admin.ModelAdmin):
         settings_obj = StoreSettings.get_settings()
         rate = settings_obj.yer_per_sar or Decimal('530')
         sar_price = obj.price_sar
-        html = f"""
-        <div style="background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 10px; padding: 12px 16px; margin-top: 6px; font-size: 13px; line-height: 1.6;">
-            <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
-                <div>
-                    <span style="color: #64748b; font-size: 11px; display: block;">السعر الحالي بالريال اليمني:</span>
-                    <strong style="color: #0f172a; font-size: 15px;">{obj.price_yer:,.0f} ر.ي</strong>
-                </div>
-                <div>
-                    <span style="color: #64748b; font-size: 11px; display: block;">المعادل للعميل بالريال السعودي:</span>
-                    <strong style="color: #be123f; font-size: 15px;">{sar_price} ر.س</strong>
-                    <span style="color: #64748b; font-size: 11px;">(سعر الصرف: 1 ر.س = {rate} ر.ي)</span>
-                </div>
-        """
+
+        discount_block = ''
         if obj.compare_at_price_yer and obj.compare_at_price_yer > obj.price_yer:
-            discount = obj.discount_percentage
-            compare_sar = obj.compare_at_price_sar
-            html += f"""
-                <div>
-                    <span style="color: #64748b; font-size: 11px; display: block;">نسبة الخصم المعروضة:</span>
-                    <span style="background: #be123f; color: #fff; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 12px;">خصم {discount}%</span>
-                    <span style="color: #64748b; font-size: 11px; text-decoration: line-through;">({obj.compare_at_price_yer:,.0f} ر.ي / {compare_sar} ر.س)</span>
-                </div>
-            """
+            discount_block = format_html(
+                '<div>'
+                '<span style="color: #64748b; font-size: 11px; display: block;">نسبة الخصم المعروضة:</span>'
+                '<span style="background: #be123f; color: #fff; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 12px;">خصم {}%</span>'
+                '<span style="color: #64748b; font-size: 11px; text-decoration: line-through;">({} ر.ي / {} ر.س)</span>'
+                '</div>',
+                obj.discount_percentage,
+                f"{obj.compare_at_price_yer:,.0f}",
+                obj.compare_at_price_sar,
+            )
+
+        grades_block = ''
         if obj.has_grades:
             orig_yer = f"{obj.price_original_yer:,.0f}" if obj.price_original_yer else "—"
             orig_sar = f"{obj.price_original_sar}" if obj.price_original_sar else "—"
-            orig_comp_yer = f"{obj.compare_at_price_original_yer:,.0f} ر.ي" if obj.compare_at_price_original_yer else ""
-            orig_disc = f'<span style="background:#be123f;color:#fff;padding:1px 6px;border-radius:4px;font-size:10px;margin-right:4px;">خصم {obj.discount_percentage_original}%</span>' if obj.discount_percentage_original > 0 else ""
+            orig_comp = (
+                format_html('<span style="color:#64748b;font-size:11px;text-decoration:line-through;margin-right:4px;">({} ر.ي)</span>', f"{obj.compare_at_price_original_yer:,.0f}")
+                if obj.compare_at_price_original_yer else ''
+            )
+            orig_disc = (
+                format_html('<span style="background:#be123f;color:#fff;padding:1px 6px;border-radius:4px;font-size:10px;margin-right:4px;">خصم {}%</span>', obj.discount_percentage_original)
+                if obj.discount_percentage_original > 0 else ''
+            )
 
             mast_yer = f"{obj.price_master_yer:,.0f}" if obj.price_master_yer else "—"
             mast_sar = f"{obj.price_master_sar}" if obj.price_master_sar else "—"
-            mast_comp_yer = f"{obj.compare_at_price_master_yer:,.0f} ر.ي" if obj.compare_at_price_master_yer else ""
-            mast_disc = f'<span style="background:#be123f;color:#fff;padding:1px 6px;border-radius:4px;font-size:10px;margin-right:4px;">خصم {obj.discount_percentage_master}%</span>' if obj.discount_percentage_master > 0 else ""
+            mast_comp = (
+                format_html('<span style="color:#64748b;font-size:11px;text-decoration:line-through;margin-right:4px;">({} ر.ي)</span>', f"{obj.compare_at_price_master_yer:,.0f}")
+                if obj.compare_at_price_master_yer else ''
+            )
+            mast_disc = (
+                format_html('<span style="background:#be123f;color:#fff;padding:1px 6px;border-radius:4px;font-size:10px;margin-right:4px;">خصم {}%</span>', obj.discount_percentage_master)
+                if obj.discount_percentage_master > 0 else ''
+            )
 
-            html += f"""
-                <div style="width: 100%; border-top: 1px dashed #fecdd3; padding-top: 8px; margin-top: 4px; display: flex; gap: 24px; flex-wrap: wrap;">
-                    <div>
-                        <strong style="color: #be123f;">الأصلي 100%:</strong> {orig_yer} ر.ي ({orig_sar} ر.س)
-                        {orig_disc}
-                        {f'<span style="color:#64748b;font-size:11px;text-decoration:line-through;margin-right:4px;">({orig_comp_yer})</span>' if orig_comp_yer else ''}
-                    </div>
-                    <div>
-                        <strong style="color: #831843;">ماستر كواليتي:</strong> {mast_yer} ر.ي ({mast_sar} ر.س)
-                        {mast_disc}
-                        {f'<span style="color:#64748b;font-size:11px;text-decoration:line-through;margin-right:4px;">({mast_comp_yer})</span>' if mast_comp_yer else ''}
-                    </div>
-                </div>
-            """
-        html += "</div></div>"
-        return format_html(html)
+            grades_block = format_html(
+                '<div style="width: 100%; border-top: 1px dashed #fecdd3; padding-top: 8px; margin-top: 4px; display: flex; gap: 24px; flex-wrap: wrap;">'
+                '<div><strong style="color: #be123f;">الأصلي 100%:</strong> {} ر.ي ({} ر.س) {}{}</div>'
+                '<div><strong style="color: #831843;">ماستر كواليتي:</strong> {} ر.ي ({} ر.س) {}{}</div>'
+                '</div>',
+                orig_yer, orig_sar, orig_disc, orig_comp,
+                mast_yer, mast_sar, mast_disc, mast_comp,
+            )
+
+        return format_html(
+            '<div style="background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 10px; padding: 12px 16px; margin-top: 6px; font-size: 13px; line-height: 1.6;">'
+            '<div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">'
+            '<div>'
+            '<span style="color: #64748b; font-size: 11px; display: block;">السعر الحالي بالريال اليمني:</span>'
+            '<strong style="color: #0f172a; font-size: 15px;">{} ر.ي</strong>'
+            '</div>'
+            '<div>'
+            '<span style="color: #64748b; font-size: 11px; display: block;">المعادل للعميل بالريال السعودي:</span>'
+            '<strong style="color: #be123f; font-size: 15px;">{} ر.س</strong>'
+            '<span style="color: #64748b; font-size: 11px;">(سعر الصرف: 1 ر.س = {} ر.ي)</span>'
+            '</div>'
+            '{}{}</div></div>',
+            f"{obj.price_yer:,.0f}",
+            sar_price,
+            rate,
+            discount_block,
+            grades_block,
+        )
 
     @admin.action(description='📋 تكرار المنتج المحدد (عمل نسخة للمنتجات المشابهة)')
     def duplicate_products(self, request, queryset):
@@ -564,31 +588,37 @@ class ProductAdmin(admin.ModelAdmin):
     @admin.action(description='✅ تفعيل وعرض المنتجات المحددة في المتجر')
     def make_active(self, request, queryset):
         updated = queryset.update(is_active=True)
+        invalidate_home_and_catalog_cache()
         self.message_user(request, f"تم تفعيل {updated} منتج بنجاح.")
 
     @admin.action(description='🚫 إلغاء تفعيل وإخفاء المنتجات المحددة')
     def make_inactive(self, request, queryset):
         updated = queryset.update(is_active=False)
+        invalidate_home_and_catalog_cache()
         self.message_user(request, f"تم إخفاء {updated} منتج من واجهة المتجر.")
 
     @admin.action(description='⭐ تمييز في الصفحة الرئيسية (Featured)')
     def make_featured(self, request, queryset):
         updated = queryset.update(is_featured=True)
+        invalidate_home_and_catalog_cache()
         self.message_user(request, f"تم تمييز {updated} منتج في الصفحة الرئيسية.")
 
     @admin.action(description='✖ إلغاء التمييز من الصفحة الرئيسية')
     def unmake_featured(self, request, queryset):
         updated = queryset.update(is_featured=False)
+        invalidate_home_and_catalog_cache()
         self.message_user(request, f"تم إلغاء تمييز {updated} منتج.")
 
     @admin.action(description='✨ إضافة لشارة "وصل حديثاً"')
     def mark_as_new(self, request, queryset):
         updated = queryset.update(is_new=True)
+        invalidate_home_and_catalog_cache()
         self.message_user(request, f"تمت إضافة شارة وصل حديثاً لـ {updated} منتج.")
 
     @admin.action(description='✖ إزالة شارة "وصل حديثاً"')
     def unmark_as_new(self, request, queryset):
         updated = queryset.update(is_new=False)
+        invalidate_home_and_catalog_cache()
         self.message_user(request, f"تمت إزالة شارة وصل حديثاً عن {updated} منتج.")
 
     @admin.action(description='📢 إرسال إشعار ترويجي فوري لهواتف المشتركين (Push Notification)')
@@ -602,6 +632,7 @@ class ProductAdmin(admin.ModelAdmin):
     @admin.action(description='⚠️ تحديد كـ نفد من المخزون (المخزون = 0)')
     def mark_out_of_stock(self, request, queryset):
         updated = queryset.update(stock_quantity=0)
+        invalidate_home_and_catalog_cache()
         self.message_user(request, f"تم تحديد المخزون إلى 0 لـ {updated} منتج.")
 
 
@@ -653,6 +684,14 @@ class GiftBundleAdmin(admin.ModelAdmin):
     list_editable = ['is_active', 'is_featured', 'display_order']
     prepopulated_fields = {'slug': ('title_ar',)}
     inlines = [GiftBundleItemInline]
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .prefetch_related('items__product__images')
+            .annotate(_items_count=Count('items', distinct=True))
+        )
 
     class Media:
         css = {
@@ -745,7 +784,9 @@ class GiftBundleAdmin(admin.ModelAdmin):
     discount_badge.short_description = 'نسبة التوفير'
 
     def items_count_display(self, obj):
-        c = obj.items.count()
+        c = getattr(obj, '_items_count', None)
+        if c is None:
+            c = obj.items.count()
         return format_html(
             '<span style="font-weight: bold; color: #1e293b;">{} منتجات</span>',
             c
@@ -758,7 +799,7 @@ class GiftBundleAdmin(admin.ModelAdmin):
             badges.append('<span style="background:#f3e8ff; color:#7e22ce; padding: 2px 6px; border-radius: 4px; font-size: 10px;">🎁 تغليف فاخر</span>')
         if obj.includes_gift_card:
             badges.append('<span style="background:#fef3c7; color:#b45309; padding: 2px 6px; border-radius: 4px; font-size: 10px;">✉️ كرت إهداء</span>')
-        return format_html('&nbsp;'.join(badges)) if badges else '—'
+        return mark_safe('&nbsp;'.join(badges)) if badges else '—'
     packaging_badges.short_description = 'المزايا المشمولة'
 
 
@@ -867,20 +908,24 @@ class OrderAdmin(admin.ModelAdmin):
         if not obj or not obj.id:
             return '—'
         invoice_url = reverse('store:admin_print_invoice', kwargs={'order_id': obj.id})
-        html = (
-            f'<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0;">'
-            f'<a href="{invoice_url}" target="_blank" style="background: #0f172a; color: white; padding: 7px 16px; border-radius: 8px; font-size: 12px; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(15,23,42,0.25);">'
-            f'<span>🖨️ طباعة الفاتورة الرسمية (A4 / PNG)</span>'
-            f'</a>'
-        )
+        cloud_link = ''
         if obj.invoice_image:
-            html += (
-                f'<a href="{obj.invoice_image.url}" target="_blank" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 6px 14px; border-radius: 8px; font-size: 11px; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">'
-                f'<span>☁️ استعراض الفاتورة على Cloudinary</span>'
-                f'</a>'
+            cloud_link = format_html(
+                '<a href="{}" target="_blank" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 6px 14px; border-radius: 8px; font-size: 11px; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">'
+                '<span>☁️ استعراض الفاتورة على Cloudinary</span>'
+                '</a>',
+                obj.invoice_image.url,
             )
-        html += '</div>'
-        return format_html(html)
+        return format_html(
+            '<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0;">'
+            '<a href="{}" target="_blank" style="background: #0f172a; color: white; padding: 7px 16px; border-radius: 8px; font-size: 12px; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(15,23,42,0.25);">'
+            '<span>🖨️ طباعة الفاتورة الرسمية (A4 / PNG)</span>'
+            '</a>'
+            '{}'
+            '</div>',
+            invoice_url,
+            cloud_link,
+        )
 
     @admin.display(description='مراسلة العميل')
     def customer_whatsapp_link(self, obj):
@@ -976,7 +1021,7 @@ class OrderAdmin(admin.ModelAdmin):
                 '</a>',
                 url, url
             )
-        return format_html('<span style="color: #9ca3af; font-size: 12px;">بدون إشعار</span>')
+        return mark_safe('<span style="color: #9ca3af; font-size: 12px;">بدون إشعار</span>')
 
     @admin.display(description='فحص السند مكبراً')
     def receipt_large_view(self, obj):
@@ -1035,7 +1080,6 @@ class OrderAdmin(admin.ModelAdmin):
         restored_count = 0
         for order in queryset:
             order.status = 'cancelled'
-            order.restore_stock()
             order.save()
             restored_count += 1
         self.message_user(request, f'تم إلغاء {restored_count} طلب واسترجاع كميات منتجاتها إلى المخزون فوراً.')
@@ -1059,8 +1103,26 @@ class OrderAdmin(admin.ModelAdmin):
 # 4. إعدادات المتجر وسعر الصرف اليومي (Store Settings)
 # ==============================================================================
 
+class StoreSettingsAdminForm(forms.ModelForm):
+    """نموذج إعدادات المتجر مع إخفاء المفاتيح السرية بصرياً في الحقول"""
+    class Meta:
+        model = StoreSettings
+        fields = '__all__'
+        widgets = {
+            'google_client_secret': forms.PasswordInput(
+                render_value=True,
+                attrs={'autocomplete': 'new-password', 'class': 'vTextField'},
+            ),
+            'vapid_private_key': forms.PasswordInput(
+                render_value=True,
+                attrs={'autocomplete': 'new-password', 'class': 'vTextField'},
+            ),
+        }
+
+
 @admin.register(StoreSettings)
 class StoreSettingsAdmin(admin.ModelAdmin):
+    form = StoreSettingsAdminForm
     list_display = ['store_name', 'yer_per_sar', 'cart_reservation_minutes', 'default_category', 'contact_phone', 'contact_whatsapp', 'updated_at']
     autocomplete_fields = ['default_category']
 
@@ -1123,10 +1185,10 @@ class PaymentAccountAdmin(admin.ModelAdmin):
     @admin.display(description='العملة')
     def currency_badge(self, obj):
         if obj.currency == 'SAR':
-            return format_html('<span style="background-color: #ecfdf5; color: #047857; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">🇸🇦 ريال سعودي فقط</span>')
+            return mark_safe('<span style="background-color: #ecfdf5; color: #047857; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">🇸🇦 ريال سعودي فقط</span>')
         elif obj.currency == 'YER':
-            return format_html('<span style="background-color: #f8fafc; color: #475569; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">🇾🇪 ريال يمني فقط</span>')
-        return format_html('<span style="background-color: #fdf2f8; color: #be185d; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">يقبل الريالين</span>')
+            return mark_safe('<span style="background-color: #f8fafc; color: #475569; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">🇾🇪 ريال يمني فقط</span>')
+        return mark_safe('<span style="background-color: #fdf2f8; color: #be185d; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">يقبل الريالين</span>')
 
     @admin.display(description='الدولة')
     def country_badge(self, obj):
@@ -1226,10 +1288,10 @@ class NotificationAdmin(admin.ModelAdmin):
     @admin.display(description='الجهة')
     def target_badge(self, obj):
         if obj.for_admin:
-            return format_html('<span style="background: #be123f; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">إدارة المتجر</span>')
+            return mark_safe('<span style="background: #be123f; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">إدارة المتجر</span>')
         if obj.recipient:
             return format_html('<span style="background: #0284c7; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">{}</span>', obj.recipient.username)
-        return format_html('<span style="background: #64748b; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px;">عام</span>')
+        return mark_safe('<span style="background: #64748b; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px;">عام</span>')
 
     @admin.display(description='النوع')
     def notification_type_badge(self, obj):
@@ -1249,8 +1311,8 @@ class NotificationAdmin(admin.ModelAdmin):
     @admin.display(description='الحالة')
     def is_read_badge(self, obj):
         if obj.is_read:
-            return format_html('<span style="color: #10b981; font-weight: bold;">✓ مقروء</span>')
-        return format_html('<span style="background: #f43f5e; color: #fff; padding: 1px 7px; border-radius: 10px; font-size: 11px; font-weight: bold;">● جديد</span>')
+            return mark_safe('<span style="color: #10b981; font-weight: bold;">✓ مقروء</span>')
+        return mark_safe('<span style="background: #f43f5e; color: #fff; padding: 1px 7px; border-radius: 10px; font-size: 11px; font-weight: bold;">● جديد</span>')
 
     @admin.display(description='الرابط')
     def link_action(self, obj):
@@ -1258,14 +1320,31 @@ class NotificationAdmin(admin.ModelAdmin):
             return format_html('<a href="{}" style="color: #e11d48; font-weight: bold; text-decoration: underline;">فتح الرابط ↗</a>', obj.link)
         return '-'
 
+    def _collect_unread_cache_keys(self, queryset):
+        keys = set()
+        for uid, for_admin in queryset.values_list('recipient_id', 'for_admin').distinct():
+            if uid:
+                keys.add(f'bv_unread_notifications_user_{uid}')
+            if for_admin:
+                keys.add('bv_admin_unread_notifications')
+        return list(keys)
+
     @admin.action(description='تحديد كمقروء')
     def mark_as_read(self, request, queryset):
+        from django.core.cache import cache
+        keys = self._collect_unread_cache_keys(queryset)
         count = queryset.update(is_read=True)
+        if keys:
+            cache.delete_many(keys)
         self.message_user(request, f"تم تحديد {count} إشعار كمقروء بنجاح.")
 
     @admin.action(description='تحديد كغير مقروء')
     def mark_as_unread(self, request, queryset):
+        from django.core.cache import cache
+        keys = self._collect_unread_cache_keys(queryset)
         count = queryset.update(is_read=False)
+        if keys:
+            cache.delete_many(keys)
         self.message_user(request, f"تم تحديد {count} إشعار كغير مقروء.")
 
     @admin.action(description='📢 بث الإشعارات المحددة كهواتف (Web Push Broadcast)')
@@ -1320,7 +1399,7 @@ class WebPushSubscriptionAdmin(admin.ModelAdmin):
                 '<span style="font-weight: 700; color: #0284c7;">👤 {}</span>',
                 obj.user.get_full_name() or obj.user.username
             )
-        return format_html('<span style="color: #64748b;">📱 زائر مجهول (هاتف)</span>')
+        return mark_safe('<span style="color: #64748b;">📱 زائر مجهول (هاتف)</span>')
 
     @admin.display(description='الجهاز / المتصفح')
     def user_agent_short(self, obj):

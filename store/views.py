@@ -10,6 +10,7 @@ from io import BytesIO
 from PIL import Image
 from decimal import Decimal
 from urllib.parse import urlencode, quote
+from xml.sax.saxutils import escape as xml_escape
 import requests
 
 from django.core.files.base import ContentFile
@@ -20,8 +21,9 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
+from django.middleware.csrf import get_token
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, F
 from django.core.cache import cache
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout, update_session_auth_hash
@@ -29,6 +31,8 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.urls import reverse
+from django.utils.encoding import iri_to_uri
+from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from datetime import datetime, date, timedelta
 
@@ -42,12 +46,78 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-def _get_safe_redirect(request, default='store:home'):
+def _get_safe_redirect(request, default='store:home', candidate=None):
     """التحقق من رابط التوجيه والتأكد من أمانه لمنع ثغرات Open Redirect"""
-    next_url = request.POST.get('next') or request.GET.get('next') or request.GET.get('state') or request.META.get('HTTP_REFERER')
+    next_url = candidate or request.POST.get('next') or request.GET.get('next') or request.META.get('HTTP_REFERER')
     if next_url and url_has_allowed_host_and_scheme(url=next_url, allowed_hosts={request.get_host()}):
         return next_url
     return reverse(default)
+
+
+def _is_htmx_partial(request):
+    """التحقق مما إذا كان الطلب استبدالاً جزئياً عبر HTMX وليس تنقلاً كاملاً معززاً بـ hx-boost"""
+    return bool(
+        request.headers.get('HX-Request')
+        and not request.headers.get('HX-Boosted')
+        and not request.GET.get('full_page')
+    )
+
+
+def _yer_to_sar(amount_yer, yer_per_sar):
+    """تحويل المبلغ من الريال اليمني إلى الريال السعودي مقرباً للأعلى بدون كسور"""
+    if not yer_per_sar:
+        return 0
+    return int(math.ceil(Decimal(str(amount_yer)) / Decimal(str(yer_per_sar))))
+
+
+def _normalize_phone(phone_str):
+    """تطبيع رقم الهاتف المحمول بإزالة الرموز ومفاتيح الدولة المتكررة للمقارنة الدقيقة"""
+    digits = re.sub(r'\D', '', str(phone_str or ''))
+    if digits.startswith('00967') and len(digits) >= 14:
+        digits = digits[5:]
+    elif digits.startswith('967') and len(digits) >= 12:
+        digits = digits[3:]
+    elif digits.startswith('0') and len(digits) == 10 and digits[1] == '7':
+        digits = digits[1:]
+    return digits
+
+
+def _find_profile_by_phone(phone_str):
+    """البحث عن ملف عميل برقم الهاتف مع احترام الصيغ الدولية والمحلية دون تطابق زائف"""
+    raw = str(phone_str or '').strip()
+    if not raw:
+        return None
+    exact = UserProfile.objects.select_related('user').filter(phone=raw).first()
+    if exact:
+        return exact
+    norm = _normalize_phone(raw)
+    if len(norm) < 8:
+        return None
+    candidates = UserProfile.objects.select_related('user').filter(phone__endswith=norm[-8:])
+    for prof in candidates:
+        if _normalize_phone(prof.phone) == norm:
+            return prof
+    return None
+
+
+def _get_client_ip(request):
+    """استخراج عنوان IP للعميل مع دعم ترويسة Cloudflare و Reverse Proxy"""
+    cf_ip = request.META.get('HTTP_CF_CONNECTING_IP', '').strip()
+    if cf_ip:
+        return cf_ip
+    xff = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    if xff:
+        return xff.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '').strip()
+
+
+def _admin_change_url(model_name, obj_id):
+    """توليد رابط صفحة التعديل في لوحة التحكم ديناميكياً لدعم المسار السري المخصص"""
+    try:
+        return reverse(f'admin:store_{model_name}_change', args=[obj_id])
+    except Exception:
+        prefix = os.getenv('DJANGO_ADMIN_URL', 'admin').strip().strip('/') or 'admin'
+        return f"/{prefix}/store/{model_name}/{obj_id}/change/"
 
 
 def validate_receipt_file(uploaded_file):
@@ -356,7 +426,7 @@ def brands_list_view(request):
         'total_count': brands.count(),
     }
     
-    if request.headers.get('HX-Request') and not request.GET.get('full_page'):
+    if _is_htmx_partial(request):
         return render(request, 'store/partials/brands_grid.html', context)
         
     return render(request, 'store/brands_list.html', context)
@@ -441,7 +511,7 @@ def brand_detail_view(request, slug):
         'total_count': products.count(),
     }
     
-    if request.headers.get('HX-Request') and not request.GET.get('full_page'):
+    if _is_htmx_partial(request):
         return render(request, 'store/partials/product_grid.html', context)
         
     return render(request, 'store/brand_detail.html', context)
@@ -629,8 +699,8 @@ def product_list_view(request):
         'total_count': paginator.count,
     }
     
-    # إذا كان الطلب من HTMX لاستبدال شبكة المنتجات فقط
-    if request.headers.get('HX-Request') and not request.GET.get('full_page'):
+    # إذا كان الطلب جزئياً من HTMX لاستبدال شبكة المنتجات فقط (وليس hx-boost)
+    if _is_htmx_partial(request):
         return render(request, 'store/partials/product_grid.html', context)
         
     return render(request, 'store/product_list.html', context)
@@ -658,7 +728,7 @@ def product_quick_view(request, slug):
 
 def product_detail_view(request, slug):
     """صفحة تفاصيل المنتج الفاخر مع المواصفات الذكية"""
-    if request.headers.get('HX-Request') and not request.GET.get('full_page'):
+    if _is_htmx_partial(request):
         return product_quick_view(request, slug)
 
     product = get_object_or_404(
@@ -791,7 +861,7 @@ def get_cart_timing_context(request):
 
 
 def merge_and_restore_user_cart(request, user):
-    """دمج سلة الزائر السابقة مع السلة المحفوظة بحسابه في قاعدة البيانات واستعادتها كاملة"""
+    """دمج سلة الزائر السابقة مع السلة المحفوظة بحسابه في قاعدة البيانات واستعادتها كاملة مع تنظيف غير النشط"""
     try:
         profile, _ = UserProfile.objects.get_or_create(user=user)
         db_cart = profile.cart_data or {}
@@ -801,10 +871,29 @@ def merge_and_restore_user_cart(request, user):
         merged = dict(db_cart)
         for key, item in guest_cart.items():
             if key in merged:
-                # نعتمد الكمية الأكبر منعاً للتكرار العشوائي
                 merged[key]['quantity'] = max(merged[key].get('quantity', 1), item.get('quantity', 1))
             else:
                 merged[key] = item
+
+        # استبعاد العناصر المحذوفة أو المعطلة من قاعدة البيانات
+        if merged:
+            prod_ids = {
+                v.get('product_id') for v in merged.values()
+                if not v.get('is_bundle') and v.get('product_id')
+            }
+            bundle_ids = {
+                (v.get('bundle_id') or v.get('product_id')) for v in merged.values()
+                if v.get('is_bundle') and (v.get('bundle_id') or v.get('product_id'))
+            }
+            active_pids = set(Product.objects.filter(id__in=prod_ids, is_active=True).values_list('id', flat=True)) if prod_ids else set()
+            active_bids = set(GiftBundle.objects.filter(id__in=bundle_ids, is_active=True).values_list('id', flat=True)) if bundle_ids else set()
+            merged = {
+                k: v for k, v in merged.items()
+                if (
+                    (v.get('is_bundle') and (v.get('bundle_id') or v.get('product_id')) in active_bids)
+                    or (not v.get('is_bundle') and v.get('product_id') in active_pids)
+                )
+            }
 
         request.session['cart'] = merged
         request.session.modified = True
@@ -812,6 +901,8 @@ def merge_and_restore_user_cart(request, user):
         profile.save(update_fields=['cart_data'])
         if merged:
             refresh_cart_reservation(request)
+        else:
+            request.session.pop('cart_expires_at', None)
         return merged
     except Exception:
         return request.session.get('cart', {})
@@ -820,6 +911,7 @@ def merge_and_restore_user_cart(request, user):
 @require_POST
 def cart_add(request):
     """إضافة منتج للسلة لحظياً عبر HTMX مع فحص المخزون ودعم درجتي الأصلي والماستر"""
+    check_and_expire_cart(request)
     product_id = request.POST.get('product_id')
     try:
         quantity = int(request.POST.get('quantity', 1))
@@ -837,7 +929,7 @@ def cart_add(request):
     if product.stock_quantity <= 0:
         cart = request.session.get('cart', {})
         cart_count = sum(item.get('quantity', 1) for item in cart.values())
-        response = render(request, 'store/partials/cart_badge.html', {'cart_count': cart_count})
+        response = render(request, 'store/partials/cart_badge.html', {'cart_count': cart_count, 'oob_sync': True})
         response['HX-Trigger'] = 'outOfStock'
         return response
 
@@ -861,11 +953,16 @@ def cart_add(request):
     cart = request.session.get('cart', {})
     item_key = f"{product_id}_{grade}_{variant_info}".strip('_')
     
-    current_cart_qty = cart.get(item_key, {}).get('quantity', 0)
-    available_qty = max(0, product.stock_quantity - current_cart_qty)
+    # احتساب إجمالي الكمية المضافة مسبقاً لنفس المنتج بجميع درجاته وخياراته
+    current_product_qty = sum(
+        int(v.get('quantity', 0))
+        for v in cart.values()
+        if not v.get('is_bundle') and str(v.get('product_id')) == str(product.id)
+    )
+    available_qty = max(0, product.stock_quantity - current_product_qty)
     if available_qty <= 0:
         cart_count = sum(item.get('quantity', 1) for item in cart.values())
-        response = render(request, 'store/partials/cart_badge.html', {'cart_count': cart_count})
+        response = render(request, 'store/partials/cart_badge.html', {'cart_count': cart_count, 'oob_sync': True})
         response['HX-Trigger'] = 'maxStockReached'
         return response
 
@@ -878,7 +975,7 @@ def cart_add(request):
         cart[item_key] = {
             'product_id': product.id,
             'name': product.name_ar,
-            'brand': product.brand_name,
+            'brand': product.effective_brand_name,
             'price_yer': unit_price,
             'image_url': product.primary_image_url,
             'quantity': quantity,
@@ -890,11 +987,10 @@ def cart_add(request):
     request.session.modified = True
     sync_cart_to_profile(request)
     refresh_cart_reservation(request)
-    refresh_cart_reservation(request)
     
     cart_count = sum(item.get('quantity', 1) for item in cart.values())
     
-    response = render(request, 'store/partials/cart_badge.html', {'cart_count': cart_count})
+    response = render(request, 'store/partials/cart_badge.html', {'cart_count': cart_count, 'oob_sync': True})
     response['HX-Trigger'] = 'cartUpdated'
     return response
 
@@ -902,6 +998,7 @@ def cart_add(request):
 @require_POST
 def cart_update_quantity(request):
     """تعديل كمية عنصر في السلة مع احترام رصيد المخزون ومزامنة الحساب"""
+    check_and_expire_cart(request)
     item_key = request.POST.get('item_key')
     action = request.POST.get('action') # 'increase' or 'decrease'
     
@@ -909,24 +1006,41 @@ def cart_update_quantity(request):
     
     if item_key in cart:
         if action == 'increase':
-            p_id = cart[item_key].get('product_id')
-            prod = Product.objects.filter(id=p_id, is_active=True).first()
-            if not prod:
-                del cart[item_key]
-            elif cart[item_key]['quantity'] >= prod.stock_quantity:
-                pass  # لا يسمح بتجاوز الكمية المتوفرة بالمخزون
+            if cart[item_key].get('is_bundle'):
+                b_id = cart[item_key].get('bundle_id') or cart[item_key].get('product_id')
+                bundle = GiftBundle.objects.prefetch_related('items__product').filter(id=b_id, is_active=True).first()
+                if not bundle:
+                    del cart[item_key]
+                else:
+                    can_add = all(
+                        b_item.product and b_item.product.is_active and (
+                            b_item.product.stock_quantity >= (cart[item_key]['quantity'] + 1) * b_item.quantity
+                        )
+                        for b_item in bundle.items.all()
+                    )
+                    if can_add:
+                        cart[item_key]['quantity'] += 1
             else:
-                cart[item_key]['quantity'] += 1
+                p_id = cart[item_key].get('product_id')
+                prod = Product.objects.filter(id=p_id, is_active=True).first()
+                if not prod:
+                    del cart[item_key]
+                else:
+                    total_for_prod = sum(
+                        int(v.get('quantity', 0))
+                        for v in cart.values()
+                        if not v.get('is_bundle') and str(v.get('product_id')) == str(p_id)
+                    )
+                    if total_for_prod < prod.stock_quantity:
+                        cart[item_key]['quantity'] += 1
         elif action == 'decrease':
             cart[item_key]['quantity'] -= 1
             if cart[item_key]['quantity'] <= 0:
                 del cart[item_key]
 
-                
     request.session['cart'] = cart
     request.session.modified = True
     sync_cart_to_profile(request)
-    refresh_cart_reservation(request)
     if cart:
         refresh_cart_reservation(request)
     else:
@@ -954,8 +1068,8 @@ def cart_remove_item(request):
     return _render_cart_response(request)
 
 
-def _render_cart_response(request):
-    """دالة مساعدة لحساب إجماليات السلة وعرضها"""
+def _build_cart_context(request):
+    """دالة مساعدة مشتركة لحساب عناصر السلة والإجماليات لكل من العرض الكامل والجزئي"""
     cart = request.session.get('cart', {})
     settings = StoreSettings.get_settings()
     yer_per_sar = settings.yer_per_sar or Decimal('530.00')
@@ -969,10 +1083,6 @@ def _render_cart_response(request):
         line_total_yer = price_yer * qty
         subtotal_yer += line_total_yer
         
-        # حساب المعادل بالسعودي بدون كسور مقرباً للأعلى
-        price_sar = int(math.ceil(price_yer / yer_per_sar))
-        line_total_sar = int(math.ceil(line_total_yer / yer_per_sar))
-        
         items.append({
             'key': key,
             'product_id': data.get('product_id'),
@@ -982,66 +1092,40 @@ def _render_cart_response(request):
             'variant_info': data.get('variant_info'),
             'quantity': qty,
             'price_yer': price_yer,
-            'price_sar': price_sar,
+            'price_sar': _yer_to_sar(price_yer, yer_per_sar),
             'line_total_yer': line_total_yer,
-            'line_total_sar': line_total_sar,
+            'line_total_sar': _yer_to_sar(line_total_yer, yer_per_sar),
         })
         
-    subtotal_sar = int(math.ceil(subtotal_yer / yer_per_sar)) if yer_per_sar else 0
-    
-    context = {
+    return {
         'cart_items': items,
         'subtotal_yer': subtotal_yer,
-        'subtotal_sar': subtotal_sar,
+        'subtotal_sar': _yer_to_sar(subtotal_yer, yer_per_sar),
         'cart_count': sum(item['quantity'] for item in items),
         **get_cart_timing_context(request),
     }
-    
+
+
+def _render_cart_response(request):
+    """إرجاع جدول السلة الجزئي مع تفعيل حدث تحديث السلة والمزامنة التلقائية لشارات الجوال وسطح المكتب"""
+    context = _build_cart_context(request)
+    context['oob_cart_badges'] = True
     response = render(request, 'store/partials/cart_table.html', context)
     response['HX-Trigger'] = 'cartUpdated'
     return response
 
 
 def cart_view(request):
-    """صفحة سلة المشتريات الكاملة مع فحص انتهاء حجز السلة"""
-    if check_and_expire_cart(request):
+    """صفحة سلة المشتريات الكاملة مع دعم التحديث الجزئي عند انتهاء المهلة"""
+    expired = check_and_expire_cart(request)
+    if expired:
+        if _is_htmx_partial(request):
+            return _render_cart_response(request)
         return redirect('store:cart_view')
-        
-    cart = request.session.get('cart', {})
-    settings = StoreSettings.get_settings()
-    yer_per_sar = settings.yer_per_sar or Decimal('530.00')
-    
-    items = []
-    subtotal_yer = Decimal('0.00')
-    
-    for key, data in cart.items():
-        qty = data.get('quantity', 1)
-        price_yer = Decimal(str(data.get('price_yer', 0)))
-        line_total_yer = price_yer * qty
-        subtotal_yer += line_total_yer
-        
-        items.append({
-            'key': key,
-            'product_id': data.get('product_id'),
-            'name': data.get('name'),
-            'brand': data.get('brand'),
-            'image_url': data.get('image_url'),
-            'variant_info': data.get('variant_info'),
-            'quantity': qty,
-            'price_yer': price_yer,
-            'price_sar': int(math.ceil(price_yer / yer_per_sar)),
-            'line_total_yer': line_total_yer,
-            'line_total_sar': int(math.ceil(line_total_yer / yer_per_sar)),
-        })
-        
-    subtotal_sar = int(math.ceil(subtotal_yer / yer_per_sar)) if yer_per_sar else 0
-    
-    context = {
-        'cart_items': items,
-        'subtotal_yer': subtotal_yer,
-        'subtotal_sar': subtotal_sar,
-        **get_cart_timing_context(request),
-    }
+
+    context = _build_cart_context(request)
+    if _is_htmx_partial(request):
+        return _render_cart_response(request)
     return render(request, 'store/cart.html', context)
 
 
@@ -1061,21 +1145,22 @@ def toggle_currency(request):
             return redirect(referer)
         return redirect('store:home')
 
-    response = HttpResponse(f"""
-        <button 
-            hx-post="{reverse('store:toggle_currency')}" 
-            hx-headers='{{"X-CSRFToken": "{request.COOKIES.get("csrftoken", "")}"}}'
-            hx-swap="outerHTML" 
-            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white hover:bg-pink-50 border border-pink-200 text-slate-800 text-xs font-bold transition-all shadow-2xs cursor-pointer min-h-[40px]"
-            title="تبديل العملة المعروضة">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>{'🇸🇦 ر.س' if new_currency == 'SAR' else '🇾🇪 ر.ي'}</span>
-        </button>
-    """)
+    csrf_tok = get_token(request)
+    label = '🇸🇦 ر.س' if new_currency == 'SAR' else '🇾🇪 ر.ي'
+    btn_html = format_html(
+        '<button hx-post="{}" hx-headers=\'{{"X-CSRFToken": "{}"}}\' hx-swap="outerHTML" '
+        'class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white hover:bg-pink-50 border border-pink-200 text-slate-800 text-xs font-bold transition-all shadow-2xs cursor-pointer min-h-[40px]" '
+        'title="تبديل العملة المعروضة">'
+        '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>'
+        '<span>{}</span></button>',
+        reverse('store:toggle_currency'),
+        csrf_tok,
+        label,
+    )
+    response = HttpResponse(btn_html)
     if request.headers.get('HX-Request'):
         response['HX-Refresh'] = 'true'
     return response
-
 
 
 def get_shipping_fee(request):
@@ -1090,7 +1175,7 @@ def get_shipping_fee(request):
     
     if city_id:
         try:
-            zone = ShippingZone.objects.get(id=city_id)
+            zone = ShippingZone.objects.get(id=city_id, is_active=True)
             shipping_fee = zone.delivery_fee_yer
             delivery_time = zone.estimated_delivery_time
         except (ShippingZone.DoesNotExist, ValueError):
@@ -1105,7 +1190,7 @@ def get_shipping_fee(request):
     total_yer = subtotal_yer + shipping_fee + gift_wrapping_fee
     
     yer_per_sar = settings.yer_per_sar or Decimal('530.00')
-    total_sar = int(math.ceil(total_yer / yer_per_sar))
+    total_sar = _yer_to_sar(total_yer, yer_per_sar)
     
     return render(request, 'store/partials/checkout_totals.html', {
         'shipping_fee': shipping_fee,
@@ -1516,7 +1601,7 @@ def gift_calculate_live(request):
             'price_yer': wrapping_fee
         })
 
-    total_sar = int(math.ceil(total_yer / yer_per_sar))
+    total_sar = _yer_to_sar(total_yer, yer_per_sar)
 
     return render(request, 'store/partials/gift_builder_summary.html', {
         'total_yer': total_yer,
@@ -1538,30 +1623,41 @@ def checkout_view(request):
         
     settings = StoreSettings.get_settings()
     yer_per_sar = settings.yer_per_sar or Decimal('530.00')
-    
+
+    def _live_unit_price(item_data, products_lookup, bundles_lookup):
+        if item_data.get('is_bundle'):
+            b_id = item_data.get('bundle_id') or item_data.get('product_id')
+            b_obj = bundles_lookup.get(b_id)
+            if b_obj:
+                return b_obj.price_yer, True
+            return Decimal(str(item_data.get('price_yer', 0))), False
+        p_id = item_data.get('product_id')
+        p_grade = item_data.get('grade')
+        p_obj = products_lookup.get(p_id)
+        if not p_obj:
+            return Decimal(str(item_data.get('price_yer', 0))), False
+        if p_grade == 'master' and p_obj.price_master_yer:
+            return p_obj.price_master_yer, True
+        if (p_grade == 'original' or not p_grade) and p_obj.price_original_yer:
+            return p_obj.price_original_yer, True
+        return (p_obj.price_yer or Decimal(str(item_data.get('price_yer', 0)))), True
+
+    cart_prod_ids = {
+        v.get('product_id') for v in cart.values()
+        if not v.get('is_bundle') and v.get('product_id')
+    }
+    cart_bundle_ids = {
+        (v.get('bundle_id') or v.get('product_id')) for v in cart.values()
+        if v.get('is_bundle') and (v.get('bundle_id') or v.get('product_id'))
+    }
+    preview_products = {p.id: p for p in Product.objects.filter(id__in=cart_prod_ids, is_active=True)} if cart_prod_ids else {}
+    preview_bundles = {b.id: b for b in GiftBundle.objects.filter(id__in=cart_bundle_ids, is_active=True)} if cart_bundle_ids else {}
+
     subtotal_yer = Decimal('0.00')
     items = []
     for key, data in cart.items():
-        qty = int(data.get('quantity', 1))
-        # إعادة مطابقة السعر مع قاعدة البيانات لمنع التلاعب وتفاوت الأسعار
-        price_yer = Decimal(str(data.get('price_yer', 0)))
-        if data.get('is_bundle'):
-            b_id = data.get('bundle_id') or data.get('product_id')
-            b_obj = GiftBundle.objects.filter(id=b_id, is_active=True).first()
-            if b_obj:
-                price_yer = b_obj.price_yer
-        else:
-            p_id = data.get('product_id')
-            p_grade = data.get('grade')
-            p_obj = Product.objects.filter(id=p_id, is_active=True).first()
-            if p_obj:
-                if p_grade == 'master' and p_obj.price_master_yer:
-                    price_yer = p_obj.price_master_yer
-                elif (p_grade == 'original' or not p_grade) and p_obj.price_original_yer:
-                    price_yer = p_obj.price_original_yer
-                elif p_obj.price_yer:
-                    price_yer = p_obj.price_yer
-
+        qty = max(1, int(data.get('quantity', 1)))
+        price_yer, _ = _live_unit_price(data, preview_products, preview_bundles)
         line_total = price_yer * qty
         subtotal_yer += line_total
         items.append({
@@ -1584,7 +1680,7 @@ def checkout_view(request):
     default_zone = shipping_zones.first()
     shipping_fee_yer = default_zone.delivery_fee_yer if default_zone else Decimal('0.00')
     total_yer = subtotal_yer + shipping_fee_yer + gift_wrapping_fee_yer
-    total_sar = int(math.ceil(total_yer / yer_per_sar))
+    total_sar = _yer_to_sar(total_yer, yer_per_sar)
 
     if request.method == 'POST':
         order_type = request.POST.get('order_type', 'personal')
@@ -1600,6 +1696,37 @@ def checkout_view(request):
         payment_method_id = request.POST.get('payment_method')
         payment_reference_no = request.POST.get('payment_reference_no', '').strip()
         customer_notes = request.POST.get('customer_notes', '').strip()
+
+        if not customer_name or not customer_phone or not shipping_address:
+            messages.error(request, 'يرجى تعبئة الاسم الكامل ورقم الهاتف وعنوان التوصيل قبل تأكيد الطلب.')
+            return redirect('store:checkout')
+
+        selected_zone = None
+        if city_id:
+            try:
+                selected_zone = ShippingZone.objects.filter(id=city_id, is_active=True).first()
+            except (ValueError, TypeError):
+                selected_zone = None
+            if not selected_zone:
+                messages.error(request, 'منطقة التوصيل المختارة غير متاحة حالياً. يرجى اختيار مدينة صالحة.')
+                return redirect('store:checkout')
+        elif shipping_zones.exists():
+            messages.error(request, 'يرجى اختيار مدينة التوصيل.')
+            return redirect('store:checkout')
+
+        selected_payment = None
+        if payment_method_id:
+            try:
+                selected_payment = PaymentAccount.objects.filter(id=payment_method_id, is_active=True).first()
+            except (ValueError, TypeError):
+                selected_payment = None
+            if not selected_payment:
+                messages.error(request, 'وسيلة الدفع المختارة غير متاحة حالياً.')
+                return redirect('store:checkout')
+        elif payment_methods.exists():
+            messages.error(request, 'يرجى اختيار وسيلة الدفع.')
+            return redirect('store:checkout')
+
         payment_receipt = request.FILES.get('payment_receipt')
         if payment_receipt:
             is_valid, err_msg = validate_receipt_file(payment_receipt)
@@ -1607,7 +1734,6 @@ def checkout_view(request):
                 messages.error(request, err_msg)
                 return redirect('store:checkout')
 
-        
         # 1. تدفق ومعالجة بيانات الإهداء بدقة
         if is_gift:
             recipient_name = request.POST.get('recipient_name', '').strip()
@@ -1643,22 +1769,15 @@ def checkout_view(request):
             hide_invoice_prices = False
             gift_wrapping_fee_yer = Decimal('0.00')
         
-        selected_zone = ShippingZone.objects.filter(id=city_id).first()
         city_name = selected_zone.city_name if selected_zone else 'غير محدد'
         actual_shipping_fee = selected_zone.delivery_fee_yer if selected_zone else Decimal('0.00')
-        
-        selected_payment = PaymentAccount.objects.filter(id=payment_method_id).first()
         payment_name = selected_payment.provider_name if selected_payment else 'دفع يدوي'
         
-        # 2. حساب العملة المحددة والمبلغ المستحق
         payment_currency_selected = request.POST.get('payment_currency_selected', 'YER')
-        if selected_payment and selected_payment.currency == 'SAR':
-            payment_currency_selected = 'SAR'
-            
-        order_total_yer = subtotal_yer + actual_shipping_fee + gift_wrapping_fee_yer
-        order_total_sar = int(math.ceil(order_total_yer / yer_per_sar))
-        
-        amount_due = order_total_sar if payment_currency_selected == 'SAR' else order_total_yer
+        if payment_currency_selected not in ('YER', 'SAR'):
+            payment_currency_selected = 'YER'
+        if selected_payment and selected_payment.currency in ('YER', 'SAR'):
+            payment_currency_selected = selected_payment.currency
         
         # إنشاء رقم طلب مشفر عالي العشوائية والأمان ومنع التصادمات
         while True:
@@ -1667,44 +1786,75 @@ def checkout_view(request):
                 break
         
         with transaction.atomic():
-            # فحص كفاية المخزون لجميع المنتجات وحجز الأسطر لمنع البيع الزائد (select_for_update)
+            # تجميع إجمالي الكميات المطلوبة لكل product_id عبر جميع الدرجات والباقات لمنع البيع الزائد
+            bundles_map = {
+                b.id: b
+                for b in GiftBundle.objects.prefetch_related('items__product').filter(id__in=cart_bundle_ids, is_active=True)
+            } if cart_bundle_ids else {}
+
+            needed_by_pid = {}
+            label_by_pid = {}
             insufficient_items = []
-            locked_products = []
-            locked_bundle_items = []
+
             for item_data in cart.values():
-                p_qty = int(item_data.get('quantity', 1))
+                p_qty = max(1, int(item_data.get('quantity', 1)))
                 if item_data.get('is_bundle'):
                     b_id = item_data.get('bundle_id') or item_data.get('product_id')
-                    bundle_obj = GiftBundle.objects.filter(id=b_id, is_active=True).first()
-                    if bundle_obj:
-                        bundle_ok = True
-                        for b_item in bundle_obj.items.select_related('product'):
-                            needed = b_item.quantity * p_qty
-                            b_prod = Product.objects.select_for_update().filter(id=b_item.product_id, is_active=True).first()
-                            if not b_prod or b_prod.stock_quantity < needed:
-                                avail = b_prod.stock_quantity if b_prod else 0
-                                insufficient_items.append(f"{b_item.product.name_ar} (ضمن {bundle_obj.title_ar} - المتوفر: {avail})")
-                                bundle_ok = False
-                            else:
-                                locked_bundle_items.append((b_prod, needed))
-                        if bundle_ok:
-                            locked_products.append((None, p_qty, item_data, bundle_obj))
-                    else:
+                    bundle_obj = bundles_map.get(b_id)
+                    if not bundle_obj:
                         insufficient_items.append("الباقة المختارة غير متوفرة")
+                        continue
+                    for b_item in bundle_obj.items.all():
+                        if not b_item.product_id or not b_item.product.is_active:
+                            insufficient_items.append(f"{getattr(b_item.product, 'name_ar', 'منتج')} (ضمن {bundle_obj.title_ar} غير متوفر)")
+                        else:
+                            needed_by_pid[b_item.product_id] = needed_by_pid.get(b_item.product_id, 0) + (b_item.quantity * p_qty)
+                            label_by_pid.setdefault(b_item.product_id, f"{b_item.product.name_ar} (ضمن {bundle_obj.title_ar})")
                 else:
                     p_id = item_data.get('product_id')
-                    prod = Product.objects.select_for_update().filter(id=p_id, is_active=True).first()
-                    if not prod or prod.stock_quantity < p_qty:
-                        avail = prod.stock_quantity if prod else 0
-                        p_name = item_data.get('name', 'منتج')
-                        insufficient_items.append(f"{p_name} (المتوفر: {avail})")
+                    if p_id:
+                        needed_by_pid[p_id] = needed_by_pid.get(p_id, 0) + p_qty
+                        label_by_pid.setdefault(p_id, item_data.get('name', 'منتج'))
                     else:
-                        locked_products.append((prod, p_qty, item_data, None))
+                        insufficient_items.append("منتج غير صالح")
+
+            locked_products_map = {
+                p.id: p
+                for p in Product.objects.select_for_update().filter(id__in=sorted(needed_by_pid.keys()), is_active=True)
+            } if needed_by_pid else {}
+
+            for pid, needed_total in needed_by_pid.items():
+                locked_prod = locked_products_map.get(pid)
+                if not locked_prod or locked_prod.stock_quantity < needed_total:
+                    avail = locked_prod.stock_quantity if locked_prod else 0
+                    insufficient_items.append(f"{label_by_pid.get(pid, 'منتج')} (المطلوب: {needed_total}، المتوفر: {avail})")
 
             if insufficient_items:
                 items_str = '، '.join(insufficient_items)
                 messages.error(request, f"نعتذر، نفدت الكمية المتوفرة من بعض المنتجات: {items_str}. يرجى تعديل السلة.")
                 return redirect('store:checkout')
+
+            # احتساب الأسعار الحية المطابقة لقاعدة البيانات داخل نفس المعاملة الذرية
+            order_lines = []
+            verified_subtotal_yer = Decimal('0.00')
+            for item_data in cart.values():
+                p_qty = max(1, int(item_data.get('quantity', 1)))
+                live_price, is_live = _live_unit_price(item_data, locked_products_map, bundles_map)
+                if not is_live:
+                    messages.error(request, 'بعض المنتجات في السلة لم تعد متوفرة حالياً.')
+                    return redirect('store:checkout')
+                line_total_yer = live_price * p_qty
+                verified_subtotal_yer += line_total_yer
+                if item_data.get('is_bundle'):
+                    b_id = item_data.get('bundle_id') or item_data.get('product_id')
+                    order_lines.append((None, p_qty, item_data, bundles_map.get(b_id), live_price, line_total_yer))
+                else:
+                    prod_obj = locked_products_map.get(item_data.get('product_id'))
+                    order_lines.append((prod_obj, p_qty, item_data, None, live_price, line_total_yer))
+
+            order_total_yer = verified_subtotal_yer + actual_shipping_fee + gift_wrapping_fee_yer
+            order_total_sar = _yer_to_sar(order_total_yer, yer_per_sar)
+            amount_due = order_total_sar if payment_currency_selected == 'SAR' else order_total_yer
 
             order = Order.objects.create(
                 order_number=order_number,
@@ -1715,7 +1865,7 @@ def checkout_view(request):
                 shipping_city=city_name,
                 shipping_address=shipping_address,
                 shipping_fee_yer=actual_shipping_fee,
-                subtotal_yer=subtotal_yer,
+                subtotal_yer=verified_subtotal_yer,
                 total_yer=order_total_yer,
                 total_sar=order_total_sar,
                 exchange_rate_applied=yer_per_sar,
@@ -1741,9 +1891,8 @@ def checkout_view(request):
                 stock_deducted=True,
             )
             
-            # حفظ عناصر الطلب وخصم المخزون
-            for prod, p_qty, item_data, bundle_ref in locked_products:
-                p_price = Decimal(str(item_data.get('price_yer', 0)))
+            # حفظ عناصر الطلب بنفس السعر الحي المعتمد بالفاتورة
+            for prod, p_qty, item_data, bundle_ref, live_price, line_total_yer in order_lines:
                 OrderItem.objects.create(
                     order=order,
                     product=prod,
@@ -1751,35 +1900,29 @@ def checkout_view(request):
                     product_name=item_data.get('name', 'منتج'),
                     product_image_url=item_data.get('image_url', ''),
                     variant_info=item_data.get('variant_info', ''),
-                    unit_price_yer=p_price,
+                    unit_price_yer=live_price,
                     quantity=p_qty,
-                    total_price_yer=p_price * p_qty,
+                    total_price_yer=line_total_yer,
                 )
-                
-                if prod:
-                    # خصم الكمية من المخزون للمنتجات العادية
-                    prod.stock_quantity = max(0, prod.stock_quantity - p_qty)
-                    prod.save(update_fields=['stock_quantity'])
-                    # تنبيه انخفاض المخزون للإدارة عند وصول الرصيد إلى 3 قطع أو أقل
-                    if prod.stock_quantity <= 3:
-                        Notification.notify_admin(
-                            title=f"تنبيه انخفاض المخزون: {prod.name_ar}",
-                            message=f"الكمية المتبقية من المنتج ({prod.name_ar}) أصبحت {prod.stock_quantity} فقط. يرجى مراجعة المخزون.",
-                            notification_type='low_stock',
-                            link=f"/admin/store/product/{prod.id}/change/"
-                        )
 
-            # خصم الكمية من المخزون لمحتويات باقات الهدايا
-            for b_prod, needed in locked_bundle_items:
-                b_prod.stock_quantity = max(0, b_prod.stock_quantity - needed)
-                b_prod.save(update_fields=['stock_quantity'])
-                if b_prod.stock_quantity <= 3:
+            # خصم ذري موحد للمخزون عبر F() لكل منتج وتنبيه الإدارة بانخفاض المخزون
+            cache_needs_invalidation = False
+            for pid, needed_total in needed_by_pid.items():
+                prod = locked_products_map[pid]
+                new_stock = max(0, prod.stock_quantity - needed_total)
+                Product.objects.filter(pk=pid).update(stock_quantity=F('stock_quantity') - needed_total)
+                if new_stock <= 0:
+                    cache_needs_invalidation = True
+                if new_stock <= 3:
                     Notification.notify_admin(
-                        title=f"تنبيه انخفاض المخزون: {b_prod.name_ar}",
-                        message=f"الكمية المتبقية من المنتج ({b_prod.name_ar}) أصبحت {b_prod.stock_quantity} فقط. يرجى مراجعة المخزون.",
+                        title=f"تنبيه انخفاض المخزون: {prod.name_ar}",
+                        message=f"الكمية المتبقية من المنتج ({prod.name_ar}) أصبحت {new_stock} فقط. يرجى مراجعة المخزون.",
                         notification_type='low_stock',
-                        link=f"/admin/store/product/{b_prod.id}/change/"
+                        link=_admin_change_url('product', prod.id),
                     )
+            if cache_needs_invalidation:
+                from .signals import invalidate_home_and_catalog_cache
+                transaction.on_commit(invalidate_home_and_catalog_cache)
 
         # 1. إرسال إشعار تأكيد للعميل (إذا كان مسجلاً الدخول)
         if request.user.is_authenticated:
@@ -1798,7 +1941,7 @@ def checkout_view(request):
             message=f"طلب جديد من {customer_name} في {city_name} بقيمة {order.total_yer:,.0f} ر.ي بانتظار فحص السند والاعتماد.",
             notification_type='order_created',
             order=order,
-            link=f"/admin/store/order/{order.id}/change/"
+            link=_admin_change_url('order', order.id),
         )
 
         # حفظ بيانات ملف العميل المسجل لتسهيل طلباته اللاحقة
@@ -2110,10 +2253,9 @@ def pwa_manifest(request):
 def service_worker(request):
     """ملف sw.js لإدارة الكاش، التصفح أوفلاين، واستقبال إشعارات PWA وتطبيق الهاتف"""
     sw_code = """
-    const CACHE_NAME = 'brand-veloura-pwa-v4';
+    const CACHE_NAME = 'brand-veloura-pwa-v5';
     const OFFLINE_URL = '/offline/';
     const PRECACHE_ASSETS = [
-        '/',
         OFFLINE_URL,
         '/manifest.json',
         '/static/icons/icon-48.png',
@@ -2155,23 +2297,37 @@ def service_worker(request):
         self.clients.claim();
     });
 
+    const NO_CACHE_PREFIXES = [
+        '/admin',
+        '/api/',
+        '/partials/',
+        '/notifications/',
+        '/cart',
+        '/checkout',
+        '/account',
+        '/order',
+        '/login',
+        '/register',
+        '/logout',
+        '/auth/',
+        '/set-currency',
+        '/get-shipping-fee',
+        '/gifting/calculate',
+    ];
+
     self.addEventListener('fetch', (event) => {
         if (event.request.method !== 'GET') return;
+        if (event.request.headers.get('HX-Request')) return;
         const url = new URL(event.request.url);
-        if (
-            url.pathname.startsWith('/admin') || 
-            url.pathname.startsWith('/api/') ||
-            url.pathname.startsWith('/cart') ||
-            url.pathname.startsWith('/checkout') ||
-            url.pathname.startsWith('/account') ||
-            url.pathname.startsWith('/order')
-        ) return;
+        if (url.origin !== self.location.origin) return;
+        if (NO_CACHE_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) return;
 
         if (event.request.mode === 'navigate') {
             event.respondWith(
                 fetch(event.request)
                     .then((networkResponse) => {
-                        if (networkResponse && networkResponse.status === 200) {
+                        const cc = (networkResponse.headers.get('Cache-Control') || '').toLowerCase();
+                        if (networkResponse && networkResponse.status === 200 && !cc.includes('no-store') && !cc.includes('private')) {
                             const copy = networkResponse.clone();
                             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
                         }
@@ -2186,20 +2342,22 @@ def service_worker(request):
             return;
         }
 
-        event.respondWith(
-            caches.match(event.request).then((cachedResponse) => {
-                if (cachedResponse) return cachedResponse;
-                return fetch(event.request).then((networkResponse) => {
-                    if (networkResponse && networkResponse.status === 200) {
-                        const copy = networkResponse.clone();
-                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-                    }
-                    return networkResponse;
-                }).catch(() => {
-                    return new Response('', { status: 408, statusText: 'Request timed out' });
-                });
-            })
-        );
+        if (url.pathname.startsWith('/static/')) {
+            event.respondWith(
+                caches.match(event.request).then((cachedResponse) => {
+                    if (cachedResponse) return cachedResponse;
+                    return fetch(event.request).then((networkResponse) => {
+                        if (networkResponse && networkResponse.status === 200) {
+                            const copy = networkResponse.clone();
+                            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+                        }
+                        return networkResponse;
+                    }).catch(() => {
+                        return new Response('', { status: 408, statusText: 'Request timed out' });
+                    });
+                })
+            );
+        }
     });
 
     // الاستماع لإشعارات الويب وتطبيق الهاتف المباشرة (Push Notifications)
@@ -2264,20 +2422,16 @@ def push_vapid_key(request):
     return JsonResponse({'publicKey': pub_key})
 
 
-@csrf_exempt
+@require_POST
 def push_subscribe(request):
     """تسجيل وتحديث اشتراك جهاز العميل في إشعارات الويب وتطبيق الهاتف مع تحصين ضد الهجمات"""
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
-        
-    client_ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+    client_ip = _get_client_ip(request)
     push_throttle_key = f"bv_push_sub_rate_{client_ip}"
     req_count = cache.get(push_throttle_key, 0)
     if req_count >= 30:
         return JsonResponse({'error': 'Too many requests. Please try again later.'}, status=429)
     cache.set(push_throttle_key, req_count + 1, timeout=60)
 
-    import json
     try:
         data = json.loads(request.body.decode('utf-8'))
         endpoint = str(data.get('endpoint', '')).strip()
@@ -2325,7 +2479,7 @@ def login_view(request):
     next_url = request.GET.get('next', '')
     
     if request.method == 'POST':
-        client_ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+        client_ip = _get_client_ip(request)
         throttle_key = f"bv_login_fails_{client_ip}"
         failed_attempts = cache.get(throttle_key, 0)
         if failed_attempts >= 10:
@@ -2348,18 +2502,11 @@ def login_view(request):
             if matched_user:
                 username = matched_user.username
         else:
-            # فحص إذا كان المدخل يطابق اسم مستخدم مباشرة
             matched_user_by_name = User.objects.filter(username__iexact=identifier).first()
             if matched_user_by_name:
                 username = matched_user_by_name.username
             else:
-                # البحث برقم الهاتف كمعرف تسجيل دخول أساسي
-                clean_digits = re.sub(r'\D', '', identifier)
-                matched_profile = None
-                if clean_digits:
-                    matched_profile = UserProfile.objects.filter(phone=identifier).first()
-                    if not matched_profile:
-                        matched_profile = UserProfile.objects.filter(phone__endswith=clean_digits[-8:]).first()
+                matched_profile = _find_profile_by_phone(identifier)
                 if matched_profile:
                     username = matched_profile.user.username
                 
@@ -2396,55 +2543,58 @@ def register_view(request):
     next_url = request.GET.get('next', '')
     
     if request.method == 'POST':
-        client_ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
-        reg_throttle_key = f"bv_register_rate_{client_ip}"
-        reg_count = cache.get(reg_throttle_key, 0)
-        if reg_count >= 10:
-            messages.error(request, 'تم تجاوز الحد المسموح لمحاولات إنشاء الحسابات من هذا الجهاز مؤقتاً. يرجى الانتظار 15 دقيقة.')
-            return render(request, 'store/auth/register.html', locals())
-
         name = request.POST.get('name', '').strip()
-        email = request.POST.get('email', '').strip().lower()
+        email_raw = request.POST.get('email', '').strip().lower()
         phone = request.POST.get('phone', '').strip()
         password = request.POST.get('password', '')
         password_confirm = request.POST.get('password_confirm', '')
         next_url = request.POST.get('next', '')
-        
-        # الفحوصات والتحقق من صحة المدخلات
+
+        def _render_register_error(err_text):
+            messages.error(request, err_text)
+            return render(request, 'store/auth/register.html', {
+                'next_url': next_url,
+                'name': name,
+                'email': email_raw,
+                'phone': phone,
+            })
+
+        client_ip = _get_client_ip(request)
+        reg_throttle_key = f"bv_register_rate_{client_ip}"
+        reg_count = cache.get(reg_throttle_key, 0)
+        if reg_count >= 10:
+            return _render_register_error('تم تجاوز الحد المسموح لمحاولات إنشاء الحسابات من هذا الجهاز مؤقتاً. يرجى الانتظار 15 دقيقة.')
+
         if not name:
-            messages.error(request, 'يرجى إدخال الاسم.')
-            return render(request, 'store/auth/register.html', locals())
+            return _render_register_error('يرجى إدخال الاسم.')
 
         if not phone:
-            messages.error(request, 'يرجى إدخال رقم الهاتف (مطلوب لتوثيق الحساب وتسجيل الدخول).')
-            return render(request, 'store/auth/register.html', locals())
+            return _render_register_error('يرجى إدخال رقم الهاتف (مطلوب لتوثيق الحساب وتسجيل الدخول).')
 
-        clean_phone_digits = re.sub(r'\D', '', phone)
+        clean_phone_digits = _normalize_phone(phone)
         if len(clean_phone_digits) < 8:
-            messages.error(request, 'يرجى إدخال رقم هاتف صحيح لا يقل عن 8 أرقام.')
-            return render(request, 'store/auth/register.html', locals())
+            return _render_register_error('يرجى إدخال رقم هاتف صحيح لا يقل عن 8 أرقام.')
 
-        if UserProfile.objects.filter(phone=phone).exists() or (clean_phone_digits and UserProfile.objects.filter(phone__endswith=clean_phone_digits[-8:]).exists()):
-            messages.error(request, 'رقم الهاتف هذا مسجل مسبقاً بحساب آخر. يرجى تسجيل الدخول به.')
-            return render(request, 'store/auth/register.html', locals())
+        if _find_profile_by_phone(phone):
+            return _render_register_error('رقم الهاتف هذا مسجل مسبقاً بحساب آخر. يرجى تسجيل الدخول به.')
             
+        email = email_raw
         if email:
             if '@' not in email:
-                messages.error(request, 'يرجى إدخال بريد إلكتروني صحيح أو ترك الحقل فارغاً.')
-                return render(request, 'store/auth/register.html', locals())
+                return _render_register_error('يرجى إدخال بريد إلكتروني صحيح أو ترك الحقل فارغاً.')
             if User.objects.filter(email__iexact=email).exists():
-                messages.error(request, 'البريد الإلكتروني مسجل مسبقاً. يرجى تسجيل الدخول.')
-                return render(request, 'store/auth/register.html', locals())
+                return _render_register_error('البريد الإلكتروني مسجل مسبقاً. يرجى تسجيل الدخول.')
         else:
             email = f"u_{clean_phone_digits}@brandveloura.local"
             
-        if len(password) < 6:
-            messages.error(request, 'يجب ألا يقل الرمز السري عن 6 خانات.')
-            return render(request, 'store/auth/register.html', locals())
-            
         if password != password_confirm:
-            messages.error(request, 'الرمزان السريان غير متطابقين.')
-            return render(request, 'store/auth/register.html', locals())
+            return _render_register_error('الرمزان السريان غير متطابقين.')
+
+        try:
+            temp_user = User(username=f"u_{clean_phone_digits}", email=email, first_name=name)
+            validate_password(password, user=temp_user)
+        except ValidationError as exc:
+            return _render_register_error(' '.join(exc.messages))
             
         # إنشاء اسم مستخدم فريد يعتمد على رقم الهاتف
         clean_prefix = f"u_{clean_phone_digits}" if clean_phone_digits else (''.join(c for c in email.split('@')[0] if c.isalnum() or c in '_-') or 'user')
@@ -2488,7 +2638,7 @@ def logout_view(request):
 
 
 def google_login_redirect(request):
-    """بدء تدفق المصادقة عبر Google OAuth 2.0"""
+    """بدء تدفق المصادقة عبر Google OAuth 2.0 مع حماية state ضد هجمات Login CSRF"""
     settings = StoreSettings.get_settings()
     client_id = settings.effective_google_client_id
     next_url = request.GET.get('next', '')
@@ -2498,11 +2648,19 @@ def google_login_redirect(request):
             request, 
             'لتفعيل الدخول عبر Google، يرجى حفظ معرف Google Client ID في إعدادات المتجر بلوحة الإدارة.'
         )
-        return redirect(f"{reverse('store:login')}?next={next_url}")
+        return redirect(f"{reverse('store:login')}?next={quote(next_url)}")
         
     redirect_uri = request.build_absolute_uri(reverse('store:google_callback'))
-    if not os.getenv('DJANGO_DEBUG', 'False').lower() in ('true', '1') and redirect_uri.startswith('http://'):
+    if os.getenv('DJANGO_DEBUG', 'False').lower() not in ('true', '1') and redirect_uri.startswith('http://'):
         redirect_uri = redirect_uri.replace('http://', 'https://', 1)
+
+    oauth_state = secrets.token_urlsafe(24)
+    request.session['google_oauth_state'] = oauth_state
+    if next_url and url_has_allowed_host_and_scheme(url=next_url, allowed_hosts={request.get_host()}):
+        request.session['google_oauth_next'] = next_url
+    else:
+        request.session.pop('google_oauth_next', None)
+    request.session.modified = True
 
     params = {
         'client_id': client_id,
@@ -2511,7 +2669,7 @@ def google_login_redirect(request):
         'scope': 'openid email profile',
         'access_type': 'online',
         'prompt': 'select_account',
-        'state': next_url,
+        'state': oauth_state,
     }
     return redirect(f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}")
 
@@ -2520,12 +2678,12 @@ def google_login_redirect(request):
 def google_auth_callback(request):
     """
     استقبال التحقق من Google وتسجيل الدخول / إنشاء الحساب تلقائياً:
-    1. عبر Google Identity Services (GIS) Token POST
-    2. عبر OAuth 2.0 Authorization Code GET
-    3. وضع التجربة السريع (Demo Mode) للاختبار
+    1. عبر Google Identity Services (GIS) Token POST مع التحقق من g_csrf_token و aud و iss
+    2. عبر OAuth 2.0 Authorization Code GET مع التحقق الصارم من state و email_verified
     """
     settings = StoreSettings.get_settings()
-    next_url = _get_safe_redirect(request, default='store:home')
+    saved_next = request.session.pop('google_oauth_next', '')
+    next_url = _get_safe_redirect(request, default='store:home', candidate=saved_next)
     
     credential = request.POST.get('credential')
     code = request.GET.get('code')
@@ -2537,19 +2695,32 @@ def google_auth_callback(request):
     
     # 1. التحقق من التوكن القادم من Google Identity Services (GIS)
     if credential:
+        g_csrf_cookie = request.COOKIES.get('g_csrf_token', '')
+        g_csrf_body = request.POST.get('g_csrf_token', '')
+        if not g_csrf_cookie or not g_csrf_body or not secrets.compare_digest(g_csrf_cookie, g_csrf_body):
+            messages.error(request, 'تعذر التحقق من رمز حماية CSRF الخاص بجلسة Google.')
+            return redirect('store:login')
+
+        client_id = settings.effective_google_client_id
+        if not client_id:
+            messages.error(request, 'تسجيل الدخول عبر Google غير مهيأ حالياً في المتجر.')
+            return redirect('store:login')
+
         try:
-            verify_res = requests.get(
-                f"https://oauth2.googleapis.com/tokeninfo?id_token={credential}", 
-                timeout=8
+            verify_res = requests.post(
+                'https://oauth2.googleapis.com/tokeninfo',
+                data={'id_token': credential},
+                timeout=8,
             )
             if verify_res.status_code == 200:
                 payload = verify_res.json()
-                client_id = settings.effective_google_client_id
-                # التحقق الأمني الصارم من أن التوكن صادر لهذا المتجر بالذات وموثق
-                if client_id and payload.get('aud') != client_id:
+                if payload.get('aud') != client_id:
                     messages.error(request, 'رمز المصادقة غير صالح أو صادر لتطبيق آخر.')
                     return redirect('store:login')
-                if payload.get('email_verified') is not True and payload.get('email_verified') != 'true':
+                if payload.get('iss') not in ('https://accounts.google.com', 'accounts.google.com'):
+                    messages.error(request, 'مصدر رمز المصادقة غير موثوق.')
+                    return redirect('store:login')
+                if payload.get('email_verified') not in (True, 'true'):
                     messages.error(request, 'البريد الإلكتروني لحساب Google غير موثق.')
                     return redirect('store:login')
                 user_email = payload.get('email', '').strip().lower()
@@ -2559,16 +2730,22 @@ def google_auth_callback(request):
             else:
                 messages.error(request, 'تعذر التحقق من رمز المصادقة المقدم من Google.')
                 return redirect('store:login')
-        except Exception as e:
-            messages.error(request, f'تعذر الاتصال بخوادم Google: {e}')
+        except Exception:
+            messages.error(request, 'تعذر الاتصال بخوادم Google في الوقت الحالي.')
             return redirect('store:login')
             
     # 2. التحقق من كود التفويض OAuth 2.0
     elif code:
+        expected_state = request.session.pop('google_oauth_state', None)
+        received_state = request.GET.get('state', '')
+        if not expected_state or not received_state or not secrets.compare_digest(str(expected_state), str(received_state)):
+            messages.error(request, 'انتهت صلاحية جلسة المصادقة مع Google. يرجى المحاولة مرة أخرى.')
+            return redirect('store:login')
+
         client_id = settings.effective_google_client_id
         client_secret = settings.effective_google_client_secret
         redirect_uri = request.build_absolute_uri(reverse('store:google_callback'))
-        if not os.getenv('DJANGO_DEBUG', 'False').lower() in ('true', '1') and redirect_uri.startswith('http://'):
+        if os.getenv('DJANGO_DEBUG', 'False').lower() not in ('true', '1') and redirect_uri.startswith('http://'):
             redirect_uri = redirect_uri.replace('http://', 'https://', 1)
         
         try:
@@ -2593,6 +2770,9 @@ def google_auth_callback(request):
                 )
                 if userinfo_res.status_code == 200:
                     u_data = userinfo_res.json()
+                    if u_data.get('email_verified') not in (True, 'true') and u_data.get('verified_email') is not True:
+                        messages.error(request, 'البريد الإلكتروني لحساب Google غير موثق.')
+                        return redirect('store:login')
                     user_email = u_data.get('email', '').strip().lower()
                     first_name = u_data.get('given_name') or u_data.get('name', 'مستخدم')
                     last_name = u_data.get('family_name', '')
@@ -2604,8 +2784,8 @@ def google_auth_callback(request):
                 err_desc = token_json.get('error_description') or token_json.get('error') or 'تعذر التحقق من كود المصادقة'
                 messages.error(request, f'تعذر تسجيل الدخول عبر Google: {err_desc}')
                 return redirect('store:login')
-        except Exception as e:
-            messages.error(request, f'تعذر استكمال الاتصال بخدمة Google: {e}')
+        except Exception:
+            messages.error(request, 'تعذر استكمال الاتصال بخدمة Google في الوقت الحالي.')
             return redirect('store:login')
             
     else:
@@ -2671,15 +2851,18 @@ def account_profile_view(request):
                 
             if not request.user.check_password(current_password):
                 messages.error(request, 'كلمة المرور الحالية غير صحيحة.')
-            elif len(new_password) < 6:
-                messages.error(request, 'يجب أن تتكون كلمة المرور الجديدة من 6 خانات على الأقل.')
             elif new_password != confirm_password:
                 messages.error(request, 'كلمتا المرور غير متطابقتين.')
             else:
-                request.user.set_password(new_password)
-                request.user.save()
-                update_session_auth_hash(request, request.user)
-                messages.success(request, 'تم تغيير كلمة المرور بنجاح.')
+                try:
+                    validate_password(new_password, user=request.user)
+                except ValidationError as exc:
+                    messages.error(request, ' '.join(exc.messages))
+                else:
+                    request.user.set_password(new_password)
+                    request.user.save()
+                    update_session_auth_hash(request, request.user)
+                    messages.success(request, 'تم تغيير كلمة المرور بنجاح.')
             return redirect('store:account_profile')
             
         # 2. تعديل البيانات وعنوان التوصيل
@@ -2698,8 +2881,8 @@ def account_profile_view(request):
             
             # رقم الهاتف غير قابل للتعديل نهائياً لأسباب أمنية وتثبيت هوية الحساب
             if not profile.phone and phone:
-                clean_phone_digits = re.sub(r'\D', '', phone)
-                if len(clean_phone_digits) >= 8 and not UserProfile.objects.filter(phone=phone).exists():
+                clean_phone_digits = _normalize_phone(phone)
+                if len(clean_phone_digits) >= 8 and not _find_profile_by_phone(phone):
                     profile.phone = phone
 
             profile.preferred_city = preferred_city
@@ -2724,7 +2907,7 @@ def account_profile_view(request):
     total_spent_yer = sum(o.total_yer for o in orders.exclude(status='cancelled'))
     settings = StoreSettings.get_settings()
     yer_per_sar = settings.yer_per_sar or Decimal('530.00')
-    total_spent_sar = int(math.ceil(total_spent_yer / yer_per_sar)) if yer_per_sar else 0
+    total_spent_sar = _yer_to_sar(total_spent_yer, yer_per_sar)
     
     shipping_zones = ShippingZone.objects.filter(is_active=True).order_by('city_name')
     
@@ -2969,12 +3152,13 @@ def sitemap_xml(request):
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     ]
     for u in urls:
+        safe_loc = xml_escape(iri_to_uri(u['loc']))
         xml_lines.append('  <url>')
-        xml_lines.append(f"    <loc>{u['loc']}</loc>")
+        xml_lines.append(f"    <loc>{safe_loc}</loc>")
         if 'lastmod' in u and u['lastmod']:
-            xml_lines.append(f"    <lastmod>{u['lastmod']}</lastmod>")
-        xml_lines.append(f"    <changefreq>{u['changefreq']}</changefreq>")
-        xml_lines.append(f"    <priority>{u['priority']}</priority>")
+            xml_lines.append(f"    <lastmod>{xml_escape(u['lastmod'])}</lastmod>")
+        xml_lines.append(f"    <changefreq>{xml_escape(u['changefreq'])}</changefreq>")
+        xml_lines.append(f"    <priority>{xml_escape(u['priority'])}</priority>")
         xml_lines.append('  </url>')
     xml_lines.append('</urlset>')
     

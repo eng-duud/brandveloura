@@ -196,6 +196,15 @@
     </div>
     {% endif %}
 </div>
+{% if oob_cart_badges %}
+<div id="cart-badge-container" hx-swap-oob="innerHTML" class="absolute -top-2 -right-2">
+    {% include 'store/partials/cart_badge.html' with cart_count=cart_count oob_sync=False %}
+</div>
+<div id="bottom-bar-cart-badge" hx-swap-oob="innerHTML" class="absolute -top-1 -right-1 z-20">
+    {% include 'store/partials/cart_badge.html' with cart_count=cart_count oob_sync=False %}
+</div>
+{% endif %}
+
 <script>
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();

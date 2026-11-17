@@ -1,4 +1,6 @@
+import copy
 import os
+import time
 from decimal import Decimal
 from .models import StoreSettings, Category
 
@@ -6,7 +8,7 @@ from .models import StoreSettings, Category
 def store_context(request):
     """سياق عام يتم تمريره تلقائياً لكافة صفحات وقوالب المتجر"""
     from django.core.cache import cache
-    settings = StoreSettings.get_settings()
+    settings = copy.copy(StoreSettings.get_settings())
     
     categories = cache.get('bv_active_categories')
     if categories is None:
@@ -49,13 +51,16 @@ def store_context(request):
     cart_count = sum(item.get('quantity', 1) for item in cart.values())
     
     # مدة حجز السلة بالدقائق والثواني المتبقية
-    import time
     cart_remaining_seconds = 0
     res_minutes = getattr(settings, 'cart_reservation_minutes', 60)
     if cart and res_minutes > 0:
+        now_ts = int(time.time())
         expires_at = request.session.get('cart_expires_at')
-        if expires_at:
-            cart_remaining_seconds = max(0, expires_at - int(time.time()))
+        if not expires_at:
+            expires_at = now_ts + (res_minutes * 60)
+            request.session['cart_expires_at'] = expires_at
+            request.session.modified = True
+        cart_remaining_seconds = max(0, expires_at - now_ts)
     
     # العملة النشطة الحالية (الافتراضي YER، مع إمكانية التبديل إلى SAR)
     active_currency = request.session.get('active_currency', 'YER')

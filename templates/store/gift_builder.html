@@ -1598,7 +1598,7 @@
         return true;
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
+    function initGiftBuilderPage() {
         const searchInp = document.getElementById('perfume-search-input');
         if (searchInp) searchInp.value = '';
         const accSearchInp = document.getElementById('acc-search-input');
@@ -1611,6 +1611,12 @@
         updateSelectionState();
         triggerLiveCalculation();
         updateLiveCardPreview();
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initGiftBuilderPage, { once: true });
+    } else {
+        initGiftBuilderPage();
+    }
 </script>
 {% endblock %}

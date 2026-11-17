@@ -3,9 +3,22 @@ import os
 import re
 from decimal import Decimal
 from django.db import models
+from django.db.models import Case, When, F, Value
 from django.conf import settings
+from django.urls import reverse, NoReverseMatch
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
+
+
+def _is_safe_navigation_url(url_str):
+    """التحقق من سلامة الروابط المخصصة ومنع مخططات javascript: أو data: الضارة"""
+    if not url_str:
+        return True
+    cleaned = str(url_str).strip()
+    lower = cleaned.lower()
+    if lower.startswith('/'):
+        return not lower.startswith('//')
+    return lower.startswith('http://') or lower.startswith('https://')
 
 
 def sanitize_image_url(url, fallback=''):
@@ -124,52 +137,50 @@ class StoreSettings(models.Model):
 
         if settings_obj is None:
             settings_obj = cls.objects.first()
-        if not settings_obj:
-            settings_obj, created = cls.objects.get_or_create(id=1)
-        else:
-            created = False
-        
-        # Sync environment variables if present
-        env_phone = os.getenv('STORE_PHONE', '').strip()
-        env_wa = os.getenv('STORE_WHATSAPP', '').strip()
-        env_insta = os.getenv('STORE_INSTAGRAM', '').strip()
-        
-        updated = False
-        if env_phone and (created or settings_obj.contact_phone != env_phone):
-            settings_obj.contact_phone = env_phone
-            updated = True
-        if env_wa and (created or settings_obj.contact_whatsapp != env_wa):
-            settings_obj.contact_whatsapp = env_wa
-            updated = True
-        if env_insta and (created or settings_obj.contact_instagram != env_insta):
-            settings_obj.contact_instagram = env_insta
-            updated = True
+            if not settings_obj:
+                env_phone = os.getenv('STORE_PHONE', '').strip()
+                env_wa = os.getenv('STORE_WHATSAPP', '').strip()
+                env_insta = os.getenv('STORE_INSTAGRAM', '').strip()
+                settings_obj, created = cls.objects.get_or_create(id=1)
+                if created:
+                    dirty = False
+                    if env_phone:
+                        settings_obj.contact_phone = env_phone
+                        dirty = True
+                    if env_wa:
+                        settings_obj.contact_whatsapp = env_wa
+                        dirty = True
+                    if env_insta:
+                        settings_obj.contact_instagram = env_insta
+                        dirty = True
+                    if dirty:
+                        settings_obj.save()
 
-        # تطهير وضمان استبعاد كلمة "بوتيك / Boutique" من اسم المتجر ووصفه تلقائياً
-        if settings_obj.store_name and 'Boutique' in settings_obj.store_name:
-            settings_obj.store_name = settings_obj.store_name.replace('Boutique', '').strip()
-            updated = True
-        if settings_obj.store_name and 'بوتيك' in settings_obj.store_name:
-            settings_obj.store_name = settings_obj.store_name.replace('بوتيك', '').strip()
-            updated = True
-        if settings_obj.store_tagline and 'بوتيك' in settings_obj.store_tagline:
-            settings_obj.store_tagline = settings_obj.store_tagline.replace('بوتيك', 'متجر').strip()
-            updated = True
-        if settings_obj.store_tagline and 'Boutique' in settings_obj.store_tagline:
-            settings_obj.store_tagline = settings_obj.store_tagline.replace('Boutique', 'Store').strip()
-            updated = True
-            
-        if updated:
-            try:
-                settings_obj.save()
-            except Exception:
-                pass
+            # تطهير لمرة واحدة إن وجد مصطلح قديم دون كتابة متكررة أثناء طلبات GET
+            dirty_brand = False
+            if settings_obj.store_name and 'Boutique' in settings_obj.store_name:
+                settings_obj.store_name = settings_obj.store_name.replace('Boutique', '').strip()
+                dirty_brand = True
+            if settings_obj.store_name and 'بوتيك' in settings_obj.store_name:
+                settings_obj.store_name = settings_obj.store_name.replace('بوتيك', '').strip()
+                dirty_brand = True
+            if settings_obj.store_tagline and 'بوتيك' in settings_obj.store_tagline:
+                settings_obj.store_tagline = settings_obj.store_tagline.replace('بوتيك', 'متجر').strip()
+                dirty_brand = True
+            if settings_obj.store_tagline and 'Boutique' in settings_obj.store_tagline:
+                settings_obj.store_tagline = settings_obj.store_tagline.replace('Boutique', 'Store').strip()
+                dirty_brand = True
+            if dirty_brand:
+                try:
+                    settings_obj.save()
+                except Exception:
+                    pass
 
-        if use_cache:
-            try:
-                cache.set(cache_key, settings_obj, timeout=60)
-            except Exception:
-                pass
+            if use_cache:
+                try:
+                    cache.set(cache_key, settings_obj, timeout=60)
+                except Exception:
+                    pass
 
         return settings_obj
 
@@ -372,8 +383,13 @@ class HeroBanner(models.Model):
     def __str__(self):
         return self.title
 
+    def clean(self):
+        super().clean()
+        if self.custom_url and not _is_safe_navigation_url(self.custom_url):
+            raise ValidationError({'custom_url': 'الرابط يجب أن يبدأ بـ / أو https:// أو http:// فقط.'})
+
     def save(self, *args, **kwargs):
-        # توليد رابط الزر تلقائياً وبدقة لمنع كتابة المسارات يدوياً
+        # توليد رابط الزر تلقائياً وبدقة لمنع كتابة المسارات يدوياً أو تمرير روابط ضارة
         if not self.link_type:
             self.link_type = 'all_products'
 
@@ -389,7 +405,8 @@ class HeroBanner(models.Model):
         elif self.link_type == 'product' and self.target_product:
             self.button_link = f"/products/{self.target_product.slug}/"
         elif self.link_type == 'custom' and self.custom_url:
-            self.button_link = self.custom_url.strip()
+            cleaned = self.custom_url.strip()
+            self.button_link = cleaned if _is_safe_navigation_url(cleaned) else '/products/'
         elif not self.button_link:
             self.button_link = '/products/'
         super().save(*args, **kwargs)
@@ -471,10 +488,18 @@ class Category(models.Model):
         return self.parent is None
 
     def get_descendants_and_self_ids(self):
-        """إرجاع قائمة بمعرفات هذا القسم وكافة تصنيفاته الفرعية"""
-        ids = [self.id]
-        ids.extend(self.subcategories.values_list('id', flat=True))
-        return ids
+        """إرجاع قائمة بمعرفات هذا القسم وكافة تصنيفاته الفرعية بجميع المستويات"""
+        if not self.id:
+            return []
+        seen = {self.id}
+        frontier = [self.id]
+        while frontier:
+            children = list(
+                Category.objects.filter(parent_id__in=frontier).values_list('id', flat=True)
+            )
+            frontier = [cid for cid in children if cid not in seen]
+            seen.update(frontier)
+        return list(seen)
 
     def clean(self):
         super().clean()
@@ -640,6 +665,12 @@ class Product(models.Model):
         verbose_name = 'منتج'
         verbose_name_plural = 'المنتجات'
         ordering = ['-is_featured', '-created_at']
+        indexes = [
+            models.Index(fields=['is_active', 'is_featured', '-created_at'], name='prod_active_feat_created_idx'),
+            models.Index(fields=['is_active', 'category', '-created_at'], name='prod_active_cat_created_idx'),
+            models.Index(fields=['is_active', 'brand'], name='prod_active_brand_idx'),
+            models.Index(fields=['is_active', 'is_best_seller'], name='prod_active_best_idx'),
+        ]
 
     def __str__(self):
         return f"{self.name_ar} ({self.brand_name})"
@@ -890,15 +921,18 @@ class GiftBundle(models.Model):
             return sanitize_image_url(self.cover_image.url, self.cover_image_url_fallback)
         if self.cover_image_url_fallback:
             return self.cover_image_url_fallback
-        first_item = self.items.select_related('product').first()
+        prefetched = getattr(self, '_prefetched_objects_cache', {})
+        if 'items' in prefetched:
+            first_item = next((it for it in self.items.all() if it.product), None)
+        else:
+            first_item = self.items.select_related('product').prefetch_related('product__images').first()
         if first_item and first_item.product:
             return first_item.product.primary_image_url
         return 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=800&q=80'
 
     @property
     def price_sar(self):
-        settings = StoreSettings.get_settings()
-        rate = settings.yer_per_sar or Decimal('530.00')
+        rate = StoreSettings.get_exchange_rate() or Decimal('530.00')
         import math
         return int(math.ceil(self.price_yer / rate))
 
@@ -906,8 +940,7 @@ class GiftBundle(models.Model):
     def compare_at_price_sar(self):
         if not self.compare_at_price_yer:
             return None
-        settings = StoreSettings.get_settings()
-        rate = settings.yer_per_sar or Decimal('530.00')
+        rate = StoreSettings.get_exchange_rate() or Decimal('530.00')
         import math
         return int(math.ceil(self.compare_at_price_yer / rate))
 
@@ -927,6 +960,11 @@ class GiftBundle(models.Model):
 
     @property
     def items_count(self):
+        annotated = getattr(self, '_items_count', None)
+        if annotated is not None:
+            return annotated
+        if 'items' in getattr(self, '_prefetched_objects_cache', {}):
+            return len(self.items.all())
         return self.items.count()
 
 
@@ -1037,39 +1075,50 @@ class Order(models.Model):
         verbose_name = 'طلب'
         verbose_name_plural = 'الطلبات والتحقق من السندات'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at'], name='order_user_created_idx'),
+            models.Index(fields=['status', '-created_at'], name='order_status_created_idx'),
+            models.Index(fields=['customer_email'], name='order_cust_email_idx'),
+        ]
 
     def __str__(self):
         gift_badge = " [🎁 هدية]" if self.is_gift else ""
         return f"طلب #{self.order_number}{gift_badge} — {self.customer_name} ({self.get_status_display()})"
 
+    def _adjust_stock_from_items(self, delta_sign):
+        """تحديث كميات المخزون ذرياً لجميع منتجات الطلب ومحتويات الباقات (delta_sign: +1 استرجاع، -1 خصم)"""
+        qty_by_pid = {}
+        items_qs = self.items.select_related('product', 'bundle').prefetch_related('bundle__items__product')
+        for item in items_qs:
+            if item.product_id:
+                qty_by_pid[item.product_id] = qty_by_pid.get(item.product_id, 0) + item.quantity
+            elif item.bundle:
+                for b_item in item.bundle.items.all():
+                    if b_item.product_id:
+                        qty_by_pid[b_item.product_id] = qty_by_pid.get(b_item.product_id, 0) + (b_item.quantity * item.quantity)
+
+        for pid, qty in qty_by_pid.items():
+            if delta_sign > 0:
+                Product.objects.filter(pk=pid).update(stock_quantity=F('stock_quantity') + qty)
+            else:
+                Product.objects.filter(pk=pid).update(
+                    stock_quantity=Case(
+                        When(stock_quantity__gte=qty, then=F('stock_quantity') - qty),
+                        default=Value(0),
+                    )
+                )
+
     def restore_stock(self):
         """إرجاع كميات هذا الطلب للمخزون إذا كان مخصوماً سابقاً (يشمل المنتجات العادية ومحتويات باقات الهدايا)"""
         if self.stock_deducted:
-            for item in self.items.all():
-                if item.product:
-                    item.product.stock_quantity += item.quantity
-                    item.product.save(update_fields=['stock_quantity'])
-                elif item.bundle:
-                    for b_item in item.bundle.items.select_related('product'):
-                        if b_item.product:
-                            b_item.product.stock_quantity += (b_item.quantity * item.quantity)
-                            b_item.product.save(update_fields=['stock_quantity'])
+            self._adjust_stock_from_items(delta_sign=1)
             self.stock_deducted = False
             self.save(update_fields=['stock_deducted'])
 
     def deduct_stock(self):
         """خصم كميات هذا الطلب من المخزون (يشمل المنتجات العادية ومحتويات باقات الهدايا)"""
         if not self.stock_deducted:
-            for item in self.items.all():
-                if item.product:
-                    item.product.stock_quantity = max(0, item.product.stock_quantity - item.quantity)
-                    item.product.save(update_fields=['stock_quantity'])
-                elif item.bundle:
-                    for b_item in item.bundle.items.select_related('product'):
-                        if b_item.product:
-                            needed = b_item.quantity * item.quantity
-                            b_item.product.stock_quantity = max(0, b_item.product.stock_quantity - needed)
-                            b_item.product.save(update_fields=['stock_quantity'])
+            self._adjust_stock_from_items(delta_sign=-1)
             self.stock_deducted = True
             self.save(update_fields=['stock_deducted'])
 
@@ -1082,30 +1131,11 @@ class Order(models.Model):
             if prev:
                 prev_status = prev['status']
                 if self.status == 'cancelled' and prev['stock_deducted']:
-                    # تم إلغاء الطلب -> إرجاع الكميات للمخزون
                     self.stock_deducted = False
-                    for item in self.items.all():
-                        if item.product:
-                            item.product.stock_quantity += item.quantity
-                            item.product.save(update_fields=['stock_quantity'])
-                        elif item.bundle:
-                            for b_item in item.bundle.items.select_related('product'):
-                                if b_item.product:
-                                    b_item.product.stock_quantity += (b_item.quantity * item.quantity)
-                                    b_item.product.save(update_fields=['stock_quantity'])
+                    self._adjust_stock_from_items(delta_sign=1)
                 elif self.status != 'cancelled' and not prev['stock_deducted']:
-                    # تم إعادة تفعيل الطلب بعد الإلغاء -> خصم الكميات
                     self.stock_deducted = True
-                    for item in self.items.all():
-                        if item.product:
-                            item.product.stock_quantity = max(0, item.product.stock_quantity - item.quantity)
-                            item.product.save(update_fields=['stock_quantity'])
-                        elif item.bundle:
-                            for b_item in item.bundle.items.select_related('product'):
-                                if b_item.product:
-                                    needed = b_item.quantity * item.quantity
-                                    b_item.product.stock_quantity = max(0, b_item.product.stock_quantity - needed)
-                                    b_item.product.save(update_fields=['stock_quantity'])
+                    self._adjust_stock_from_items(delta_sign=-1)
         super().save(*args, **kwargs)
 
         try:
@@ -1208,6 +1238,9 @@ class UserProfile(models.Model):
     class Meta:
         verbose_name = 'الملف الشخصي للعميل'
         verbose_name_plural = 'ملفات العملاء الشخصية'
+        indexes = [
+            models.Index(fields=['phone'], name='profile_phone_idx'),
+        ]
 
     def __str__(self):
         name = self.user.get_full_name() or self.user.username
@@ -1279,6 +1312,10 @@ class Notification(models.Model):
         verbose_name = 'إشعار'
         verbose_name_plural = 'مركز الإشعارات والتنبيهات'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient', 'is_read', '-created_at'], name='notif_recip_read_idx'),
+            models.Index(fields=['for_admin', 'is_read', '-created_at'], name='notif_admin_read_idx'),
+        ]
 
     def _invalidate_unread_count_cache(self):
         try:
@@ -1325,7 +1362,14 @@ class Notification(models.Model):
 
     @classmethod
     def notify_admin(cls, title, message, notification_type='system', order=None, link=''):
-        """إنشاء تنبيه لإدارة المتجر وطاقم العمل"""
+        """إنشاء تنبيه لإدارة المتجر وطاقم العمل مع دعم المسار المخصص للوحة الإدارة"""
+        resolved_link = link
+        if not resolved_link:
+            try:
+                resolved_link = reverse('admin:store_order_change', args=[order.id]) if order else reverse('admin:index')
+            except NoReverseMatch:
+                prefix = os.getenv('DJANGO_ADMIN_URL', 'admin').strip().strip('/') or 'admin'
+                resolved_link = f"/{prefix}/store/order/{order.id}/change/" if order else f"/{prefix}/"
         return cls.objects.create(
             recipient=None,
             for_admin=True,
@@ -1333,7 +1377,7 @@ class Notification(models.Model):
             message=message,
             notification_type=notification_type,
             order=order,
-            link=link or (f"/admin/store/order/{order.id}/change/" if order else "/admin/"),
+            link=resolved_link,
         )
 
 

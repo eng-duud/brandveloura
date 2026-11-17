@@ -144,10 +144,10 @@
                     {% if product.price_original_yer %}
                     <div id="modal-grade-original"
                         onclick="setModalGrade('original', {{ product.price_original_yer }}, {{ product.price_original_sar }})"
-                        class="p-2 rounded-xl border-2 border-pink-200 bg-white/70 cursor-pointer transition text-right hover:border-pink-300">
+                        class="p-2 rounded-xl border-2 {% if not product.price_master_yer %}border-brand-500 bg-white shadow-2xs{% else %}border-pink-200 bg-white/70 hover:border-pink-300{% endif %} cursor-pointer transition text-right">
                         <div class="flex items-center justify-between mb-0.5">
                             <span class="text-xs font-bold text-slate-900">أصلي</span>
-                            <span class="w-2 h-2 rounded-full bg-pink-200" id="modal-dot-original"></span>
+                            <span class="w-2 h-2 rounded-full {% if not product.price_master_yer %}bg-brand-500{% else %}bg-pink-200{% endif %}" id="modal-dot-original"></span>
                         </div>
                         <div class="text-[11px] font-black text-slate-900 font-num">
                             {{ product.price_original_sar }} ر.س
@@ -172,18 +172,18 @@
             <form hx-post="{% url 'store:cart_add' %}" hx-target="#cart-badge-container" class="space-y-2.5 pt-1">
                 <input type="hidden" name="product_id" value="{{ product.id }}">
                 <input type="hidden" id="modal-selected-grade" name="grade"
-                    value="{% if product.has_grades %}master{% endif %}">
+                    value="{% if product.has_grades %}{% if product.price_master_yer %}master{% else %}original{% endif %}{% endif %}">
 
                 <div class="flex items-center gap-2">
                     <!-- Quantity Stepper -->
                     <div class="flex items-center border border-pink-200 rounded-xl bg-white p-0.5 shrink-0">
                         <button type="button"
-                            onclick="const q = document.getElementById('modal-qty-input'); if(q.value > 1) q.value--;"
+                            onclick="const q = document.getElementById('modal-qty-input'); if(parseInt(q.value || '1', 10) > 1) q.value = parseInt(q.value, 10) - 1;"
                             class="w-8 h-8 rounded-lg hover:bg-pink-50 flex items-center justify-center font-bold text-slate-700 text-xs cursor-pointer">-</button>
                         <input type="number" id="modal-qty-input" name="quantity" value="1" min="1"
                             max="{{ product.stock_quantity }}"
                             class="w-8 text-center text-xs font-black font-num bg-transparent focus:outline-none">
-                        <button type="button" onclick="const q = document.getElementById('modal-qty-input'); q.value++;"
+                        <button type="button" onclick="const q = document.getElementById('modal-qty-input'); const max = parseInt(q.max || '99', 10); if(parseInt(q.value || '1', 10) < max) q.value = parseInt(q.value || '1', 10) + 1;"
                             class="w-8 h-8 rounded-lg hover:bg-pink-50 flex items-center justify-center font-bold text-slate-700 text-xs cursor-pointer">+</button>
                     </div>
 
@@ -197,7 +197,7 @@
                     <!-- Add to Cart Button -->
                     <button type="submit"
                         class="flex-1 py-2.5 px-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs sm:text-[13px] shadow-xs transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer h-10 active:scale-98"
-                        onclick="showToast('تمت إضافة {{ product.name_ar }} إلى السلة'); setTimeout(closeQuickViewModal, 700);">
+                        hx-on::after-request="if(event.detail.successful){ if(event.detail.xhr.getResponseHeader('HX-Trigger') === 'cartUpdated'){ showToast('تمت إضافة {{ product.name_ar|escapejs }} إلى السلة'); } setTimeout(closeQuickViewModal, 700); }">
                         <i data-lucide="shopping-bag" class="w-4 h-4"></i>
                         <span>إضافة للسلة</span>
                     </button>
@@ -206,7 +206,7 @@
 
                 <!-- WhatsApp Direct Order -->
                 <a id="modal-whatsapp-btn"
-                    href="https://wa.me/{{ store_settings.contact_whatsapp }}?text=مرحباً، أود طلب {{ product.name_ar }}{% if product.has_grades %} (ماستر){% endif %} بسعر {% if product.has_grades and product.price_master_sar %}{{ product.price_master_sar }}{% else %}{{ product.price_sar }}{% endif %} ر.س"
+                    href="https://wa.me/{{ store_settings.contact_whatsapp|urlencode }}?text={{ 'مرحباً، أود طلب '|urlencode }}{{ product.name_ar|urlencode }}{% if product.has_grades and product.price_master_yer %}{{ ' (ماستر)'|urlencode }}{% elif product.has_grades %}{{ ' (أصلي)'|urlencode }}{% endif %}{{ ' بسعر '|urlencode }}{% if product.has_grades and product.price_master_sar %}{{ product.price_master_sar }}{% else %}{{ product.price_sar }}{% endif %}{{ ' ر.س'|urlencode }}"
                     target="_blank"
                     class="w-full py-2 px-3 rounded-xl bg-white hover:bg-pink-50 text-slate-800 border border-pink-200 font-medium text-xs transition flex items-center justify-center gap-1.5 cursor-pointer h-9 shadow-2xs">
                     <i data-lucide="message-circle" class="w-3.5 h-3.5 text-emerald-600"></i>

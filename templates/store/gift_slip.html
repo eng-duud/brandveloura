@@ -388,10 +388,14 @@
         celebrationAnimId = requestAnimationFrame(render);
     }
 
-    // Auto-trigger on page load
-    document.addEventListener('DOMContentLoaded', function() {
+    function initGiftSlipCelebration() {
         setTimeout(startRoyalCelebration, 300);
-    });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initGiftSlipCelebration, { once: true });
+    } else {
+        initGiftSlipCelebration();
+    }
 </script>
 {% endblock %}
 
