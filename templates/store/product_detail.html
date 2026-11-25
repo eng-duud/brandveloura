@@ -130,7 +130,7 @@
             </div>
 
             <!-- Gallery Thumbnails (only if multiple images exist - side-by-side horizontally, comfortable balanced size) -->
-            {% if images.count > 1 %}
+            {% if images|length > 1 %}
             <div class="flex items-center justify-start gap-2.5 sm:gap-3 overflow-x-auto py-1 px-0.5 no-scrollbar">
                 {% for img in images %}
                 <button 

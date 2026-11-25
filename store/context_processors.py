@@ -32,13 +32,26 @@ def store_context(request):
         timeout=300,
     )
     
-    # حساب عدد عناصر السلة واستعادتها تلقائياً للمستخدم المسجل إن كانت الجلسة فارغة
+    # حساب عدد عناصر السلة واستعادتها تلقائياً للمستخدم المسجل عبر الكاش السريع (صفر استعلامات N+1)
     cart = request.session.get('cart')
-    if (cart is None or len(cart) == 0) and request.user.is_authenticated:
+    user_avatar_url = ''
+    if request.user.is_authenticated:
         try:
-            profile = getattr(request.user, 'store_profile', None)
-            if profile and profile.cart_data:
-                cart = profile.cart_data
+            from .models import UserProfile
+            prof_meta = cache_get_or_set_safe(
+                f'bv_user_profile_meta_{request.user.pk}',
+                lambda: (
+                    UserProfile.objects.filter(user_id=request.user.pk)
+                    .values('avatar_url', 'cart_data')
+                    .first()
+                    or {'avatar_url': '', 'cart_data': {}}
+                ),
+                timeout=300,
+                jitter_ratio=0.05,
+            ) or {'avatar_url': '', 'cart_data': {}}
+            user_avatar_url = prof_meta.get('avatar_url') or ''
+            if (cart is None or len(cart) == 0) and prof_meta.get('cart_data'):
+                cart = dict(prof_meta['cart_data'])
                 request.session['cart'] = cart
                 request.session.modified = True
         except Exception:
@@ -118,4 +131,5 @@ def store_context(request):
         'google_site_verification': os.getenv('GOOGLE_SITE_VERIFICATION', '').strip(),
         'unread_notifications_count': unread_notifications_count,
         'admin_unread_notifications_count': admin_unread_notifications_count,
+        'user_avatar_url': user_avatar_url,
     }

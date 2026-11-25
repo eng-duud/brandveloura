@@ -24,6 +24,7 @@ HOME_CACHE_KEYS = [
     'bv_home_deferred_html_YER',
     'bv_home_deferred_html_SAR',
     'bv_home_deferred_html_USD',
+    'bv_sitemap_xml',
 ]
 
 CATEGORY_CACHE_KEYS = [
@@ -161,10 +162,11 @@ def cache_get_or_set_safe(
 
     if not acquired:
         _stat_inc('stampede_waits')
-        time.sleep(0.025)
-        retry_val = cache_get(key, default=_MISS_SENTINEL, alias=alias)
-        if retry_val is not _MISS_SENTINEL:
-            return retry_val
+        for _ in range(4):
+            time.sleep(0.03)
+            retry_val = cache_get(key, default=_MISS_SENTINEL, alias=alias)
+            if retry_val is not _MISS_SENTINEL:
+                return retry_val
 
     try:
         value = builder_fn()

@@ -2,7 +2,7 @@
     <!-- Results Header -->
     <div class="flex items-center justify-between text-xs text-slate-500 pb-3 border-b border-pink-200">
         <div class="font-semibold text-slate-800 flex items-center gap-1.5 text-xs sm:text-sm">
-            <span class="font-bold text-slate-900 font-num">{{ products.paginator.count|default:products|length }}</span>
+            <span class="font-bold text-slate-900 font-num">{{ total_count|default:products|length }}</span>
             <span>منتج</span>
         </div>
     </div>
@@ -19,10 +19,11 @@
     {% if is_paginated and page_obj.has_other_pages %}
     <div class="flex items-center justify-center gap-2 pt-6 pb-2">
         {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if current_category %}&category={{ current_category.slug }}{% endif %}{% if active_subcategory %}&subcategory={{ active_subcategory.slug }}{% endif %}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" 
-           hx-get="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if current_category %}&category={{ current_category.slug }}{% endif %}{% if active_subcategory %}&subcategory={{ active_subcategory.slug }}{% endif %}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}"
+        <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_category %}&category={{ current_category.slug }}{% elif category_filter %}&category={{ category_filter }}{% endif %}{% if active_subcategory %}&subcategory={{ active_subcategory.slug }}{% endif %}{% if brand_filter %}&brand={{ brand_filter|urlencode }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if gender_filter %}&gender={{ gender_filter }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if sort_by and sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}" 
+           hx-get="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_category %}&category={{ current_category.slug }}{% elif category_filter %}&category={{ category_filter }}{% endif %}{% if active_subcategory %}&subcategory={{ active_subcategory.slug }}{% endif %}{% if brand_filter %}&brand={{ brand_filter|urlencode }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if gender_filter %}&gender={{ gender_filter }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if sort_by and sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
            hx-target="#product-grid"
            hx-swap="outerHTML"
+           hx-push-url="true"
            class="px-4 py-2 rounded-xl border border-pink-200 bg-white text-xs font-bold text-slate-700 hover:bg-pink-50 transition shadow-2xs">
             السابق
         </a>
@@ -33,10 +34,11 @@
         </span>
 
         {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if current_category %}&category={{ current_category.slug }}{% endif %}{% if active_subcategory %}&subcategory={{ active_subcategory.slug }}{% endif %}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" 
-           hx-get="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if current_category %}&category={{ current_category.slug }}{% endif %}{% if active_subcategory %}&subcategory={{ active_subcategory.slug }}{% endif %}{% if brand_filter %}&brand={{ brand_filter }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}"
+        <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_category %}&category={{ current_category.slug }}{% elif category_filter %}&category={{ category_filter }}{% endif %}{% if active_subcategory %}&subcategory={{ active_subcategory.slug }}{% endif %}{% if brand_filter %}&brand={{ brand_filter|urlencode }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if gender_filter %}&gender={{ gender_filter }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if sort_by and sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}" 
+           hx-get="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_category %}&category={{ current_category.slug }}{% elif category_filter %}&category={{ category_filter }}{% endif %}{% if active_subcategory %}&subcategory={{ active_subcategory.slug }}{% endif %}{% if brand_filter %}&brand={{ brand_filter|urlencode }}{% endif %}{% if grade_filter %}&grade={{ grade_filter }}{% endif %}{% if gender_filter %}&gender={{ gender_filter }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if sort_by and sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}"
            hx-target="#product-grid"
            hx-swap="outerHTML"
+           hx-push-url="true"
            class="px-4 py-2 rounded-xl border border-pink-200 bg-white text-xs font-bold text-slate-700 hover:bg-pink-50 transition shadow-2xs">
             التالي
         </a>

@@ -1,33 +1,46 @@
-# Build production Tailwind CSS from the Django templates.
+# Stage 1: Build production Tailwind CSS from the Django templates.
 FROM node:22-alpine AS css-builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY tailwind.config.cjs ./
 COPY static/css/tailwind.input.css ./static/css/tailwind.input.css
+COPY static/js ./static/js
 COPY templates ./templates
 COPY store ./store
 RUN npm run build:css
 
-# Brand Veloura Production Docker image.
-FROM python:3.12-slim
-
+# Stage 2: Build Python wheels so build toolchains (gcc/headers) stay out of runtime.
+FROM python:3.12-slim AS py-builder
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
-WORKDIR /app
-
-# Install system dependencies for Pillow, PostgreSQL and Healthcheck.
+    PIP_NO_CACHE_DIR=1
+WORKDIR /wheels
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip wheel --wheel-dir /wheels -r requirements.txt
+
+# Stage 3: Slim Brand Veloura Production runtime image.
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# Install minimal runtime libraries only (no gcc or -dev headers).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies.
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# Install pre-built Python wheels.
+COPY --from=py-builder /wheels /wheels
+RUN pip install --no-index --find-links=/wheels /wheels/* && rm -rf /wheels
 
 # Copy application source and the CSS generated in the Node build stage.
 COPY . /app/

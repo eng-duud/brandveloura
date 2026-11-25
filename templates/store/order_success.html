@@ -3,7 +3,7 @@
 {% block title %}تم استلام طلبك بنجاح | {{ order.order_number }} — {{ store_settings.store_name }}{% endblock %}
 
 {% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<meta name="robots" content="noindex, nofollow">
 {% include 'store/includes/invoice_styles.html' %}
 {% endblock %}
 
@@ -18,7 +18,7 @@
 
         <div class="space-y-1.5">
             <span class="text-xs font-bold text-slate-600 block">تم استلام وتسجيل طلبك بنجاح</span>
-            <h1 class="text-xl sm:text-2xl font-bold text-slate-900">شكراً لك، {{ order.customer_name }}</h1>
+            <h1 class="text-xl sm:text-2xl font-bold text-slate-900">شكراً لك{% if is_order_owner %}، {{ order.customer_name }}{% endif %}</h1>
             <p class="text-xs sm:text-sm text-slate-500 max-w-md mx-auto pt-1">
                 رقم الطلب المرجعي: <span class="font-mono font-bold text-slate-900 bg-pink-50 px-2.5 py-0.5 rounded-lg border border-pink-200 font-num">#{{ order.order_number }}</span>
             </p>
@@ -51,8 +51,8 @@
             </div>
 
             <div class="flex items-center justify-between">
-                <span class="text-slate-500 font-medium">المدينة والعنوان:</span>
-                <span class="font-bold text-slate-900">{{ order.shipping_city }} — {{ order.shipping_address }}</span>
+                <span class="text-slate-500 font-medium">المدينة{% if is_order_owner %} والعنوان{% endif %}:</span>
+                <span class="font-bold text-slate-900">{{ order.shipping_city }}{% if is_order_owner %} — {{ order.shipping_address }}{% endif %}</span>
             </div>
 
             <div class="flex items-center justify-between">
@@ -60,15 +60,15 @@
                 <span class="font-bold text-slate-900">{{ order.payment_method_name }}</span>
             </div>
 
-            {% if order.payment_reference_no %}
+            {% if is_order_owner and order.payment_reference_no %}
             <div class="flex items-center justify-between">
                 <span class="text-slate-500 font-medium">رقم الحوالة / الإشعار:</span>
                 <span class="font-mono font-bold text-slate-900 font-num">{{ order.payment_reference_no }}</span>
             </div>
             {% endif %}
 
-            <!-- Gift Order Details Card (if applicable) -->
-            {% if order.is_gift %}
+            <!-- Gift Order Details Card (if applicable & authorized) -->
+            {% if order.is_gift and is_order_owner %}
             <div class="p-5 rounded-2xl bg-white border border-pink-200 space-y-3 text-right shadow-2xs">
                 <div class="flex items-center justify-between text-xs font-bold text-slate-900 pb-2 border-b border-pink-100">
                     <span class="flex items-center gap-1.5">
@@ -187,6 +187,7 @@
                 </div>
             </div>
 
+            {% if is_order_owner %}
             <!-- معاينة الفاتورة -->
             <div class="pt-3 border-t border-pink-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-pink-100 shadow-2xs">
                 <div class="flex items-center gap-2.5">
@@ -207,12 +208,15 @@
                     <span>معاينة الفاتورة</span>
                 </button>
             </div>
+            {% endif %}
         </div>
 
+        {% if is_order_owner %}
         <!-- Hidden Invoice Source for Modal Rendering -->
         <div id="order-invoice-source" class="hidden">
             {% include 'store/includes/order_invoice_sheet.html' with order=order store_settings=store_settings %}
         </div>
+        {% endif %}
 
         <!-- Links -->
         <div class="pt-3 flex flex-wrap items-center justify-center gap-5">
@@ -310,6 +314,20 @@
         document.body.style.overflow = '';
     }
 
+    let _html2canvasPromise = null;
+    function ensureHtml2Canvas() {
+        if (typeof window.html2canvas === 'function') return Promise.resolve(window.html2canvas);
+        if (_html2canvasPromise) return _html2canvasPromise;
+        _html2canvasPromise = new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+            s.onload = () => resolve(window.html2canvas);
+            s.onerror = () => { _html2canvasPromise = null; reject(new Error('Failed to load html2canvas')); };
+            document.head.appendChild(s);
+        });
+        return _html2canvasPromise;
+    }
+
     async function downloadModalInvoicePNG() {
         const btn = document.getElementById('modal-btn-download-png');
         const originalText = btn.innerHTML;
@@ -321,22 +339,23 @@
             btn.disabled = true;
             btn.innerHTML = '<span>⏳ جارٍ التوليد...</span>';
 
+            await ensureHtml2Canvas();
             const canvas = await html2canvas(sheet, {
                 scale: 2,
                 useCORS: true,
-                allowTaint: true,
                 backgroundColor: '#ffffff',
                 logging: false,
                 windowWidth: 1000
             });
 
+            const dataUrl = canvas.toDataURL('image/png');
             const link = document.createElement('a');
             link.download = `فاتورة-${'{{ order.order_number }}'}.png`;
-            link.href = canvas.toDataURL('image/png');
+            link.href = dataUrl;
             link.click();
 
             // Background sync with Cloudinary
-            uploadInvoiceToCloudinary(canvas.toDataURL('image/png'));
+            uploadInvoiceToCloudinary(dataUrl);
 
             btn.innerHTML = '<span>✓ تم الحفظ</span>';
             setTimeout(() => {
@@ -357,10 +376,10 @@
         if (!sheet) return;
 
         try {
+            await ensureHtml2Canvas();
             const canvas = await html2canvas(sheet, {
                 scale: 2,
                 useCORS: true,
-                allowTaint: true,
                 backgroundColor: '#ffffff',
                 logging: false,
                 windowWidth: 1000
@@ -391,7 +410,7 @@
 
     async function uploadInvoiceToCloudinary(base64Data) {
         try {
-            const csrfToken = getCookie('csrftoken');
+            const csrfToken = document.getElementById('bv-csrf-token')?.dataset.token || '{{ csrf_token }}';
             await fetch('/api/order/{{ order.order_number }}/save-invoice-image/', {
                 method: 'POST',
                 headers: {
@@ -403,21 +422,6 @@
         } catch (e) {
             console.warn('Cloudinary upload:', e);
         }
-    }
-
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
     }
 
     async function shareGiftCard(orderNumber, recipientName, slipUrl) {

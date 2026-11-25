@@ -1,5 +1,5 @@
 {% load static %}
-<div id="notifications-dropdown-content" class="w-80 sm:w-96 bg-white rounded-2xl shadow-luxury-lg border border-rose-100 overflow-hidden text-xs">
+<div id="notifications-dropdown-content" class="w-full sm:w-96 bg-white rounded-2xl shadow-luxury-lg border border-rose-100 overflow-hidden text-xs">
     <!-- Header -->
     <div class="px-4 py-3 bg-gradient-to-r from-rose-50/90 to-white border-b border-rose-100/80 flex items-center justify-between">
         <div class="flex items-center gap-2">
@@ -116,7 +116,10 @@
 </div>
 <script>
     if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
+        lucide.createIcons(document.getElementById('notifications-dropdown-content') || document);
+    }
+    if (typeof htmx !== 'undefined') {
+        htmx.trigger(document.body, 'refreshBadge');
     }
 </script>
 

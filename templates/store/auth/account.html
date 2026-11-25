@@ -4,7 +4,7 @@
 {% block title %}حسابي | Brand Veloura{% endblock %}
 
 {% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<meta name="robots" content="noindex, nofollow">
 {% include 'store/includes/invoice_styles.html' %}
 {% endblock %}
 
@@ -36,10 +36,13 @@
             </div>
 
             <div class="flex items-center gap-2 self-end sm:self-center">
-                <a href="{% url 'store:logout' %}" class="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition flex items-center gap-1.5">
-                    <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-                    <span>تسجيل الخروج</span>
-                </a>
+                <form method="POST" action="{% url 'store:logout' %}" hx-boost="false">
+                    {% csrf_token %}
+                    <button type="submit" class="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition flex items-center gap-1.5 cursor-pointer">
+                        <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                        <span>تسجيل الخروج</span>
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -690,6 +693,20 @@
         document.body.style.overflow = '';
     }
 
+    let _acctHtml2CanvasPromise = null;
+    function ensureAccountHtml2Canvas() {
+        if (typeof window.html2canvas === 'function') return Promise.resolve(window.html2canvas);
+        if (_acctHtml2CanvasPromise) return _acctHtml2CanvasPromise;
+        _acctHtml2CanvasPromise = new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+            s.onload = () => resolve(window.html2canvas);
+            s.onerror = () => { _acctHtml2CanvasPromise = null; reject(new Error('Failed to load html2canvas')); };
+            document.head.appendChild(s);
+        });
+        return _acctHtml2CanvasPromise;
+    }
+
     async function downloadModalInvoicePNG() {
         if (!currentInvoiceOrderNumber) return;
         const btn = document.getElementById('modal-btn-download-png');
@@ -702,22 +719,23 @@
             btn.disabled = true;
             btn.innerHTML = '<span>⏳ جارٍ التوليد...</span>';
 
+            await ensureAccountHtml2Canvas();
             const canvas = await html2canvas(sheet, {
                 scale: 2,
                 useCORS: true,
-                allowTaint: true,
                 backgroundColor: '#ffffff',
                 logging: false,
                 windowWidth: 1000
             });
 
+            const dataUrl = canvas.toDataURL('image/png');
             const link = document.createElement('a');
             link.download = `فاتورة-${currentInvoiceOrderNumber}.png`;
-            link.href = canvas.toDataURL('image/png');
+            link.href = dataUrl;
             link.click();
 
             // Background Cloudinary Sync
-            uploadInvoiceToCloudinary(currentInvoiceOrderNumber, canvas.toDataURL('image/png'));
+            uploadInvoiceToCloudinary(currentInvoiceOrderNumber, dataUrl);
 
             btn.innerHTML = '<span>✓ تم الحفظ</span>';
             setTimeout(() => {
@@ -740,10 +758,10 @@
         if (!sheet) return;
 
         try {
+            await ensureAccountHtml2Canvas();
             const canvas = await html2canvas(sheet, {
                 scale: 2,
                 useCORS: true,
-                allowTaint: true,
                 backgroundColor: '#ffffff',
                 logging: false,
                 windowWidth: 1000
@@ -775,7 +793,7 @@
 
     async function uploadInvoiceToCloudinary(orderNumber, base64Data) {
         try {
-            const csrfToken = getCookie('csrftoken');
+            const csrfToken = document.getElementById('bv-csrf-token')?.dataset.token || '{{ csrf_token }}';
             await fetch(`/api/order/${orderNumber}/save-invoice-image/`, {
                 method: 'POST',
                 headers: {
@@ -787,21 +805,6 @@
         } catch (e) {
             console.warn('Background invoice sync:', e);
         }
-    }
-
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
     }
 
     // Web Share API for Gift Orders

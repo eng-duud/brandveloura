@@ -304,7 +304,9 @@
             slideInterval = null;
         }
         if (totalSlides > 1) {
-            slideInterval = setInterval(nextSlide, 2000);
+            slideInterval = setInterval(() => {
+                if (!document.hidden) nextSlide();
+            }, 4500);
         }
     }
 
@@ -368,6 +370,48 @@
         let startScrollLeft = 0;
         let hasDragged = false;
         let rafId = null;
+        let isVisible = false;
+        let carry = 0;
+
+        function startGlideLoop() {
+            if (rafId || !isVisible || document.hidden) return;
+            rafId = requestAnimationFrame(glide);
+            activeRafs.add(rafId);
+        }
+
+        function stopGlideLoop() {
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+                activeRafs.delete(rafId);
+                rafId = null;
+            }
+        }
+
+        let io = null;
+        if ('IntersectionObserver' in window) {
+            io = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    isVisible = entry.isIntersecting;
+                    if (isVisible) {
+                        startGlideLoop();
+                    } else {
+                        stopGlideLoop();
+                    }
+                });
+            }, { threshold: 0.05 });
+            io.observe(el);
+        } else {
+            isVisible = true;
+        }
+
+        function onVisibilityChange() {
+            if (document.hidden) {
+                stopGlideLoop();
+            } else if (isVisible) {
+                startGlideLoop();
+            }
+        }
+        document.addEventListener('visibilitychange', onVisibilityChange);
 
         function pauseTemporarily(ms = 3500) {
             isPaused = true;
@@ -424,22 +468,31 @@
 
         function glide() {
             if (!document.body.contains(el)) {
-                if (rafId) activeRafs.delete(rafId);
+                stopGlideLoop();
+                return;
+            }
+            if (!isVisible || document.hidden) {
+                stopGlideLoop();
                 return;
             }
             if (!isPaused && !isMouseDown && el.scrollWidth > el.clientWidth) {
-                const mode = detectRTLType();
-                const maxScroll = el.scrollWidth - el.clientWidth;
+                carry += speed;
+                const stepPx = Math.trunc(carry);
+                if (stepPx >= 1) {
+                    carry -= stepPx;
+                    const mode = detectRTLType();
+                    const maxScroll = el.scrollWidth - el.clientWidth;
 
-                if (mode === 'negative') {
-                    el.scrollLeft -= speed;
-                    if (Math.abs(el.scrollLeft) >= maxScroll - 2) {
-                        el.scrollLeft = 0;
-                    }
-                } else {
-                    el.scrollLeft += speed;
-                    if (el.scrollLeft >= maxScroll - 2) {
-                        el.scrollLeft = 0;
+                    if (mode === 'negative') {
+                        el.scrollLeft -= stepPx;
+                        if (Math.abs(el.scrollLeft) >= maxScroll - 2) {
+                            el.scrollLeft = 0;
+                        }
+                    } else {
+                        el.scrollLeft += stepPx;
+                        if (el.scrollLeft >= maxScroll - 2) {
+                            el.scrollLeft = 0;
+                        }
                     }
                 }
             }
@@ -448,8 +501,7 @@
             activeRafs.add(rafId);
         }
 
-        rafId = requestAnimationFrame(glide);
-        activeRafs.add(rafId);
+        startGlideLoop();
 
         function step(dir) {
             pauseTemporarily(3500);
@@ -466,10 +518,9 @@
 
         function destroy() {
             if (pauseTimer) clearTimeout(pauseTimer);
-            if (rafId) {
-                cancelAnimationFrame(rafId);
-                activeRafs.delete(rafId);
-            }
+            stopGlideLoop();
+            if (io) io.disconnect();
+            document.removeEventListener('visibilitychange', onVisibilityChange);
             window.removeEventListener('mouseup', onWindowMouseUp);
         }
 

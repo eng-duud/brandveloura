@@ -9,14 +9,18 @@
     root.querySelectorAll('i[data-lucide], svg[data-lucide]').forEach((source) => {
       const name = source.getAttribute('data-lucide');
       if (!name || !/^[a-z0-9-]+$/i.test(name)) return;
+      if (source.tagName.toLowerCase() === 'svg' && source.getAttribute('data-lucide-hydrated') === name) {
+        return;
+      }
 
       const icon = document.createElementNS(svgNs, 'svg');
       for (const attribute of source.attributes) {
-        if (attribute.name !== 'data-lucide') {
+        if (attribute.name !== 'data-lucide' && attribute.name !== 'data-lucide-hydrated') {
           icon.setAttribute(attribute.name, attribute.value);
         }
       }
       icon.setAttribute('data-lucide', name);
+      icon.setAttribute('data-lucide-hydrated', name);
       icon.setAttribute('viewBox', '0 0 24 24');
       icon.setAttribute('fill', 'none');
       icon.setAttribute('stroke', 'currentColor');

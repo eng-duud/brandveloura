@@ -301,7 +301,7 @@ class SecurityAndHardeningTests(TestCase):
         sw_res = self.client.get('/sw.js')
         self.assertEqual(sw_res.status_code, 200)
         sw_text = sw_res.content.decode('utf-8')
-        self.assertIn('brand-veloura-pwa-v5', sw_text)
+        self.assertIn('brand-veloura-pwa-v7', sw_text)
         self.assertIn("'/partials/'", sw_text)
         self.assertIn("'/notifications/'", sw_text)
         self.assertIn('HX-Request', sw_text)

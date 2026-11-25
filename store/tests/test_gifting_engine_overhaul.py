@@ -380,7 +380,15 @@ class GiftingEngineOverhaulTests(TestCase):
         self.assertIn('royal-celebration-canvas', slip_html)
         self.assertIn('startRoyalCelebration', slip_html)
 
-        # فحص صفحة نجاح الطلب
+        # فحص حماية الخصوصية أولاً: الغريب بدون جلسة المشتري لا يرى بيانات المستلم أو الفاتورة التفصيلية
+        res_stranger = self.client.get(reverse('store:order_success', kwargs={'order_number': order.order_number}))
+        self.assertEqual(res_stranger.status_code, 200)
+        self.assertNotIn('سعيد بن مبارك', res_stranger.content.decode('utf-8'))
+
+        # فحص صفحة نجاح الطلب لصاحب الطلب الفعلي في جلسته
+        sess = self.client.session
+        sess['last_order_number'] = order.order_number
+        sess.save()
         res_success = self.client.get(reverse('store:order_success', kwargs={'order_number': order.order_number}))
         self.assertEqual(res_success.status_code, 200)
         success_html = res_success.content.decode('utf-8')

@@ -1,4 +1,11 @@
-<span id="notification-badge" class="{% if unread_count > 0 %}inline-flex{% else %}hidden{% endif %} items-center justify-center px-1.5 py-0.5 text-[9px] font-extrabold leading-none text-white bg-rose-600 rounded-full shadow-sm animate-pulse min-w-[18px]">
+<span id="notification-badge"
+      data-unread="{{ unread_count|default:0 }}"
+      {% if latest_unread %}
+      data-notif-id="{{ latest_unread.id }}"
+      data-notif-title="{{ latest_unread.title }}"
+      data-notif-body="{{ latest_unread.message|truncatechars:140 }}"
+      data-notif-url="{{ latest_unread.link|default:'/account/?tab=notifications' }}"
+      {% endif %}
+      class="{% if unread_count > 0 %}inline-flex{% else %}hidden{% endif %} items-center justify-center px-1.5 py-0.5 text-[9px] font-extrabold leading-none text-white bg-rose-600 rounded-full shadow-sm animate-pulse min-w-[18px]">
     {% if unread_count > 9 %}9+{% else %}{{ unread_count }}{% endif %}
 </span>
-

@@ -105,10 +105,14 @@ class UserRoutesAndOperationsTests(TestCase):
         self.assertIn('featured_products', def_res.context)
 
     def test_product_list_and_search(self):
-        """فحص صفحة كافة المنتجات والبحث النصي"""
+        """فحص صفحة كافة المنتجات والبحث النصي الشامل عبر كافة الأقسام (العطور والساعات معاً)"""
         res = self.client.get(reverse('store:product_list'), {'q': 'عود'})
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, 'عطر عود ملكي')
+
+        res_watch = self.client.get(reverse('store:product_list'), {'q': 'رولكس'})
+        self.assertEqual(res_watch.status_code, 200)
+        self.assertContains(res_watch, 'ساعة رولكس')
 
     def test_perfumes_catalog_with_filters(self):
         """فحص كتالوج العطور مع فلترة الدرجة والماركة والترتيب وتوجيهه للكتالوج الموحد"""
@@ -449,6 +453,9 @@ class UserRoutesAndOperationsTests(TestCase):
 
     def test_gifting_order_full_journey(self):
         """فحص مسار الإهداء الكامل: من المعالج، مروراً بالسلة إلى إنشاء الطلب بحجب الأسعار والجدولة"""
+        from datetime import date, timedelta
+        future_date = (date.today() + timedelta(days=10)).isoformat()
+
         # 1. إرسال خيارات الإهداء من المعالج
         post_data = {
             'perfume_id': self.perfume.id,
@@ -457,7 +464,7 @@ class UserRoutesAndOperationsTests(TestCase):
             'recipient_phone': '771234567',
             'gift_card_sender': 'صالح (جدة)',
             'gift_card_message': 'ألف مبروك التخرج والنجاح الباهر',
-            'preferred_delivery_date': '2026-11-20',
+            'preferred_delivery_date': future_date,
             'is_luxury_gift_wrapping': 'true',
         }
         res = self.client.post(reverse('store:gift_builder'), post_data)
@@ -483,7 +490,7 @@ class UserRoutesAndOperationsTests(TestCase):
             'gift_card_sender': 'صالح (جدة)',
             'gift_card_recipient': 'خالد المنصوري',
             'gift_card_message': 'ألف مبروك التخرج والنجاح الباهر',
-            'preferred_delivery_date': '2026-11-20',
+            'preferred_delivery_date': future_date,
             'hide_invoice_prices': 'true',
             'is_luxury_gift_wrapping': 'true',
         }
@@ -495,7 +502,7 @@ class UserRoutesAndOperationsTests(TestCase):
         # التأكد من صحة بيانات الحقول الجديدة
         self.assertTrue(order.is_gift)
         self.assertTrue(order.hide_invoice_prices)
-        self.assertEqual(str(order.preferred_delivery_date), '2026-11-20')
+        self.assertEqual(str(order.preferred_delivery_date), future_date)
         self.assertEqual(order.gift_card_sender, 'صالح (جدة)')
         self.assertTrue(order.is_luxury_gift_wrapping)
         self.assertEqual(order.gift_wrapping_fee_yer, Decimal('3000.00'))
@@ -851,10 +858,10 @@ class UserRoutesAndOperationsTests(TestCase):
         self.assertEqual(int(self.client.session['_auth_user_id']), created_user.id)
 
     def test_session_and_cookie_persistence_settings(self):
-        """فحص إعدادات دوام الكوكيز والجلسات السنوية المتجددة تلقائياً"""
+        """فحص إعدادات دوام الكوكيز والجلسات السنوية بدون كتابة مهدرة في كل طلب قراءة"""
         from django.conf import settings
         self.assertGreaterEqual(settings.SESSION_COOKIE_AGE, 86400 * 365)
-        self.assertTrue(settings.SESSION_SAVE_EVERY_REQUEST)
+        self.assertFalse(settings.SESSION_SAVE_EVERY_REQUEST)
         self.assertFalse(settings.SESSION_EXPIRE_AT_BROWSER_CLOSE)
 
         # فحص أن تسجيل الدخول لا ينهي الجلسة عند إغلاق المتصفح (expiry > 0)
@@ -1038,6 +1045,79 @@ class UserRoutesAndOperationsTests(TestCase):
         # إعادة القيمة لـ 60
         settings.cart_reservation_minutes = 60
         settings.save()
+
+    def test_native_push_subscription_sync_and_guest_order_binding(self):
+        """فحص ربط إشعارات الشريط العلوي بجهاز العميل تلقائياً عند الطلب كزائر وعند تسجيل الدخول"""
+        import json
+        from unittest.mock import patch
+        from store.models import WebPushSubscription, Notification
+        from store.push_notifications import get_order_push_endpoint, send_order_status_push
+
+        # 1. زائر يفعل الإشعارات قبل تسجيل الدخول
+        sub_payload = {
+            'endpoint': 'https://fcm.googleapis.com/fcm/send/test-device-token-123',
+            'keys': {
+                'p256dh': 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFg',
+                'auth': 'UUxI4O8-FbRouAevSmBQ6o',
+            },
+        }
+        sub_res = self.client.post(
+            reverse('store:push_subscribe'),
+            data=json.dumps(sub_payload),
+            content_type='application/json',
+        )
+        self.assertEqual(sub_res.status_code, 200)
+        sub_obj = WebPushSubscription.objects.get(endpoint=sub_payload['endpoint'])
+        self.assertIsNone(sub_obj.user)
+        self.assertEqual(self.client.session.get('push_endpoint'), sub_payload['endpoint'])
+
+        # 2. الزائر يسجل الدخول -> يتم ربط الاشتراك بحسابه تلقائياً
+        login_res = self.client.post(reverse('store:login'), {
+            'identifier': self.user.username,
+            'password': 'KhaledPassword2026!',
+        })
+        self.assertEqual(login_res.status_code, 302)
+        sub_obj.refresh_from_db()
+        self.assertEqual(sub_obj.user_id, self.user.id)
+
+        # 3. شارة الإشعارات تمرر بيانات أحدث إشعار لعرضه في الشريط العلوي
+        notif = Notification.notify_user(
+            user=self.user,
+            title='تم شحن طلبك',
+            message='طلبك مع مندوب التوصيل الآن',
+            notification_type='out_for_delivery',
+            link='/account/',
+        )
+        badge_res = self.client.get(reverse('store:notification_badge'))
+        self.assertEqual(badge_res.status_code, 200)
+        self.assertContains(badge_res, f'data-notif-id="{notif.id}"')
+        self.assertContains(badge_res, 'تم شحن طلبك')
+
+        # 4. التحقق من أن sw.js يدعم renotify و BV_PUSH_RECEIVED
+        sw_res = self.client.get(reverse('store:service_worker'))
+        self.assertEqual(sw_res.status_code, 200)
+        self.assertContains(sw_res, 'BV_PUSH_RECEIVED')
+        self.assertContains(sw_res, 'renotify')
+
+        # 5. التحقق من عدم بث إشعار حالة طلب لعموم المشتركين إذا لم يوجد هدف محدد
+        guest_order = Order.objects.create(
+            order_number='BV-GUEST-NOPUSH',
+            customer_name='زائر بدون اشتراك',
+            customer_phone='770000111',
+            shipping_city='صنعاء',
+            shipping_address='حدة',
+            subtotal_yer=Decimal('10000'),
+            shipping_fee_yer=Decimal('2000'),
+            total_yer=Decimal('12000'),
+            total_sar=Decimal('25'),
+            exchange_rate_applied=Decimal('530'),
+            status='pending_verification',
+        )
+        with patch('store.push_notifications.send_web_push') as mocked_push:
+            sent_count = send_order_status_push(guest_order, 'payment_verified')
+            self.assertEqual(sent_count, 0)
+            mocked_push.assert_not_called()
+
 
 
 

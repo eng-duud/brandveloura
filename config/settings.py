@@ -27,20 +27,28 @@ elif RUNNING_COLLECTSTATIC or RUNNING_TESTS:
 elif DEBUG:
     SECRET_KEY = hashlib.sha256(f"bv-local-dev-{BASE_DIR}".encode()).hexdigest()
 else:
-    runtime_seed = os.getenv('RAILWAY_SERVICE_ID') or os.getenv('DATABASE_URL') or str(BASE_DIR)
-    if runtime_seed == str(BASE_DIR):
-        SECRET_KEY = get_random_secret_key()
+    db_secret_seed = os.getenv('DATABASE_URL', '').strip()
+    if db_secret_seed:
+        SECRET_KEY = hashlib.pbkdf2_hmac(
+            'sha256',
+            db_secret_seed.encode('utf-8'),
+            b'brandveloura-prod-key-derivation-v2',
+            100_000,
+        ).hex()
     else:
-        SECRET_KEY = hashlib.sha256(f"bv-runtime-{runtime_seed}".encode()).hexdigest()
+        SECRET_KEY = get_random_secret_key()
 
 # Clean ALLOWED_HOSTS (strip schemes like https:// if mistakenly passed)
 ALLOWED_HOSTS = []
-DEFAULT_ALLOWED_HOSTS = '.railway.app,.up.railway.app,brandveloura.com,www.brandveloura.com,.brandveloura.com,localhost,127.0.0.1'
+DEFAULT_ALLOWED_HOSTS = 'brandveloura.com,www.brandveloura.com,.brandveloura.com,localhost,127.0.0.1'
 raw_hosts = os.getenv('DJANGO_ALLOWED_HOSTS', DEFAULT_ALLOWED_HOSTS).split(',')
 for host in raw_hosts:
     cleaned = host.strip()
     if cleaned:
         cleaned = cleaned.replace('https://', '').replace('http://', '').rstrip('/')
+        # Ignore overly broad shared-hosting wildcards unless explicitly forced
+        if cleaned in ('.railway.app', '.up.railway.app') and os.getenv('ALLOW_SHARED_RAILWAY_WILDCARDS', 'False').lower() not in ('true', '1'):
+            continue
         if cleaned and cleaned not in ALLOWED_HOSTS:
             ALLOWED_HOSTS.append(cleaned)
 
@@ -48,20 +56,21 @@ railway_domain = os.getenv('RAILWAY_PUBLIC_DOMAIN', '').strip()
 if railway_domain and railway_domain not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(railway_domain)
 if not ALLOWED_HOSTS:
-    ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'brandveloura.com', 'www.brandveloura.com', '.brandveloura.com', '.railway.app', '.up.railway.app']
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'brandveloura.com', 'www.brandveloura.com', '.brandveloura.com']
 if RUNNING_TESTS and 'testserver' not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append('testserver')
 if '*' not in ALLOWED_HOSTS:
-    for domain_pattern in ['.railway.app', '.up.railway.app', 'brandveloura.com', 'www.brandveloura.com', '.brandveloura.com', 'localhost', '127.0.0.1']:
+    for domain_pattern in ['brandveloura.com', 'www.brandveloura.com', '.brandveloura.com', 'localhost', '127.0.0.1']:
         if domain_pattern not in ALLOWED_HOSTS:
             ALLOWED_HOSTS.append(domain_pattern)
 
-# CSRF Trusted Origins for Railway HTTPS & Custom Domains
+# CSRF Trusted Origins for Railway HTTPS & Custom Domains (strictly scoped to own domains)
 CSRF_TRUSTED_ORIGINS = [
     origin.strip() for origin in os.getenv(
-        'CSRF_TRUSTED_ORIGINS', 
-        'https://*.railway.app,https://*.up.railway.app,https://brandveloura.com,https://www.brandveloura.com,http://localhost:8000,http://127.0.0.1:8000'
-    ).split(',') if origin.strip()
+        'CSRF_TRUSTED_ORIGINS',
+        'https://brandveloura.com,https://www.brandveloura.com,http://localhost:8000,http://127.0.0.1:8000'
+    ).split(',')
+    if origin.strip() and origin.strip() not in ('https://*.railway.app', 'https://*.up.railway.app')
 ]
 if railway_domain:
     railway_origin = f"https://{railway_domain}"
@@ -70,25 +79,25 @@ if railway_domain:
 
 # Automatically add any custom domain from ALLOWED_HOSTS to CSRF_TRUSTED_ORIGINS
 for host in ALLOWED_HOSTS:
-    if host not in ['*', 'localhost', '127.0.0.1'] and not host.startswith('.'):
+    if host not in ['*', 'localhost', '127.0.0.1', 'testserver'] and not host.startswith('.'):
         origin = f"https://{host}"
         if origin not in CSRF_TRUSTED_ORIGINS:
             CSRF_TRUSTED_ORIGINS.append(origin)
 
 # Reverse Proxy & SSL Configuration (Essential for Railway SSL & Google OAuth Redirect URIs)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_HOST = os.getenv('USE_X_FORWARDED_HOST', 'False').lower() in ('true', '1')
 USE_X_FORWARDED_PORT = True
 
 # Cross-Origin Policies (allows Google Sign-In popups/redirects without blocking window communication)
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
-# Global Session & Long-Lived Cookie Configuration (365-Day Rolling Session)
+# Global Session & Long-Lived Cookie Configuration (365-Day Persistent Session, Write-On-Modify Only)
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 SESSION_CACHE_ALIAS = 'sessions'
 SESSION_COOKIE_AGE = 86400 * 365  # 1 full year persistent shopping & auth session
-SESSION_SAVE_EVERY_REQUEST = True  # Automatically renews/slides cookie expiration on every visit
+SESSION_SAVE_EVERY_REQUEST = False  # Avoid synchronous DB/Redis writes on every read-only GET request
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
@@ -139,7 +148,7 @@ if REDIS_URL and 'test' not in sys.argv:
             'LOCATION': REDIS_URL,
             'KEY_PREFIX': 'veloura_sess',
             'VERSION': 1,
-            'TIMEOUT': 86400 * 7,
+            'TIMEOUT': 86400 * 30,
             'OPTIONS': dict(_redis_options),
         },
     }
@@ -160,7 +169,7 @@ else:
             'LOCATION': 'veloura-sessions-cache',
             'KEY_PREFIX': 'veloura_sess',
             'VERSION': 1,
-            'TIMEOUT': 86400 * 7,
+            'TIMEOUT': 86400 * 30,
             'OPTIONS': {
                 'MAX_ENTRIES': 2000,
             },
@@ -279,8 +288,14 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 WHITENOISE_MANIFEST_STRICT = False
+WHITENOISE_USE_FINDERS = DEBUG or ('test' in sys.argv)
+staticfiles_storage_backend = (
+    'django.contrib.staticfiles.storage.StaticFilesStorage'
+    if (DEBUG or 'test' in sys.argv)
+    else 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+)
+STATICFILES_STORAGE = staticfiles_storage_backend
 
 # Media Files & Cloudinary Integration (Supports Railway Cloudinary URL or discrete keys)
 MEDIA_URL = '/media/'
@@ -316,7 +331,7 @@ STORAGES = {
         "BACKEND": media_storage_backend,
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": staticfiles_storage_backend,
     },
 }
 
@@ -365,85 +380,3 @@ LOGOUT_REDIRECT_URL = 'store:home'
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
 
-# Django Unfold Theme Customization (Luxury Pink, Rose & White)
-from django.urls import reverse_lazy
-
-UNFOLD = {
-    "SITE_TITLE": "Brand Veloura | لوحة الإدارة",
-    "SITE_HEADER": "Brand Veloura",
-    "SITE_SUBHEADER": "المتجر الفاخر للعطور والساعات ومستحضرات التجميل",
-    "COLORS": {
-        "primary": {
-            "50": "255 241 242",
-            "100": "255 228 230",
-            "200": "254 205 211",
-            "300": "253 164 175",
-            "400": "251 113 133",
-            "500": "244 63 94",
-            "600": "225 29 72",
-            "700": "190 18 60",
-            "800": "159 18 57",
-            "900": "136 19 55",
-            "950": "76 5 25",
-        },
-    },
-    "SIDEBAR": {
-        "show_search": True,
-        "show_all_applications": False,
-        "navigation": [
-            {
-                "title": "إدارة الطلبات والمالية",
-                "separator": True,
-                "items": [
-                    {
-                        "title": "الطلبات وفحص السندات",
-                        "icon": "shopping_bag",
-                        "link": reverse_lazy("admin:store_order_changelist"),
-                    },
-                    {
-                        "title": "حسابات التحويل (الكريمي والمحافظ)",
-                        "icon": "account_balance",
-                        "link": reverse_lazy("admin:store_paymentaccount_changelist"),
-                    },
-                    {
-                        "title": "مناطق الشحن وتكاليف التوصيل",
-                        "icon": "local_shipping",
-                        "link": reverse_lazy("admin:store_shippingzone_changelist"),
-                    },
-                ],
-            },
-            {
-                "title": "الكتالوج والمنتجات الفاخرة",
-                "separator": True,
-                "items": [
-                    {
-                        "title": "المنتجات والمخزون",
-                        "icon": "inventory_2",
-                        "link": reverse_lazy("admin:store_product_changelist"),
-                    },
-                    {
-                        "title": "الأقسام والفئات",
-                        "icon": "category",
-                        "link": reverse_lazy("admin:store_category_changelist"),
-                    },
-                ],
-            },
-            {
-                "title": "واجهة المتجر وسعر الصرف",
-                "separator": True,
-                "items": [
-                    {
-                        "title": "إعدادات المتجر وسعر الصرف",
-                        "icon": "tune",
-                        "link": reverse_lazy("admin:store_storesettings_changelist"),
-                    },
-                    {
-                        "title": "البانرات الترويجية والعروض",
-                        "icon": "view_carousel",
-                        "link": reverse_lazy("admin:store_herobanner_changelist"),
-                    },
-                ],
-            },
-        ],
-    },
-}

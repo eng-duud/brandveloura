@@ -1,12 +1,46 @@
 import os
+import sys
+import time
 import json
 import base64
 import logging
-from decimal import Decimal
-from django.conf import settings
+import threading
+from django.db import close_old_connections, connection
+from django.db.models import Q
+from .cache_service import cache_get, cache_set
 from .models import StoreSettings, WebPushSubscription, Notification
 
 logger = logging.getLogger(__name__)
+
+ORDER_PUSH_ENDPOINT_TTL = 86400 * 30  # 30 days
+
+
+def bind_order_push_endpoint(order_number: str, endpoint: str) -> None:
+    """
+    ربط اشتراك إشعارات الجهاز برقم الطلب في Redis لمدة 30 يوماً
+    حتى تصل إشعارات الشريط العلوي للعميل حتى لو طلب كزائر بدون حساب.
+    """
+    if not order_number or not endpoint:
+        return
+    cache_set(f"bv_order_push_ep:{order_number}", endpoint.strip(), timeout=ORDER_PUSH_ENDPOINT_TTL)
+
+
+def get_order_push_endpoint(order_number: str) -> str:
+    if not order_number:
+        return ""
+    return cache_get(f"bv_order_push_ep:{order_number}") or ""
+
+
+def link_endpoint_to_user(endpoint: str, user) -> None:
+    """
+    ربط اشتراك إشعارات المتصفح/التطبيق بالمستخدم المسجل فور تسجيل الدخول أو إنشاء الحساب.
+    """
+    if not endpoint or not user or not getattr(user, "is_authenticated", False):
+        return
+    try:
+        WebPushSubscription.objects.filter(endpoint=endpoint.strip()).exclude(user=user).update(user=user)
+    except Exception as ex:
+        logger.debug("Could not link push endpoint to user: %s", ex)
 
 
 def get_or_create_vapid_keys():
@@ -30,7 +64,6 @@ def get_or_create_vapid_keys():
                 store_settings.vapid_claims_email or env_email
             )
 
-        # Generate fresh VAPID keypair
         from py_vapid import Vapid
         from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
@@ -57,41 +90,65 @@ def get_or_create_vapid_keys():
         return "", "", env_email
 
 
-def send_web_push(subscription, title, body, url="/", icon=None, badge=None):
+def send_web_push(
+    subscription,
+    title,
+    body,
+    url="/",
+    icon=None,
+    badge=None,
+    image=None,
+    tag=None,
+    urgency="high",
+    ttl=86400,
+):
     """
-    إرسال إشعار ويب / تطبيق مباشر لجهاز معين
+    إرسال إشعار ويب / تطبيق أصلي مباشر للشريط العلوي في هاتف العميل (Android FCM / iOS APNs / Desktop)
+    مع أولوية عالية (Urgency: high) ومدة بقاء (TTL: 24h) لضمان وصوله حتى لو كان الهاتف مقفلاً.
     """
     pub_key, priv_key, claims_email = get_or_create_vapid_keys()
     if not priv_key:
         logger.warning("VAPID private key is not configured. Skipping push notification.")
         return False
 
-    payload = json.dumps({
+    now_ms = int(time.time() * 1000)
+    payload_dict = {
         "title": title,
         "body": body,
         "url": url or "/",
         "icon": icon or "/static/icons/icon-192.png",
-        "badge": badge or "/static/icons/icon-192.png"
-    })
+        "badge": badge or "/static/icons/icon-192.png",
+        "tag": tag or f"bv-{now_ms}",
+        "renotify": True,
+        "timestamp": now_ms,
+    }
+    if image:
+        payload_dict["image"] = image
+
+    payload = json.dumps(payload_dict, ensure_ascii=False)
 
     try:
-        from pywebpush import webpush, WebPushException
+        from pywebpush import webpush
 
         webpush(
             subscription_info={
                 "endpoint": subscription.endpoint,
                 "keys": {
                     "p256dh": subscription.p256dh,
-                    "auth": subscription.auth
-                }
+                    "auth": subscription.auth,
+                },
             },
             data=payload,
             vapid_private_key=priv_key,
-            vapid_claims={"sub": claims_email}
+            vapid_claims={"sub": claims_email},
+            ttl=ttl,
+            headers={
+                "Urgency": urgency,
+                "Topic": (tag or f"bv-{now_ms}")[:32],
+            },
         )
         return True
     except Exception as ex:
-        # Check if the subscription has expired (HTTP 404 or 410)
         resp = getattr(ex, 'response', None)
         if resp is not None and getattr(resp, 'status_code', None) in (404, 410):
             try:
@@ -104,41 +161,87 @@ def send_web_push(subscription, title, body, url="/", icon=None, badge=None):
         return False
 
 
-def broadcast_web_push(title, body, url="/", icon=None, user_filter=None, async_dispatch=None):
+def broadcast_web_push(
+    title,
+    body,
+    url="/",
+    icon=None,
+    image=None,
+    tag=None,
+    user_filter=None,
+    extra_endpoints=None,
+    target_only=False,
+    async_dispatch=None,
+    record_in_db=True,
+):
     """
-    بث إشعار ويب فوري لجميع الأجهزة المشتركة (أو لمستخدم معين)
-    وحفظ الإشعار في مركز الإشعارات بالمتجر بشكل غير متزامن لتفادي حظر خادم الويب
+    بث إشعار فوري عالي الأولوية لجميع الأجهزة المشتركة أو لعميل محدد (حساب مسجل أو زائر عبر endpoint)
+    وحفظ الإشعار في مركز الإشعارات بالمتجر بشكل غير متزامن لتفادي حظر خادم الويب.
     """
-    import sys
-    import threading
+    cleaned_endpoints = [ep.strip() for ep in (extra_endpoints or []) if ep and ep.strip()]
+
+    if target_only and not user_filter and not cleaned_endpoints:
+        return 0
 
     if async_dispatch is None:
         async_dispatch = ('test' not in sys.argv)
 
     def _do_push():
-        subscriptions_qs = WebPushSubscription.objects.all()
-        if user_filter:
-            subscriptions_qs = subscriptions_qs.filter(user=user_filter)
-
-        successful_sends = 0
-        for sub in subscriptions_qs:
-            if send_web_push(sub, title=title, body=body, url=url, icon=icon):
-                successful_sends += 1
-
-        # Save to notification center in database
+        if async_dispatch:
+            close_old_connections()
         try:
-            Notification.objects.create(
-                recipient=user_filter,
-                for_admin=False,
-                title=title,
-                message=body,
-                notification_type='promotion' if not user_filter else 'system',
-                link=url or "/"
-            )
-        except Exception as ex:
-            logger.warning(f"Failed to record notification log: {ex}")
+            q = Q()
+            if user_filter:
+                q |= Q(user=user_filter)
+            if cleaned_endpoints:
+                q |= Q(endpoint__in=cleaned_endpoints)
 
-        return successful_sends
+            if target_only:
+                if not q:
+                    return 0
+                subscriptions_qs = WebPushSubscription.objects.filter(q).distinct()
+            elif q:
+                subscriptions_qs = WebPushSubscription.objects.filter(q).distinct()
+            else:
+                subscriptions_qs = WebPushSubscription.objects.all()
+
+            successful_sends = 0
+            seen_endpoints = set()
+            for sub in subscriptions_qs.iterator(chunk_size=100):
+                if sub.endpoint in seen_endpoints:
+                    continue
+                seen_endpoints.add(sub.endpoint)
+                if send_web_push(
+                    sub,
+                    title=title,
+                    body=body,
+                    url=url,
+                    icon=icon,
+                    image=image,
+                    tag=tag,
+                ):
+                    successful_sends += 1
+
+            if record_in_db:
+                try:
+                    Notification.objects.create(
+                        recipient=user_filter,
+                        for_admin=False,
+                        title=title,
+                        message=body,
+                        notification_type='promotion' if not user_filter else 'system',
+                        link=url or "/",
+                    )
+                except Exception as ex:
+                    logger.warning(f"Failed to record notification log: {ex}")
+
+            return successful_sends
+        finally:
+            if async_dispatch:
+                try:
+                    connection.close()
+                except Exception:
+                    pass
 
     if async_dispatch:
         thread = threading.Thread(target=_do_push, daemon=True)
@@ -151,7 +254,6 @@ def send_product_promotion_push(product, custom_title=None, custom_body=None):
     """
     إرسال إشعار تسويقي وترويجي لمنتج عند إضافته أو تعديل سعره / خصمه
     """
-    # 1. Generate smart title
     if custom_title and custom_title.strip():
         title = custom_title.strip()
     elif product.compare_at_price_yer and product.compare_at_price_yer > product.price_yer:
@@ -162,7 +264,6 @@ def send_product_promotion_push(product, custom_title=None, custom_body=None):
     else:
         title = f"⭐ متاح الآن: {product.name_ar}"
 
-    # 2. Generate smart body text
     if custom_body and custom_body.strip():
         body = custom_body.strip()
     elif product.compare_at_price_yer and product.compare_at_price_yer > product.price_yer:
@@ -171,15 +272,48 @@ def send_product_promotion_push(product, custom_title=None, custom_body=None):
         brand_info = f"من {product.brand_name} " if product.brand_name else ""
         body = f"منتج فاخر {brand_info}بسعر {product.price_yer:,.0f} ر.ي ({product.price_sar} ر.س). انقر للمعاينة والطلب."
 
-    url = f"/product/{product.slug}/"
-    icon = product.primary_image_url
+    url = f"/products/{product.slug}/"
+    img = product.primary_image_url
 
-    return broadcast_web_push(title=title, body=body, url=url, icon=icon)
+    return broadcast_web_push(
+        title=title,
+        body=body,
+        url=url,
+        icon="/static/icons/icon-192.png",
+        image=img,
+        tag=f"promo-prod-{product.id}-{int(time.time())}",
+    )
+
+
+def send_order_created_push(order, guest_endpoint=None):
+    """
+    إرسال إشعار فوري للشريط العلوي لهاتف العميل فور إتمام الطلب بنجاح.
+    """
+    ep = guest_endpoint or get_order_push_endpoint(order.order_number)
+    if ep:
+        bind_order_push_endpoint(order.order_number, ep)
+
+    title = f"🎉 تم استلام طلبك #{order.order_number}"
+    body = (
+        f"شكراً لثقتك بـ Brand Veloura! طلبك بقيمة {order.total_yer:,.0f} ر.ي قيد المراجعة والاعتماد الآن."
+    )
+    url = f"/order-success/{order.order_number}/"
+
+    return broadcast_web_push(
+        title=title,
+        body=body,
+        url=url,
+        tag=f"order-new-{order.order_number}",
+        user_filter=order.user,
+        extra_endpoints=[ep] if ep else None,
+        target_only=True,
+        record_in_db=False,
+    )
 
 
 def send_order_status_push(order, new_status):
     """
-    إرسال إشعار فوري للعميل على هاتفه عند تغيير حالة طلبه
+    إرسال إشعار فوري للشريط العلوي على هاتف العميل (مسجل أو زائر) عند تغيير حالة طلبه.
     """
     status_messages = {
         'payment_verified': (
@@ -208,10 +342,16 @@ def send_order_status_push(order, new_status):
         return 0
 
     title, body = status_messages[new_status]
-    url = f"/account/orders/"
+    url = f"/order-success/{order.order_number}/"
+    guest_ep = get_order_push_endpoint(order.order_number)
 
-    if order.user:
-        return broadcast_web_push(title=title, body=body, url=url, user_filter=order.user)
-
-    return 0
-
+    return broadcast_web_push(
+        title=title,
+        body=body,
+        url=url,
+        tag=f"order-{order.order_number}-{new_status}",
+        user_filter=order.user,
+        extra_endpoints=[guest_ep] if guest_ep else None,
+        target_only=True,
+        record_in_db=False,
+    )

@@ -133,18 +133,18 @@
                 const canvas = await html2canvas(sheet, {
                     scale: 2,
                     useCORS: true,
-                    allowTaint: true,
                     backgroundColor: '#ffffff',
                     logging: false,
                     windowWidth: 1000
                 });
 
+                const dataUrl = canvas.toDataURL('image/png');
                 const link = document.createElement('a');
                 link.download = `فاتورة-فيلورا-${'{{ order.order_number }}'}.png`;
-                link.href = canvas.toDataURL('image/png');
+                link.href = dataUrl;
                 link.click();
 
-                uploadInvoiceToCloudinary(canvas.toDataURL('image/png'));
+                uploadInvoiceToCloudinary(dataUrl);
 
                 btn.innerHTML = '<span>✓ تم الحفظ بنجاح</span>';
                 setTimeout(() => {
@@ -162,7 +162,7 @@
 
         async function uploadInvoiceToCloudinary(base64Data) {
             try {
-                const csrfToken = getCookie('csrftoken');
+                const csrfToken = '{{ csrf_token }}';
                 await fetch('/api/order/{{ order.order_number }}/save-invoice-image/', {
                     method: 'POST',
                     headers: {
@@ -174,21 +174,6 @@
             } catch (e) {
                 console.warn('Cloudinary background upload info:', e);
             }
-        }
-
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
         }
     </script>
 </body>

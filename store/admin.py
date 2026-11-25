@@ -919,6 +919,13 @@ class OrderAdmin(admin.ModelAdmin):
         'formatted_subtotal', 'formatted_shipping_fee', 'stock_deducted', 'exchange_rate_applied', 'user'
     ]
     inlines = [OrderItemInline]
+    actions = [
+        'mark_as_verified',
+        'mark_as_processing',
+        'mark_as_out_for_delivery',
+        'mark_as_delivered',
+        'cancel_and_restore_stock_action',
+    ]
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'payment_method').prefetch_related('items')
@@ -1118,46 +1125,54 @@ class OrderAdmin(admin.ModelAdmin):
     def mark_as_verified(self, request, queryset):
         count = 0
         for order in queryset:
-            order.status = 'payment_verified'
-            order.save()
-            count += 1
-        self.message_user(request, f'تم اعتماد وتأكيد الدفع لـ {count} طلب بنجاح.')
+            if order.status != 'payment_verified':
+                order.status = 'payment_verified'
+                order.save()
+                count += 1
+        _log_admin_audit(request, 'orders_bulk_verified', f"count={count}")
+        self.message_user(request, f'تم اعتماد وتأكيد الدفع لـ {count} طلب بنجاح وإرسال الإشعارات الفورية للعملاء.')
 
     @admin.action(description='تغيير الحالة إلى (قيد التجهيز والتغليف)')
     def mark_as_processing(self, request, queryset):
         count = 0
         for order in queryset:
-            order.status = 'processing'
-            order.save()
-            count += 1
-        self.message_user(request, f'تم نقل {count} طلب إلى قيد التجهيز.')
+            if order.status != 'processing':
+                order.status = 'processing'
+                order.save()
+                count += 1
+        _log_admin_audit(request, 'orders_bulk_processing', f"count={count}")
+        self.message_user(request, f'تم نقل {count} طلب إلى قيد التجهيز وإشعار العملاء.')
 
     @admin.action(description='تغيير الحالة إلى (جاري التوصيل مع المندوب)')
     def mark_as_out_for_delivery(self, request, queryset):
         count = 0
         for order in queryset:
-            order.status = 'out_for_delivery'
-            order.save()
-            count += 1
-        self.message_user(request, f'تم نقل {count} طلب إلى جاري التوصيل.')
+            if order.status != 'out_for_delivery':
+                order.status = 'out_for_delivery'
+                order.save()
+                count += 1
+        _log_admin_audit(request, 'orders_bulk_out_for_delivery', f"count={count}")
+        self.message_user(request, f'تم نقل {count} طلب إلى جاري التوصيل وإشعار العملاء.')
 
     @admin.action(description='تأكيد استلام العميل للطلب (تم التسليم بنجاح)')
     def mark_as_delivered(self, request, queryset):
         count = 0
         for order in queryset:
-            order.status = 'delivered'
-            order.save()
-            count += 1
+            if order.status != 'delivered':
+                order.status = 'delivered'
+                order.save()
+                count += 1
         _log_admin_audit(request, 'orders_bulk_delivered', f"count={count}")
-        self.message_user(request, f'تم تحديث {count} طلب إلى مكتمل ومسلم.')
+        self.message_user(request, f'تم تحديث {count} طلب إلى مكتمل ومسلم وإشعار العملاء.')
 
     @admin.action(description='إلغاء الطلبات واسترجاع كمياتها للمخزون آلياً ♻️')
     def cancel_and_restore_stock_action(self, request, queryset):
         restored_count = 0
         for order in queryset:
-            order.status = 'cancelled'
-            order.save()
-            restored_count += 1
+            if order.status != 'cancelled':
+                order.status = 'cancelled'
+                order.save()
+                restored_count += 1
         _log_admin_audit(request, 'orders_bulk_cancelled', f"count={restored_count}")
         self.message_user(request, f'تم إلغاء {restored_count} طلب واسترجاع كميات منتجاتها إلى المخزون فوراً.')
 
@@ -1165,7 +1180,7 @@ class OrderAdmin(admin.ModelAdmin):
         old_status = None
         if change and obj.pk:
             try:
-                old_status = Order.objects.get(pk=obj.pk).status
+                old_status = Order.objects.only('status').get(pk=obj.pk).status
             except Exception:
                 pass
         super().save_model(request, obj, form, change)
@@ -1176,10 +1191,7 @@ class OrderAdmin(admin.ModelAdmin):
                 f"order={obj.order_number} from={old_status} to={obj.status}",
             )
         if old_status and old_status != obj.status:
-            from .push_notifications import send_order_status_push
-            sent = send_order_status_push(obj, obj.status)
-            if sent:
-                self.message_user(request, f"🔔 تم إرسال إشعار تحديث الحالة لهاتف العميل بنجاح!")
+            self.message_user(request, "🔔 تم إرسال إشعار تحديث الحالة الفوري لهاتف العميل تلقائياً!")
 
 
 # ==============================================================================
@@ -1377,6 +1389,7 @@ class NotificationAdmin(admin.ModelAdmin):
     list_display = ['title', 'target_badge', 'notification_type_badge', 'is_read_badge', 'created_at', 'link_action']
     list_filter = ['is_read', 'for_admin', 'notification_type', 'created_at']
     search_fields = ['title', 'message', 'recipient__username', 'recipient__email', 'order__order_number']
+    list_select_related = ['recipient', 'order']
     list_per_page = 30
     actions = ['mark_as_read', 'mark_as_unread', 'broadcast_push']
 
@@ -1442,18 +1455,36 @@ class NotificationAdmin(admin.ModelAdmin):
             cache.delete_many(keys)
         self.message_user(request, f"تم تحديد {count} إشعار كغير مقروء.")
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if not change and not obj.for_admin:
+            from .push_notifications import broadcast_web_push
+            broadcast_web_push(
+                title=obj.title,
+                body=obj.message,
+                url=obj.link or "/",
+                tag=f"admin-notif-{obj.id}",
+                user_filter=obj.recipient,
+                record_in_db=False,
+            )
+            self.message_user(request, "📢 تم إرسال الإشعار الفوري للشريط العلوي في هاتف العميل تلقائياً!")
+
     @admin.action(description='📢 بث الإشعارات المحددة كهواتف (Web Push Broadcast)')
     def broadcast_push(self, request, queryset):
         from .push_notifications import broadcast_web_push
         total_sent = 0
         for notif in queryset:
+            if notif.for_admin:
+                continue
             total_sent += broadcast_web_push(
                 title=notif.title,
                 body=notif.message,
                 url=notif.link or "/",
-                user_filter=notif.recipient
+                tag=f"admin-notif-{notif.id}",
+                user_filter=notif.recipient,
+                record_in_db=False,
             )
-        self.message_user(request, f"تم بنجاح بث {queryset.count()} إشعار إلى {total_sent} جهاز مشترك!")
+        self.message_user(request, f"تم بنجاح بث الإشعارات المحددة إلى الأجهزة المشتركة!")
 
 
 # ==============================================================================
@@ -1464,6 +1495,7 @@ class NotificationAdmin(admin.ModelAdmin):
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ['user_name', 'user_email', 'phone', 'preferred_city', 'created_at']
     search_fields = ['user__username', 'user__first_name', 'user__last_name', 'user__email', 'phone', 'preferred_city']
+    list_select_related = ['user']
     readonly_fields = ['created_at', 'updated_at']
 
     @admin.display(description='اسم العميل')
@@ -1484,6 +1516,7 @@ class WebPushSubscriptionAdmin(admin.ModelAdmin):
     list_display = ['subscriber_label', 'user_agent_short', 'created_at', 'updated_at']
     search_fields = ['user__username', 'user__first_name', 'user__email', 'endpoint']
     list_filter = ['created_at']
+    list_select_related = ['user']
     readonly_fields = ['created_at', 'updated_at', 'endpoint', 'p256dh', 'auth', 'user_agent']
     actions = ['send_test_push']
 

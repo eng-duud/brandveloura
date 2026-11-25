@@ -505,6 +505,7 @@
                 </div>
 
                 <!-- Payment Select Dropdown -->
+                <input type="hidden" name="payment_currency_selected" id="payment_currency_selected_input" value="{% if active_currency == 'SAR' %}SAR{% else %}YER{% endif %}">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1.5">
                         اختر طريقة الدفع:
@@ -683,7 +684,7 @@
                                 type="file" 
                                 id="payment-receipt-input"
                                 name="payment_receipt" 
-                                accept="image/*"
+                                accept="image/*,.pdf,application/pdf"
                                 onchange="previewReceiptImage(event)"
                                 class="w-full text-xs text-slate-500 file:mr-0 file:ml-2.5 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-brand-500 file:text-white hover:file:bg-brand-600 file:cursor-pointer cursor-pointer border border-pink-200 rounded-xl bg-white p-1 h-10"
                             >
@@ -830,13 +831,22 @@
     function previewReceiptImage(event) {
         const file = event.target.files[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('receipt-preview-img').src = e.target.result;
-                document.getElementById('receipt-preview-name').innerText = file.name;
-                document.getElementById('receipt-preview-container').classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
+            const imgEl = document.getElementById('receipt-preview-img');
+            const nameEl = document.getElementById('receipt-preview-name');
+            const containerEl = document.getElementById('receipt-preview-container');
+            nameEl.innerText = file.name;
+            if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                imgEl.classList.add('hidden');
+                containerEl.classList.remove('hidden');
+            } else {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imgEl.src = e.target.result;
+                    imgEl.classList.remove('hidden');
+                    containerEl.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
         }
     }
 
@@ -848,6 +858,18 @@
         if (selectedCard) {
             selectedCard.classList.remove('hidden');
             if (window.lucide) window.lucide.createIcons();
+        }
+        const selectEl = document.getElementById('payment-method-select');
+        const currencyInput = document.getElementById('payment_currency_selected_input');
+        if (selectEl && currencyInput && selectEl.selectedIndex >= 0) {
+            const opt = selectEl.options[selectEl.selectedIndex];
+            const optCurrency = opt ? opt.getAttribute('data-currency') : '';
+            const optCountry = opt ? opt.getAttribute('data-country') : '';
+            if (optCurrency === 'SAR' || optCountry === 'SA') {
+                currencyInput.value = 'SAR';
+            } else if (optCurrency === 'YER') {
+                currencyInput.value = 'YER';
+            }
         }
     }
 

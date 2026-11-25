@@ -278,13 +278,18 @@ class NotificationSystemTests(TestCase):
         notif = Notification.objects.filter(notification_type='promotion').latest('created_at')
         self.assertIn('تخفيض حصري', notif.title)
         self.assertIn(self.product.name_ar, notif.title)
-        self.assertEqual(notif.link, f"/product/{self.product.slug}/")
+        self.assertEqual(notif.link, f"/products/{self.product.slug}/")
 
     def test_pwa_notification_permission_prompt_persistence_and_events(self):
         """اختبار ثبات كارت إذن الإشعارات واستماعه لأحداث التثبيت والوضع المستقل PWA"""
+        from pathlib import Path
+        from django.conf import settings as django_settings
+
         res = self.client.get(reverse('store:home'))
         self.assertEqual(res.status_code, 200)
-        content = res.content.decode('utf-8')
+        html_content = res.content.decode('utf-8')
+        js_content = (Path(django_settings.BASE_DIR) / 'static' / 'js' / 'storefront.js').read_text(encoding='utf-8')
+        content = html_content + "\n" + js_content
 
         # 1. كارت إذن الإشعارات موجود في الصفحة
         self.assertIn('id="pwa-notif-card"', content)

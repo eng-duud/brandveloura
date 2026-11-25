@@ -27,9 +27,10 @@ def sanitize_image_url(url, fallback=''):
         return fallback
     url_str = str(url).strip()
     if 'image/upload/http' in url_str:
-        c_name = getattr(settings, 'CLOUDINARY_STORAGE', {}).get('CLOUD_NAME', '') or os.getenv('CLOUDINARY_CLOUD_NAME', 'ct6yw21y')
-        pattern = r'https?://res\.cloudinary\.com/[^/]+/image/upload/https?:/+(?:res\.cloudinary\.com/[^/]+/)?'
-        url_str = re.sub(pattern, f'https://res.cloudinary.com/{c_name}/image/upload/', url_str)
+        c_name = getattr(settings, 'CLOUDINARY_STORAGE', {}).get('CLOUD_NAME', '') or os.getenv('CLOUDINARY_CLOUD_NAME', '').strip()
+        if c_name:
+            pattern = r'https?://res\.cloudinary\.com/[^/]+/image/upload/https?:/+(?:res\.cloudinary\.com/[^/]+/)?'
+            url_str = re.sub(pattern, f'https://res.cloudinary.com/{c_name}/image/upload/', url_str)
     return url_str
 
 
@@ -510,14 +511,14 @@ class Category(models.Model):
             Category.objects.filter(is_default=True).exclude(pk=self.pk).update(is_default=False)
         try:
             from django.core.cache import cache
-            cache.delete('bv_active_categories')
+            cache.delete_many(['bv_active_categories', 'bv_main_categories', 'bv_home_categories'])
         except Exception:
             pass
 
     def delete(self, *args, **kwargs):
         try:
             from django.core.cache import cache
-            cache.delete('bv_active_categories')
+            cache.delete_many(['bv_active_categories', 'bv_main_categories', 'bv_home_categories'])
         except Exception:
             pass
         super().delete(*args, **kwargs)
@@ -1132,8 +1133,8 @@ class Order(models.Model):
         except Exception:
             pass
 
-        # إرسال إشعار تلقائي للعميل عند تحديث حالة الطلب
-        if not is_new and prev_status and prev_status != self.status and self.user:
+        # إرسال إشعار تلقائي للعميل (داخل الموقع + إشعار فوري في الشريط العلوي للهاتف) عند تحديث حالة الطلب
+        if not is_new and prev_status and prev_status != self.status:
             status_notifications = {
                 'payment_verified': (
                     f"تم تأكيد استلام الدفع لطلبكم #{self.order_number}",
@@ -1162,15 +1163,24 @@ class Order(models.Model):
                 ),
             }
             if self.status in status_notifications:
-                title, msg, n_type = status_notifications[self.status]
-                Notification.notify_user(
-                    user=self.user,
-                    title=title,
-                    message=msg,
-                    notification_type=n_type,
-                    order=self,
-                    link=f"/order-success/{self.order_number}/"
-                )
+                if self.user:
+                    title, msg, n_type = status_notifications[self.status]
+                    Notification.notify_user(
+                        user=self.user,
+                        title=title,
+                        message=msg,
+                        notification_type=n_type,
+                        order=self,
+                        link=f"/order-success/{self.order_number}/"
+                    )
+                try:
+                    from django.db import transaction
+                    from .push_notifications import send_order_status_push
+                    order_ref = self
+                    new_stat = self.status
+                    transaction.on_commit(lambda: send_order_status_push(order_ref, new_stat))
+                except Exception:
+                    pass
 
     def delete(self, *args, **kwargs):
         try:
@@ -1233,6 +1243,22 @@ class UserProfile(models.Model):
     def __str__(self):
         name = self.user.get_full_name() or self.user.username
         return f"ملف {name}"
+
+    def _invalidate_profile_cache(self):
+        if self.user_id:
+            try:
+                from django.core.cache import cache
+                cache.delete(f'bv_user_profile_meta_{self.user_id}')
+            except Exception:
+                pass
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self._invalidate_profile_cache()
+
+    def delete(self, *args, **kwargs):
+        self._invalidate_profile_cache()
+        return super().delete(*args, **kwargs)
 
 
 class Notification(models.Model):
