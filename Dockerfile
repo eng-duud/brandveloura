@@ -1,4 +1,4 @@
-# Stage 1: Build production Tailwind CSS from the Django templates.
+# Stage 1: Build production Tailwind CSS from the Django templates & JS.
 FROM node:22-alpine AS css-builder
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -14,7 +14,7 @@ RUN npm run build:css
 FROM python:3.12-slim AS py-builder
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1
-WORKDIR /wheels
+WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
@@ -38,20 +38,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pre-built Python wheels.
+# Install pre-built Python wheels cleanly via requirements.txt.
 COPY --from=py-builder /wheels /wheels
-RUN pip install --no-index --find-links=/wheels /wheels/* && rm -rf /wheels
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-index --find-links=/wheels -r /app/requirements.txt && rm -rf /wheels
 
 # Copy application source and the CSS generated in the Node build stage.
 COPY . /app/
 COPY --from=css-builder /app/static/css/tailwind.css /app/static/css/tailwind.css
 
-# Ensure the start script has executable permissions.
-RUN chmod +x /app/start.sh
+# Normalize line endings (Windows CRLF -> LF) and ensure executable permissions.
+RUN sed -i 's/\r$//' /app/start.sh && chmod +x /app/start.sh
 
-# Collect static files into staticfiles directory and drop root privileges.
+# Collect compressed manifest static files and drop root privileges.
 RUN mkdir -p /app/staticfiles /app/media && \
-    python manage.py collectstatic --noinput && \
+    DJANGO_DEBUG=False python manage.py collectstatic --noinput && \
     addgroup --system appuser && \
     adduser --system --ingroup appuser appuser && \
     chown -R appuser:appuser /app
